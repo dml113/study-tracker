@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>관리자 - 공부 트래커</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+  .header { background: #1e293b; padding: 16px 32px; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 1.3rem; font-weight: 700; color: #60a5fa; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .badge { background: #7c3aed; color: white; font-size: 0.75rem; padding: 3px 10px; border-radius: 99px; font-weight: 600; }
+  .logout-btn { background: none; border: 1px solid #475569; color: #94a3b8; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+  .logout-btn:hover { border-color: #64748b; color: #e2e8f0; }
+  .container { max-width: 1100px; margin: 32px auto; padding: 0 24px; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 28px; background: #1e293b; border-radius: 10px; padding: 4px; width: fit-content; border: 1px solid #334155; }
+  .tab { padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; color: #94a3b8; border: none; background: none; }
+  .tab.active { background: #3b82f6; color: white; font-weight: 600; }
+  .create-form { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 0.8rem; color: #94a3b8; }
+  .form-group input, .form-group select { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; outline: none; min-width: 140px; }
+  .form-group input:focus, .form-group select:focus { border-color: #3b82f6; }
+  .btn { padding: 9px 20px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.9rem; font-weight: 600; }
+  .btn-primary { background: #3b82f6; color: white; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-sm { padding: 5px 12px; font-size: 0.8rem; font-weight: 600; border: none; border-radius: 6px; cursor: pointer; }
+  .btn-danger { background: #ef4444; color: white; }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-warning { background: #f59e0b; color: #0f172a; }
+  table { width: 100%; border-collapse: collapse; background: #1e293b; border-radius: 12px; overflow: hidden; border: 1px solid #334155; }
+  th { background: #0f172a; color: #94a3b8; font-size: 0.8rem; font-weight: 600; padding: 12px 16px; text-align: left; }
+  td { padding: 13px 16px; border-top: 1px solid #0f172a; font-size: 0.88rem; vertical-align: top; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .dot-active { background: #22c55e; }
+  .dot-inactive { background: #475569; }
+  .role-badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 99px; font-weight: 600; }
+  .role-admin { background: #7c3aed33; color: #a78bfa; }
+  .role-member { background: #0f172a; color: #64748b; }
+  .td-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .time-bar-wrap { background: #0f172a; border-radius: 99px; height: 6px; width: 80px; display: inline-block; vertical-align: middle; margin-left: 8px; overflow: hidden; }
+  .time-bar { height: 100%; background: #3b82f6; border-radius: 99px; }
+  /* 출퇴근 탭 */
+  .date-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .date-bar input { background: #1e293b; border: 1px solid #334155; color: #e2e8f0; padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; outline: none; }
+  .att-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px 22px; margin-bottom: 12px; }
+  .att-header { display: flex; align-items: center; gap: 16px; margin-bottom: 10px; }
+  .att-name { font-weight: 600; font-size: 1rem; flex: 1; }
+  .att-times { display: flex; gap: 20px; }
+  .att-time-item { font-size: 0.85rem; }
+  .att-time-item span { color: #94a3b8; }
+  .att-time-item strong { color: #e2e8f0; }
+  .att-active { color: #60a5fa; font-size: 0.85rem; }
+  .absence-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .absence-chip { background: #f59e0b22; border: 1px solid #f59e0b44; border-radius: 6px; padding: 4px 10px; font-size: 0.78rem; color: #fbbf24; }
+  .absence-chip .reason { color: #e2e8f0; font-weight: 600; }
+  .no-checkin { color: #475569; font-size: 0.85rem; }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; font-size: 0.9rem; display: none; z-index: 100; }
+  .toast.success { border-color: #22c55e; color: #22c55e; }
+  .toast.error { border-color: #ef4444; color: #ef4444; }
+  .modal-bg { display: none; position: fixed; inset: 0; background: #00000088; z-index: 200; align-items: center; justify-content: center; }
+  .modal-bg.show { display: flex; }
+  .modal { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 28px; width: 320px; }
+  .modal h3 { margin-bottom: 16px; font-size: 1rem; }
+  .modal input { width: 100%; background: #0f172a; border: 1px solid #334155; color: #e2e8f0; padding: 9px 12px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 14px; outline: none; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>공부 트래커 관리자</h1>
+  <div class="header-right">
+    <span id="adminName" style="color:#94a3b8;font-size:0.9rem"></span>
+    <span class="badge">ADMIN</span>
+    <button class="logout-btn" onclick="logout()">로그아웃</button>
+  </div>
+</div>
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('users', this)">유저 관리</button>
+    <button class="tab" onclick="switchTab('stats', this)">공부 통계</button>
+    <button class="tab" onclick="switchTab('attendance', this)">출퇴근 기록</button>
+  </div>
+
+  <!-- 유저 관리 -->
+  <div id="tab-users">
+    <div class="create-form">
+      <div class="form-group">
+        <label>아이디</label>
+        <input type="text" id="newUsername" placeholder="아이디">
+      </div>
+      <div class="form-group">
+        <label>비밀번호</label>
+        <input type="password" id="newPassword" placeholder="비밀번호">
+      </div>
+      <div class="form-group">
+        <label>권한</label>
+        <select id="newRole">
+          <option value="member">일반 유저</option>
+          <option value="admin">관리자</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="createUser()" style="align-self:flex-end">유저 생성</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>아이디</th><th>권한</th><th>상태</th><th>오늘 활동</th><th>생성일</th><th>관리</th>
+        </tr>
+      </thead>
+      <tbody id="userTableBody"></tbody>
+    </table>
+  </div>
+
+  <!-- 공부 통계 -->
+  <div id="tab-stats" style="display:none">
+    <div class="date-bar">
+      <input type="date" id="statsDate">
+      <button class="btn btn-primary" onclick="loadStats()">조회</button>
+    </div>
+    <div id="statsList"></div>
+  </div>
+
+  <!-- 출퇴근 기록 -->
+  <div id="tab-attendance" style="display:none">
+    <div class="date-bar">
+      <input type="date" id="attDate">
+      <button class="btn btn-primary" onclick="loadAttendance()">조회</button>
+    </div>
+    <div id="attList"></div>
+  </div>
+</div>
+
+<!-- 비밀번호 변경 모달 -->
+<div class="modal-bg" id="pwModal">
+  <div class="modal">
+    <h3>비밀번호 변경</h3>
+    <input type="password" id="newPw" placeholder="새 비밀번호">
+    <div class="modal-actions">
+      <button class="btn" style="background:#334155;color:#e2e8f0" onclick="closeModal()">취소</button>
+      <button class="btn btn-primary" onclick="confirmPwChange()">변경</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+  const token = localStorage.getItem('token');
+  const role = localStorage.getItem('role');
+  if (!token || role !== 'admin') location.href = '/';
+  document.getElementById('adminName').textContent = localStorage.getItem('username');
+
+  let editingUserId = null;
+  function authH() { return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }; }
+  function logout() { localStorage.clear(); location.href = '/'; }
+
+  function switchTab(tab, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    ['users','stats','attendance'].forEach(t => {
+      document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+    });
+    if (tab === 'stats') loadStats();
+    if (tab === 'attendance') loadAttendance();
+  }
+
+  function showToast(msg, type = 'success') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast ' + type;
+    el.style.display = 'block';
+    setTimeout(() => el.style.display = 'none', 2500);
+  }
+
+  // ── 유저 관리 ──
+  async function loadUsers() {
+    const res = await fetch('/admin/users', { headers: authH() });
+    if (!res.ok) { logout(); return; }
+    const users = await res.json();
+    const maxSec = Math.max(...users.map(u => u.today_seconds), 1);
+    document.getElementById('userTableBody').innerHTML = users.map(u => `
+      <tr>
+        <td><strong>${u.username}</strong></td>
+        <td><span class="role-badge role-${u.role}">${u.role === 'admin' ? '관리자' : '일반'}</span></td>
+        <td><span class="status-dot ${u.is_active ? 'dot-active' : 'dot-inactive'}"></span>${u.is_active ? '활성' : '비활성'}</td>
+        <td>
+          ${u.today_minutes}분
+          <span class="time-bar-wrap"><span class="time-bar" style="width:${u.today_seconds/maxSec*100}%"></span></span>
+        </td>
+        <td style="color:#94a3b8;font-size:0.8rem">${u.created_at.slice(0,10)}</td>
+        <td>
+          <div class="td-actions">
+            <button class="btn-sm btn-warning" onclick="openPwModal(${u.id})">비밀번호</button>
+            <button class="btn-sm" style="background:#1e40af;color:white" onclick="toggleActive(${u.id},${u.is_active})">${u.is_active ? '비활성화' : '활성화'}</button>
+            <button class="btn-sm btn-danger" onclick="deleteUser(${u.id},'${u.username}')">삭제</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function createUser() {
+    const username = document.getElementById('newUsername').value.trim();
+    const password = document.getElementById('newPassword').value;
+    const role = document.getElementById('newRole').value;
+    if (!username || !password) { showToast('아이디와 비밀번호를 입력하세요', 'error'); return; }
+    const res = await fetch('/admin/users', { method: 'POST', headers: authH(), body: JSON.stringify({username, password, role}) });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); document.getElementById('newUsername').value = ''; document.getElementById('newPassword').value = ''; loadUsers(); }
+    else showToast(data.detail, 'error');
+  }
+
+  async function deleteUser(id, username) {
+    if (!confirm(`'${username}' 계정을 삭제하시겠습니까?`)) return;
+    const res = await fetch('/admin/users/'+id, { method: 'DELETE', headers: authH() });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); loadUsers(); }
+    else showToast(data.detail, 'error');
+  }
+
+  async function toggleActive(id, current) {
+    const res = await fetch('/admin/users/'+id, { method: 'PATCH', headers: authH(), body: JSON.stringify({is_active: !current}) });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); loadUsers(); }
+    else showToast(data.detail, 'error');
+  }
+
+  function openPwModal(id) { editingUserId = id; document.getElementById('newPw').value = ''; document.getElementById('pwModal').classList.add('show'); }
+  function closeModal() { document.getElementById('pwModal').classList.remove('show'); editingUserId = null; }
+
+  async function confirmPwChange() {
+    const pw = document.getElementById('newPw').value;
+    if (!pw) { showToast('비밀번호를 입력하세요', 'error'); return; }
+    const res = await fetch('/admin/users/'+editingUserId, { method: 'PATCH', headers: authH(), body: JSON.stringify({password: pw}) });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); closeModal(); }
+    else showToast(data.detail, 'error');
+  }
+
+  // ── 공부 통계 ──
+  async function loadStats() {
+    const d = document.getElementById('statsDate').value || new Date().toISOString().split('T')[0];
+    const res = await fetch('/api/stats?target_date='+d, { headers: authH() });
+    const data = await res.json();
+    const list = document.getElementById('statsList');
+    if (!data.length) { list.innerHTML = '<div style="text-align:center;color:#475569;padding:60px 0">기록이 없습니다</div>'; return; }
+    const max = data[0].active_minutes;
+    const rc = ['gold','silver','bronze'];
+    const colors = { gold:'#f59e0b', silver:'#94a3b8', bronze:'#b45309' };
+    list.innerHTML = data.map((u,i) => `
+      <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:18px 22px;margin-bottom:12px;display:flex;align-items:center;gap:18px">
+        <div style="font-size:1.5rem;font-weight:800;color:${colors[rc[i]]||'#475569'};min-width:36px">${i+1}</div>
+        <div style="flex:1"><div style="font-size:1rem;font-weight:600">${u.username}</div><div style="color:#60a5fa;font-size:0.85rem;margin-top:3px">${u.active_minutes}분 활동</div></div>
+        <div style="flex:2;background:#0f172a;border-radius:99px;height:10px;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,#3b82f6,#60a5fa);border-radius:99px;width:${max>0?u.active_minutes/max*100:0}%"></div></div>
+      </div>
+    `).join('');
+  }
+
+  // ── 출퇴근 기록 ──
+  async function loadAttendance() {
+    const d = document.getElementById('attDate').value || new Date().toISOString().split('T')[0];
+    const res = await fetch('/admin/attendance?target_date='+d, { headers: authH() });
+    const data = await res.json();
+    const list = document.getElementById('attList');
+    list.innerHTML = data.map(u => `
+      <div class="att-card">
+        <div class="att-header">
+          <div class="att-name">${u.username}</div>
+          <div class="att-active">${u.active_minutes}분 활동</div>
+        </div>
+        ${u.checkin_at ? `
+          <div class="att-times">
+            <div class="att-time-item"><span>출근 </span><strong>${u.checkin_at}</strong></div>
+            <div class="att-time-item"><span>퇴근 </span><strong>${u.checkout_at || '–'}</strong></div>
+          </div>
+        ` : `<div class="no-checkin">출근 기록 없음</div>`}
+        ${u.absences.length ? `
+          <div class="absence-list">
+            ${u.absences.map(a => `
+              <div class="absence-chip">
+                <span class="reason">${a.reason}</span>
+                &nbsp;${a.start}~${a.end || '진행중'}
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `).join('');
+  }
+
+  // 초기화
+  document.getElementById('statsDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('attDate').value = new Date().toISOString().split('T')[0];
+  loadUsers();
+</script>
+</body>
+</html>

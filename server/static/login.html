@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>로그인 - 공부 트래커</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 40px; width: 360px; }
+  h1 { font-size: 1.5rem; font-weight: 700; color: #60a5fa; margin-bottom: 8px; text-align: center; }
+  p { color: #94a3b8; text-align: center; margin-bottom: 32px; font-size: 0.9rem; }
+  label { display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px; }
+  input { width: 100%; background: #0f172a; border: 1px solid #334155; color: #e2e8f0; padding: 10px 14px; border-radius: 8px; font-size: 0.95rem; margin-bottom: 18px; outline: none; }
+  input:focus { border-color: #3b82f6; }
+  button { width: 100%; background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+  button:hover { background: #2563eb; }
+  .error { color: #f87171; font-size: 0.85rem; margin-bottom: 12px; display: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>공부 트래커</h1>
+  <p>동아리 공부 시간 모니터링</p>
+  <div class="error" id="error"></div>
+  <label>아이디</label>
+  <input type="text" id="username" placeholder="아이디 입력" autofocus>
+  <label>비밀번호</label>
+  <input type="password" id="password" placeholder="비밀번호 입력">
+  <button onclick="login()">로그인</button>
+</div>
+<script>
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+
+  async function login() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const errEl = document.getElementById('error');
+    errEl.style.display = 'none';
+
+    if (!username || !password) { showError('아이디와 비밀번호를 입력하세요'); return; }
+
+    const form = new URLSearchParams();
+    form.append('username', username);
+    form.append('password', password);
+
+    try {
+      const res = await fetch('/auth/login', { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) { showError(data.detail || '로그인 실패'); return; }
+
+      localStorage.setItem('token', data.access_token);
+      localStorage.setItem('role', data.role);
+      localStorage.setItem('username', data.username);
+
+      location.href = data.role === 'admin' ? '/admin' : '/dashboard';
+    } catch (e) {
+      showError('서버 연결에 실패했습니다');
+    }
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('error');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  // 이미 로그인된 경우 리다이렉트
+  const token = localStorage.getItem('token');
+  const role = localStorage.getItem('role');
+  if (token) location.href = role === 'admin' ? '/admin' : '/dashboard';
+</script>
+</body>
+</html>

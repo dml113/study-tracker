@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>공부 트래커</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+  .header { background: #1e293b; padding: 16px 32px; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 1.3rem; font-weight: 700; color: #60a5fa; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .logout-btn { background: none; border: 1px solid #475569; color: #94a3b8; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+  .logout-btn:hover { border-color: #64748b; color: #e2e8f0; }
+  .container { max-width: 900px; margin: 32px auto; padding: 0 24px; }
+  .date-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+  .date-bar input { background: #1e293b; border: 1px solid #334155; color: #e2e8f0; padding: 8px 14px; border-radius: 8px; font-size: 0.9rem; outline: none; }
+  .date-bar button { background: #3b82f6; color: white; border: none; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; }
+  .card { background: #1e293b; border-radius: 12px; padding: 20px 24px; margin-bottom: 14px; border: 1px solid #334155; display: flex; align-items: center; gap: 20px; }
+  .me { border-color: #3b82f6; }
+  .rank { font-size: 1.5rem; font-weight: 800; color: #475569; min-width: 36px; }
+  .rank.gold { color: #f59e0b; }
+  .rank.silver { color: #94a3b8; }
+  .rank.bronze { color: #b45309; }
+  .info { flex: 1; }
+  .name { font-size: 1rem; font-weight: 600; }
+  .time { color: #60a5fa; font-size: 0.85rem; margin-top: 3px; }
+  .bar-wrap { flex: 2; background: #0f172a; border-radius: 99px; height: 10px; overflow: hidden; }
+  .bar { height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); border-radius: 99px; transition: width 0.4s; }
+  .empty { text-align: center; color: #475569; padding: 60px 0; }
+  .updated { text-align: right; color: #475569; font-size: 0.8rem; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>공부 트래커</h1>
+  <div class="header-right">
+    <span id="myName" style="color:#94a3b8;font-size:0.9rem"></span>
+    <button class="logout-btn" onclick="logout()">로그아웃</button>
+  </div>
+</div>
+<div class="container">
+  <div class="date-bar">
+    <input type="date" id="dateInput">
+    <button onclick="loadStats()">조회</button>
+  </div>
+  <div id="board"></div>
+  <div class="updated" id="updatedAt"></div>
+</div>
+<script>
+  const token = localStorage.getItem('token');
+  if (!token) location.href = '/';
+  const myUsername = localStorage.getItem('username');
+  document.getElementById('myName').textContent = myUsername;
+  document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+
+  function logout() { localStorage.clear(); location.href = '/'; }
+  function authHeaders() { return { 'Authorization': 'Bearer ' + token }; }
+
+  async function loadStats() {
+    const d = document.getElementById('dateInput').value;
+    const res = await fetch('/api/stats?target_date=' + d, { headers: authHeaders() });
+    if (res.status === 401) { logout(); return; }
+    const data = await res.json();
+    const board = document.getElementById('board');
+    if (!data.length) { board.innerHTML = '<div class="empty">아직 기록이 없어요!</div>'; return; }
+    const max = data[0].active_minutes;
+    const rc = ['gold', 'silver', 'bronze'];
+    board.innerHTML = data.map((u, i) => `
+      <div class="card ${u.username === myUsername ? 'me' : ''}">
+        <div class="rank ${rc[i] || ''}">${i + 1}</div>
+        <div class="info">
+          <div class="name">${u.username}${u.username === myUsername ? ' <span style="color:#60a5fa;font-size:0.8rem">(나)</span>' : ''}</div>
+          <div class="time">${u.active_minutes}분 활동</div>
+        </div>
+        <div class="bar-wrap"><div class="bar" style="width:${max > 0 ? u.active_minutes / max * 100 : 0}%"></div></div>
+      </div>
+    `).join('');
+    document.getElementById('updatedAt').textContent = '마지막 업데이트: ' + new Date().toLocaleTimeString('ko-KR');
+  }
+
+  loadStats();
+  setInterval(loadStats, 30000);
+</script>
+</body>
+</html>
