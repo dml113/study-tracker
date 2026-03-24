@@ -348,18 +348,62 @@ class MainWindow:
 
     # ── 외출 시작 ──
     def start_absence(self):
-        reason = simpledialog.askstring("외출", "외출 사유를 입력하세요:", parent=self.root)
-        if not reason or not reason.strip():
-            return
-        try:
-            res = api("post", "/api/absence/start", json={"reason": reason.strip()})
-            data = res.json()
-            if res.ok:
-                state["is_absent"] = True
-            else:
-                messagebox.showerror("오류", data.get("detail", "외출 처리 실패"))
-        except Exception:
-            messagebox.showerror("오류", "서버에 연결할 수 없습니다")
+        PRESET_REASONS = ["점심시간", "저녁시간", "화장실", "휴식", "기타"]
+
+        dialog = tk.Toplevel(self.root)
+        dialog.title("외출")
+        dialog.geometry("260x260")
+        dialog.resizable(False, False)
+        dialog.configure(bg=self.BG)
+        dialog.grab_set()
+
+        tk.Label(dialog, text="외출 사유", bg=self.BG, fg=self.BLUE,
+                 font=("Segoe UI", 11, "bold")).pack(pady=(16, 10))
+
+        selected = tk.StringVar(value=PRESET_REASONS[0])
+        for r in PRESET_REASONS:
+            tk.Radiobutton(dialog, text=r, variable=selected, value=r,
+                           bg=self.BG, fg=self.TEXT, selectcolor=self.CARD,
+                           activebackground=self.BG, activeforeground=self.TEXT,
+                           font=("Segoe UI", 9)).pack(anchor="w", padx=24)
+
+        e_other = tk.Entry(dialog, bg=self.CARD, fg=self.TEXT, insertbackground="white",
+                           relief="flat", font=("Segoe UI", 9))
+        e_other.pack(fill="x", padx=24, pady=(4, 0), ipady=5)
+
+        def on_radio(*_):
+            e_other.config(state="normal" if selected.get() == "기타" else "disabled")
+            if selected.get() != "기타":
+                e_other.delete(0, "end")
+
+        selected.trace_add("write", on_radio)
+        e_other.config(state="disabled")
+
+        lbl_err = tk.Label(dialog, text="", bg=self.BG, fg="#f87171", font=("Segoe UI", 8))
+        lbl_err.pack()
+
+        def submit():
+            r = selected.get()
+            if r == "기타":
+                r = e_other.get().strip()
+                if not r:
+                    lbl_err.config(text="기타 사유를 입력하세요")
+                    return
+            try:
+                res = api("post", "/api/absence/start", json={"reason": r})
+                data = res.json()
+                if res.ok:
+                    state["is_absent"] = True
+                    dialog.destroy()
+                else:
+                    lbl_err.config(text=data.get("detail", "외출 처리 실패"))
+            except Exception:
+                lbl_err.config(text="서버에 연결할 수 없습니다")
+
+        tk.Button(dialog, text="외출", bg=self.YELLOW, fg="#0f172a", relief="flat",
+                  font=("Segoe UI", 10, "bold"), cursor="hand2",
+                  command=submit).pack(fill="x", padx=24, pady=(4, 0), ipady=6)
+        dialog.bind("<Return>", lambda _: submit())
 
     # ── 복귀 ──
     def end_absence(self):
