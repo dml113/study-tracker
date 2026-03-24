@@ -78,7 +78,16 @@ MEAL_TIMES = {
 - `period=daily` (기본): 해당 날짜 하루 집계
 - `period=weekly`: target_date 기준 해당 주 월~일 `SUM(active_seconds)`
 - `period=monthly`: 해당 월 전체 집계
-- 응답에 `goal_minutes`, `achievement_rate` 포함
+- 응답에 `goal_minutes`, `achievement_rate`, **`lifetime_minutes`** 포함
+- `lifetime_minutes`: 날짜 필터 없는 ALL-TIME 누적 공부시간 (알 부화 계산용)
+
+### 알 부화 시스템 (프론트엔드 전용, DB 변경 없음)
+- `getEggType(username)`: `Array.from(username).reduce((s,c)=>s+c.charCodeAt(0),0) % 8` → 0~7
+- 8종 동물: 고양이(0) 강아지(1) 햄스터(2) 토끼(3) 개구리(4) 여우(5) 판다(6) 코알라(7)
+- 부화 단계 thresholds (누적 분): `[0, 300, 900, 1800]` (5h / 15h / 30h)
+- 각 단계별 SVG 일러스트: 자는 알 → 금 가는 알 → 깨지는 알 → 동물
+- SVG는 `width="100%" height="100%"` 속성 필수 (없으면 크기 0으로 렌더링됨)
+- `lifetime_minutes`가 없는 유저(공부 기록 없음)도 `updateEggHero(0)` 호출해야 알 표시됨
 
 ### 목표 시간 (StudyGoal 모델)
 - `group_id=NULL`: 전체 기본 목표 (기본값 480분)
@@ -111,7 +120,7 @@ MEAL_TIMES = {
 
 ## 서버 배포 정보
 
-- **서버**: Ubuntu 22.04, `172.16.145.81:8000`
+- **서버**: Ubuntu 22.04, `172.16.145.16:8000`
 - **서비스**: systemd `study-tracker.service`
 - **WorkingDirectory**: `/home/user/study-tracker` (server/ 하위가 아님!)
 - **타임존**: `TZ=Asia/Seoul` (서비스 파일에 설정)
@@ -123,19 +132,19 @@ MEAL_TIMES = {
 ### 배포 명령어
 ```bash
 # 파일 업로드 (sshpass 사용)
-sshpass -p 'PASSWORD' scp server/*.py user@172.16.145.81:~/study-tracker/
-sshpass -p 'PASSWORD' scp server/routers/*.py user@172.16.145.81:~/study-tracker/routers/
-sshpass -p 'PASSWORD' scp server/static/*.html user@172.16.145.81:~/study-tracker/static/
+sshpass -p 'PASSWORD' scp server/*.py user@172.16.145.16:~/study-tracker/
+sshpass -p 'PASSWORD' scp server/routers/*.py user@172.16.145.16:~/study-tracker/routers/
+sshpass -p 'PASSWORD' scp server/static/*.html user@172.16.145.16:~/study-tracker/static/
 
 # 캐시 제거 후 재시작 (중요: __pycache__ 남아있으면 구버전 실행됨)
-sshpass -p 'PASSWORD' ssh user@172.16.145.81 \
+sshpass -p 'PASSWORD' ssh user@172.16.145.16 \
   'find ~/study-tracker -name "__pycache__" -not -path "*/venv/*" -exec rm -rf {} + 2>/dev/null && sudo systemctl restart study-tracker'
 
 # 로그 확인
 sudo journalctl -u study-tracker -f
 
 # DB 스키마 변경 시 (migration 미적용)
-sshpass -p 'PASSWORD' ssh user@172.16.145.81 \
+sshpass -p 'PASSWORD' ssh user@172.16.145.16 \
   'rm -f ~/study-tracker/study_tracker.db && sudo systemctl restart study-tracker'
 ```
 
@@ -168,7 +177,7 @@ sshpass -p 'PASSWORD' ssh user@172.16.145.81 \
 - 트리거: `client/VERSION` 변경 후 main push, 또는 수동 실행(workflow_dispatch)
 - `permissions: contents: write` 설정됨
 - GitHub Secrets (이미 등록):
-  - `SERVER_URL`: `http://172.16.145.81:8000`
+  - `SERVER_URL`: `http://172.16.145.16:8000`
   - `ADMIN_PASSWORD`: 관리자 비밀번호
 - 서버가 사설IP(`172.16.145.x`)라 GitHub Actions에서 직접 업로드 불가 → `sync-github` 엔드포인트로 우회
 
@@ -177,6 +186,12 @@ sshpass -p 'PASSWORD' ssh user@172.16.145.81 \
 - 인증 토큰은 `localStorage`에 저장
 - API 호출 시 `Authorization: Bearer <token>` 헤더 필수
 - 관리자 체크: `role === 'admin'` 아닌 `['superadmin','group_admin'].includes(role)` 사용
+- 4개 페이지: `login.html`, `dashboard.html`, `me.html`, `admin.html`
+- 디자인: Nunito 폰트, 파스텔 크림(`#fdf6f0`) 배경, 핑크/퍼플 그라디언트 테마
+
+### GitHub Actions CI/CD 관련
+- `SERVER_URL`: `http://172.16.145.16:8000` (Secrets에 등록)
+- 서버 IP가 `172.16.145.16`으로 변경됨 (이전: `.81`, `.145.81`)
 
 ## API 엔드포인트 요약
 
@@ -198,7 +213,8 @@ sshpass -p 'PASSWORD' ssh user@172.16.145.81 \
 | POST | `/api/heartbeat` | member+ | 활동 시간 전송 (body: active_seconds) |
 | POST | `/api/cheat-report` | member+ | 치트 감지 신고 (body: reason) |
 | POST | `/api/change-password` | member+ | 비밀번호 변경 (body: current_password, new_password) |
-| GET | `/api/stats` | member+ | 랭킹 조회 (?target_date&period=daily\|weekly\|monthly) |
+| GET | `/api/my-stats` | member+ | 내 통계 조회 (?days=30) — daily[], weekly[], streak |
+| GET | `/api/stats` | member+ | 랭킹 조회 (?target_date&period=daily\|weekly\|monthly) — lifetime_minutes 포함 |
 | GET | `/admin/groups` | admin+ | 그룹 목록 |
 | POST | `/admin/groups` | superadmin | 그룹 생성 |
 | DELETE | `/admin/groups/{id}` | superadmin | 그룹 삭제 |
