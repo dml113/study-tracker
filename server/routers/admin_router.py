@@ -6,7 +6,7 @@ from typing import Optional
 from models import User, ActivityLog, Attendance, Absence, Group, CheatLog, StudyGoal
 from auth import hash_password, get_current_admin, get_current_superadmin
 from database import get_session
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -207,6 +207,104 @@ async def delete_user(
     await session.delete(user)
     await session.commit()
     return {"message": "삭제되었습니다"}
+
+
+# ── 공부 기록 수정 ─────────────────────────────────────
+
+class ActivityEditRequest(BaseModel):
+    active_seconds: float
+
+class ActivityCreateRequest(BaseModel):
+    username: str
+    date: str
+    active_seconds: float
+
+
+@router.get("/activity")
+async def get_activity(
+    target_date: Optional[str] = None,
+    username: Optional[str] = None,
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_admin),
+):
+    d = target_date or date.today().isoformat()
+    query = select(ActivityLog).where(ActivityLog.date == d)
+    if username:
+        query = query.where(ActivityLog.username == username)
+    if current["role"] == "group_admin":
+        users_result = await session.execute(
+            select(User.username).where(User.group_id == current.get("group_id"))
+        )
+        group_usernames = {row[0] for row in users_result.all()}
+        query = query.where(ActivityLog.username.in_(group_usernames))
+    result = await session.execute(query.order_by(ActivityLog.active_seconds.desc()))
+    logs = result.scalars().all()
+    return [
+        {
+            "id": log.id,
+            "username": log.username,
+            "date": log.date,
+            "active_seconds": log.active_seconds,
+            "active_minutes": round(log.active_seconds / 60, 1),
+            "last_updated": log.last_updated.isoformat(),
+        }
+        for log in logs
+    ]
+
+
+@router.patch("/activity/{log_id}")
+async def update_activity(
+    log_id: int,
+    req: ActivityEditRequest,
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_admin),
+):
+    result = await session.execute(select(ActivityLog).where(ActivityLog.id == log_id))
+    log = result.scalar_one_or_none()
+    if not log:
+        raise HTTPException(status_code=404, detail="기록을 찾을 수 없습니다")
+    if current["role"] == "group_admin":
+        users_result = await session.execute(
+            select(User.username).where(User.group_id == current.get("group_id"))
+        )
+        group_usernames = {row[0] for row in users_result.all()}
+        if log.username not in group_usernames:
+            raise HTTPException(status_code=403, detail="다른 그룹의 기록은 수정할 수 없습니다")
+    if req.active_seconds < 0:
+        raise HTTPException(status_code=400, detail="활동 시간은 0 이상이어야 합니다")
+    log.active_seconds = req.active_seconds
+    log.last_updated = datetime.now()
+    await session.commit()
+    return {"message": "수정되었습니다"}
+
+
+@router.post("/activity")
+async def create_activity(
+    req: ActivityCreateRequest,
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_admin),
+):
+    if current["role"] == "group_admin":
+        users_result = await session.execute(
+            select(User.username).where(User.group_id == current.get("group_id"))
+        )
+        group_usernames = {row[0] for row in users_result.all()}
+        if req.username not in group_usernames:
+            raise HTTPException(status_code=403, detail="다른 그룹의 유저는 수정할 수 없습니다")
+    if req.active_seconds < 0:
+        raise HTTPException(status_code=400, detail="활동 시간은 0 이상이어야 합니다")
+    existing = await session.execute(
+        select(ActivityLog).where(ActivityLog.username == req.username, ActivityLog.date == req.date)
+    )
+    log = existing.scalar_one_or_none()
+    if log:
+        log.active_seconds = req.active_seconds
+        log.last_updated = datetime.now()
+    else:
+        log = ActivityLog(username=req.username, date=req.date, active_seconds=req.active_seconds)
+        session.add(log)
+    await session.commit()
+    return {"message": "저장되었습니다"}
 
 
 # ── 출퇴근 기록 ────────────────────────────────────────

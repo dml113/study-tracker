@@ -57,6 +57,11 @@ async def dashboard_page():
     return FileResponse("static/dashboard.html")
 
 
+@app.get("/me", response_class=HTMLResponse)
+async def me_page():
+    return FileResponse("static/me.html")
+
+
 # ── 클라이언트 배포 ────────────────────────────────────
 
 @app.get("/client/version")

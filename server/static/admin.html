@@ -88,6 +88,7 @@
     <button class="tab" onclick="switchTab('stats', this)">공부 통계</button>
     <button class="tab" onclick="switchTab('attendance', this)">출퇴근 기록</button>
     <button class="tab" onclick="switchTab('cheats', this)">치트 감지</button>
+    <button class="tab" onclick="switchTab('activity', this)">기록 수정</button>
     <button class="tab" onclick="switchTab('goals', this)">목표 설정</button>
     <button class="tab" onclick="switchTab('absence-stats', this)">외출 통계</button>
     <button class="tab" id="groupTab" style="display:none" onclick="switchTab('groups', this)">그룹 관리</button>
@@ -188,6 +189,15 @@
       </div>
       <div id="uploadStatus" style="font-size:0.85rem;color:#94a3b8"></div>
     </div>
+  </div>
+
+  <!-- 기록 수정 -->
+  <div id="tab-activity" style="display:none">
+    <div class="date-bar">
+      <input type="date" id="actDate">
+      <button class="btn btn-primary" onclick="loadActivity()">조회</button>
+    </div>
+    <div id="actList"></div>
   </div>
 
   <!-- 목표 설정 -->
@@ -304,7 +314,7 @@
   function switchTab(tab, el) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
-    ['users','stats','attendance','cheats','goals','absence-stats','groups','client','backup'].forEach(t => {
+    ['users','stats','attendance','cheats','activity','goals','absence-stats','groups','client','backup'].forEach(t => {
       const div = document.getElementById('tab-' + t);
       if (div) div.style.display = t === tab ? 'block' : 'none';
     });
@@ -313,6 +323,7 @@
     if (tab === 'groups') loadGroups();
     if (tab === 'cheats') loadCheats();
     if (tab === 'client') loadClientVersion();
+    if (tab === 'activity') loadActivity();
     if (tab === 'goals') loadGoals();
     if (tab === 'absence-stats') loadAbsenceStats();
     if (tab === 'backup') loadBackups();
@@ -353,6 +364,7 @@
     const res = await fetch('/admin/users', { headers: authH() });
     if (!res.ok) { logout(); return; }
     const users = await res.json();
+    window._allUsers = users;
     const maxSec = Math.max(...users.map(u => u.today_seconds), 1);
     document.getElementById('userTableBody').innerHTML = users.map(u => `
       <tr>
@@ -575,6 +587,108 @@
       </table>`;
   }
 
+  // ── 기록 수정 ──
+  let editingLogId = null;
+
+  async function loadActivity() {
+    const d = document.getElementById('actDate').value || new Date().toISOString().split('T')[0];
+    const res = await fetch('/admin/activity?target_date=' + d, { headers: authH() });
+    const data = await res.json();
+    const list = document.getElementById('actList');
+
+    const addRow = `
+      <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:18px 22px;margin-bottom:16px">
+        <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:10px">기록 직접 추가</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+          <div class="form-group">
+            <label>유저</label>
+            <select id="newActUser" style="min-width:120px">
+              ${(window._allUsers||[]).map(u=>`<option value="${u.username}">${u.username}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group"><label>날짜</label><input type="date" id="newActDate" value="${d}"></div>
+          <div class="form-group"><label>활동 시간 (분)</label><input type="number" id="newActMinutes" min="0" placeholder="예: 120" style="min-width:100px"></div>
+          <button class="btn btn-primary" onclick="createActivity()">추가</button>
+        </div>
+      </div>`;
+
+    if (!data.length) {
+      list.innerHTML = addRow + '<div style="text-align:center;color:#475569;padding:40px 0">기록이 없습니다</div>';
+      return;
+    }
+    list.innerHTML = addRow + `
+      <table>
+        <thead><tr><th>유저</th><th>날짜</th><th>활동 시간</th><th>마지막 업데이트</th><th>수정</th></tr></thead>
+        <tbody>
+          ${data.map(r => `
+            <tr id="row-${r.id}">
+              <td><strong>${r.username}</strong></td>
+              <td style="color:#94a3b8">${r.date}</td>
+              <td>
+                <span id="disp-${r.id}">${r.active_minutes}분</span>
+                <input type="number" id="inp-${r.id}" value="${r.active_minutes}" min="0"
+                  style="display:none;width:80px;background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:4px 8px;border-radius:6px;font-size:0.88rem">
+              </td>
+              <td style="color:#475569;font-size:0.8rem">${r.last_updated.slice(0,16).replace('T',' ')}</td>
+              <td>
+                <div class="td-actions">
+                  <button class="btn-sm" style="background:#0369a1;color:white" id="editBtn-${r.id}" onclick="startEdit(${r.id})">수정</button>
+                  <button class="btn-sm btn-primary" id="saveBtn-${r.id}" style="display:none" onclick="saveActivity(${r.id})">저장</button>
+                  <button class="btn-sm" style="background:#334155;color:#e2e8f0;display:none" id="cancelBtn-${r.id}" onclick="cancelEdit(${r.id}, ${r.active_minutes})">취소</button>
+                </div>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  function startEdit(id) {
+    document.getElementById('disp-'+id).style.display = 'none';
+    document.getElementById('inp-'+id).style.display = '';
+    document.getElementById('editBtn-'+id).style.display = 'none';
+    document.getElementById('saveBtn-'+id).style.display = '';
+    document.getElementById('cancelBtn-'+id).style.display = '';
+  }
+
+  function cancelEdit(id, origMinutes) {
+    document.getElementById('inp-'+id).value = origMinutes;
+    document.getElementById('disp-'+id).style.display = '';
+    document.getElementById('inp-'+id).style.display = 'none';
+    document.getElementById('editBtn-'+id).style.display = '';
+    document.getElementById('saveBtn-'+id).style.display = 'none';
+    document.getElementById('cancelBtn-'+id).style.display = 'none';
+  }
+
+  async function saveActivity(id) {
+    const minutes = parseFloat(document.getElementById('inp-'+id).value);
+    if (isNaN(minutes) || minutes < 0) { showToast('올바른 값을 입력하세요', 'error'); return; }
+    const res = await fetch('/admin/activity/'+id, {
+      method: 'PATCH', headers: authH(),
+      body: JSON.stringify({ active_seconds: minutes * 60 })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast(data.message);
+      document.getElementById('disp-'+id).textContent = minutes + '분';
+      cancelEdit(id, minutes);
+    } else showToast(data.detail, 'error');
+  }
+
+  async function createActivity() {
+    const username = document.getElementById('newActUser').value;
+    const date = document.getElementById('newActDate').value;
+    const minutes = parseFloat(document.getElementById('newActMinutes').value);
+    if (!username || !date) { showToast('유저와 날짜를 입력하세요', 'error'); return; }
+    if (isNaN(minutes) || minutes < 0) { showToast('활동 시간을 입력하세요', 'error'); return; }
+    const res = await fetch('/admin/activity', {
+      method: 'POST', headers: authH(),
+      body: JSON.stringify({ username, date, active_seconds: minutes * 60 })
+    });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); loadActivity(); }
+    else showToast(data.detail, 'error');
+  }
+
   // ── 목표 설정 ──
   async function loadGoals() {
     await loadGroupOptions();
@@ -767,6 +881,7 @@
   // 초기화
   const today = new Date().toISOString().split('T')[0];
   const weekAgo = new Date(Date.now() - 6*86400000).toISOString().split('T')[0];
+  document.getElementById('actDate').value = today;
   document.getElementById('statsDate').value = today;
   document.getElementById('attDate').value = today;
   document.getElementById('cheatDate').value = today;

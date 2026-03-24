@@ -274,6 +274,81 @@ async def change_password_endpoint(
     return {"message": "비밀번호가 변경되었습니다"}
 
 
+@router.get("/my-stats")
+async def my_stats(
+    days: int = 30,
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_user),
+):
+    username = current["sub"]
+    end_d = date.today()
+    start_d = end_d - timedelta(days=days - 1)
+
+    logs_result = await session.execute(
+        select(ActivityLog)
+        .where(ActivityLog.username == username,
+               ActivityLog.date.between(start_d.isoformat(), end_d.isoformat()))
+    )
+    logs = {log.date: log.active_seconds for log in logs_result.scalars().all()}
+
+    att_result = await session.execute(
+        select(Attendance).where(
+            Attendance.username == username,
+            Attendance.date.between(start_d.isoformat(), end_d.isoformat()),
+            Attendance.checkin_at != None,
+        )
+    )
+    attended_dates = {att.date for att in att_result.scalars().all()}
+
+    daily = []
+    temp_streak = 0
+    max_streak = 0
+    for i in range(days):
+        d = (start_d + timedelta(days=i)).isoformat()
+        secs = logs.get(d, 0)
+        daily.append({"date": d, "active_seconds": secs,
+                      "active_minutes": round(secs / 60, 1), "attended": d in attended_dates})
+        if secs > 0:
+            temp_streak += 1
+            max_streak = max(max_streak, temp_streak)
+        else:
+            temp_streak = 0
+
+    current_streak = 0
+    for item in reversed(daily):
+        if item["active_seconds"] > 0:
+            current_streak += 1
+        else:
+            break
+
+    weeks = []
+    for w in range(4):
+        wend = end_d - timedelta(days=w * 7)
+        wstart = wend - timedelta(days=6)
+        wsecs = sum(logs.get((wstart + timedelta(days=i)).isoformat(), 0) for i in range(7))
+        weeks.append({"start": wstart.isoformat(), "end": wend.isoformat(),
+                      "active_minutes": round(wsecs / 60, 1)})
+
+    # 목표 조회
+    user_row = (await session.execute(select(User.group_id).where(User.username == username))).first()
+    group_id = user_row[0] if user_row else None
+    goals = (await session.execute(select(StudyGoal))).scalars().all()
+    goal_by_group = {g.group_id: g.daily_target_minutes for g in goals}
+    daily_goal = goal_by_group.get(group_id, goal_by_group.get(None, 480))
+
+    return {
+        "username": username,
+        "period": {"start": start_d.isoformat(), "end": end_d.isoformat(), "days": days},
+        "total_minutes": round(sum(logs.values()) / 60, 1),
+        "attend_days": len(attended_dates),
+        "current_streak": current_streak,
+        "max_streak": max_streak,
+        "daily_goal_minutes": daily_goal,
+        "daily": daily,
+        "weekly": weeks,
+    }
+
+
 @router.get("/stats")
 async def get_stats(
     target_date: Optional[str] = None,
