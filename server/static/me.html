@@ -40,10 +40,10 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
   position:absolute; top:14px; left:14px; right:14px; bottom:14px;
   border-radius:50% 50% 50% 50% / 58% 58% 42% 42%;
   display:flex; align-items:center; justify-content:center;
-  box-shadow:0 4px 16px rgba(0,0,0,0.1);
-  font-size:2.8rem;
+  box-shadow:0 4px 16px rgba(0,0,0,0.1); overflow:hidden;
 }
-.egg-big.hatched { font-size:3.2rem; animation:pop 0.6s ease; }
+.egg-big.animal { border-radius:50%; }
+.egg-big.hatched { animation:pop 0.6s ease; }
 @keyframes pop { 0%{transform:scale(0.6)} 70%{transform:scale(1.15)} 100%{transform:scale(1)} }
 .egg-hero-info { flex:1; }
 .egg-hero-title { font-size:1.5rem; font-weight:900; margin-bottom:4px; }
@@ -109,7 +109,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
           stroke-dasharray="314" stroke-dashoffset="314" stroke-linecap="round" transform="rotate(-90 60 60)"
           style="transition:stroke-dashoffset 1s ease"/>
       </svg>
-      <div class="egg-big" id="eggBig">🥚</div>
+      <div class="egg-big" id="eggBig"></div>
     </div>
     <div class="egg-hero-info">
       <div class="egg-hero-title" id="eggTitle">내 알 🥚</div>
@@ -153,10 +153,160 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
     {bg:'#f5f5f5',from:'#e0e0e0',ring:'#9e9e9e'},
     {bg:'#e3f2fd',from:'#90caf9',ring:'#42a5f5'},
   ];
-  const ANIMALS = ['🐱','🐶','🐹','🐰','🐸','🦊','🐼','🐨'];
   const ANIMAL_NAMES = ['고양이','강아지','햄스터','토끼','개구리','여우','판다','코알라'];
   const THRESHOLDS = [0, 300, 900, 1800];
   const STAGE_LABELS = ['알 🥚','금 가는 중 ✨','부화 중 🐣','부화 완료! 🎉'];
+
+  const ANIMAL_SVGS = [
+    `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<polygon points="21,47 13,13 40,34" fill="#FFCBA4"/><polygon points="79,47 87,13 60,34" fill="#FFCBA4"/>
+<polygon points="24,43 18,18 38,33" fill="#FFB0C8"/><polygon points="76,43 82,18 62,33" fill="#FFB0C8"/>
+<circle cx="50" cy="60" r="34" fill="#FFCBA4"/>
+<circle cx="37" cy="55" r="9" fill="white"/><circle cx="63" cy="55" r="9" fill="white"/>
+<ellipse cx="37" cy="56" rx="5" ry="7" fill="#6AABDE"/><ellipse cx="63" cy="56" rx="5" ry="7" fill="#6AABDE"/>
+<ellipse cx="37" cy="57" rx="3" ry="5" fill="#1a1020"/><ellipse cx="63" cy="57" rx="3" ry="5" fill="#1a1020"/>
+<circle cx="39" cy="53" r="2" fill="white"/><circle cx="65" cy="53" r="2" fill="white"/>
+<ellipse cx="50" cy="67" rx="3.5" ry="2.5" fill="#FF9DC0"/>
+<path d="M46,70 Q50,75 54,70" stroke="#FF9DC0" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<line x1="10" y1="63" x2="43" y2="65" stroke="rgba(80,60,80,0.3)" stroke-width="1.2"/>
+<line x1="10" y1="68" x2="43" y2="68" stroke="rgba(80,60,80,0.3)" stroke-width="1.2"/>
+<line x1="57" y1="65" x2="90" y2="63" stroke="rgba(80,60,80,0.3)" stroke-width="1.2"/>
+<line x1="57" y1="68" x2="90" y2="68" stroke="rgba(80,60,80,0.3)" stroke-width="1.2"/>
+<circle cx="29" cy="65" r="6" fill="rgba(255,160,180,0.35)"/><circle cx="71" cy="65" r="6" fill="rgba(255,160,180,0.35)"/>
+</svg>`,
+    `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<ellipse cx="21" cy="62" rx="13" ry="21" fill="#C8922A" transform="rotate(-8 21 62)"/>
+<ellipse cx="79" cy="62" rx="13" ry="21" fill="#C8922A" transform="rotate(8 79 62)"/>
+<circle cx="50" cy="53" r="33" fill="#E8B870"/>
+<ellipse cx="50" cy="67" rx="16" ry="10" fill="#D4A050"/>
+<circle cx="37" cy="47" r="9" fill="white"/><circle cx="63" cy="47" r="9" fill="white"/>
+<circle cx="37" cy="48" r="6" fill="#3A2010"/><circle cx="63" cy="48" r="6" fill="#3A2010"/>
+<circle cx="39" cy="46" r="2.2" fill="white"/><circle cx="65" cy="46" r="2.2" fill="white"/>
+<ellipse cx="50" cy="62" rx="5" ry="3.5" fill="#2A1A0A"/>
+<ellipse cx="48.5" cy="61" rx="1.5" ry="1" fill="rgba(255,255,255,0.4)"/>
+<path d="M44,67 Q50,73 56,67" stroke="#C08040" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<ellipse cx="50" cy="71" rx="4.5" ry="3.5" fill="#FF9999"/>
+<circle cx="27" cy="58" r="7" fill="rgba(255,160,100,0.28)"/><circle cx="73" cy="58" r="7" fill="rgba(255,160,100,0.28)"/>
+</svg>`,
+    `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<ellipse cx="15" cy="63" rx="15" ry="13" fill="#F5C896"/>
+<ellipse cx="85" cy="63" rx="15" ry="13" fill="#F5C896"/>
+<circle cx="27" cy="28" r="10" fill="#F0C070"/><circle cx="73" cy="28" r="10" fill="#F0C070"/>
+<circle cx="27" cy="28" r="6" fill="#FFB0C0"/><circle cx="73" cy="28" r="6" fill="#FFB0C0"/>
+<circle cx="50" cy="55" r="30" fill="#F0C070"/>
+<circle cx="38" cy="49" r="9.5" fill="white"/><circle cx="62" cy="49" r="9.5" fill="white"/>
+<circle cx="38" cy="50" r="7" fill="#2A1A0A"/><circle cx="62" cy="50" r="7" fill="#2A1A0A"/>
+<circle cx="40" cy="47" r="2.5" fill="white"/><circle cx="64" cy="47" r="2.5" fill="white"/>
+<circle cx="41" cy="53" r="1" fill="white"/><circle cx="65" cy="53" r="1" fill="white"/>
+<ellipse cx="50" cy="62" rx="3.5" ry="2.5" fill="#FFB0A0"/>
+<path d="M46,65 Q50,70 54,65" stroke="#E8906A" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<circle cx="18" cy="62" r="6" fill="rgba(255,150,130,0.4)"/><circle cx="82" cy="62" r="6" fill="rgba(255,150,130,0.4)"/>
+</svg>`,
+    `<svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+<ellipse cx="35" cy="26" rx="9" ry="24" fill="#EEE8F8" transform="rotate(-8 35 26)"/>
+<ellipse cx="65" cy="26" rx="9" ry="24" fill="#EEE8F8" transform="rotate(8 65 26)"/>
+<ellipse cx="35" cy="26" rx="5.5" ry="19" fill="#F8C0D8" transform="rotate(-8 35 26)"/>
+<ellipse cx="65" cy="26" rx="5.5" ry="19" fill="#F8C0D8" transform="rotate(8 65 26)"/>
+<circle cx="50" cy="74" r="30" fill="#EEE8F8"/>
+<circle cx="37" cy="69" r="9" fill="white"/><circle cx="63" cy="69" r="9" fill="white"/>
+<circle cx="37" cy="70" r="6.5" fill="#CC5577"/><circle cx="63" cy="70" r="6.5" fill="#CC5577"/>
+<circle cx="39" cy="67" r="2.2" fill="white"/><circle cx="65" cy="67" r="2.2" fill="white"/>
+<ellipse cx="50" cy="80" rx="3.5" ry="2.5" fill="#FF99BB"/>
+<path d="M46,83 Q50,88 54,83" stroke="#FF99BB" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<circle cx="29" cy="79" r="6" fill="rgba(255,160,200,0.3)"/><circle cx="71" cy="79" r="6" fill="rgba(255,160,200,0.3)"/>
+</svg>`,
+    `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<circle cx="33" cy="34" r="14" fill="#5CBF6A"/><circle cx="67" cy="34" r="14" fill="#5CBF6A"/>
+<ellipse cx="50" cy="65" rx="36" ry="27" fill="#7ED68A"/>
+<circle cx="33" cy="34" r="10" fill="white"/><circle cx="67" cy="34" r="10" fill="white"/>
+<circle cx="33" cy="35" r="7" fill="#1A3A1A"/><circle cx="67" cy="35" r="7" fill="#1A3A1A"/>
+<circle cx="35" cy="33" r="2.5" fill="white"/><circle cx="69" cy="33" r="2.5" fill="white"/>
+<ellipse cx="50" cy="62" rx="22" ry="12" fill="#B8F0B0"/>
+<circle cx="44" cy="57" r="2.5" fill="#4A9A50"/><circle cx="56" cy="57" r="2.5" fill="#4A9A50"/>
+<path d="M30,71 Q50,85 70,71" stroke="#3A8040" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+<circle cx="26" cy="71" r="6" fill="rgba(150,230,150,0.35)"/><circle cx="74" cy="71" r="6" fill="rgba(150,230,150,0.35)"/>
+</svg>`,
+    `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<polygon points="24,47 14,11 42,32" fill="#E8742A"/><polygon points="76,47 86,11 58,32" fill="#E8742A"/>
+<polygon points="27,43 19,16 40,31" fill="#FFB0C8"/><polygon points="73,43 81,16 60,31" fill="#FFB0C8"/>
+<circle cx="50" cy="57" r="33" fill="#E8742A"/>
+<ellipse cx="50" cy="65" rx="20" ry="15" fill="white"/>
+<circle cx="37" cy="49" r="9" fill="white"/><circle cx="63" cy="49" r="9" fill="white"/>
+<ellipse cx="37" cy="50" rx="5" ry="6.5" fill="#2A1A08"/><ellipse cx="63" cy="50" rx="5" ry="6.5" fill="#2A1A08"/>
+<ellipse cx="37" cy="50" rx="2.5" ry="4" fill="#1a1020"/><ellipse cx="63" cy="50" rx="2.5" ry="4" fill="#1a1020"/>
+<circle cx="39" cy="48" r="2" fill="white"/><circle cx="65" cy="48" r="2" fill="white"/>
+<ellipse cx="50" cy="63" rx="4" ry="3" fill="#2A1A08"/>
+<path d="M46,67 Q50,72 54,67" stroke="#C05020" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<circle cx="27" cy="61" r="7" fill="rgba(255,130,80,0.22)"/><circle cx="73" cy="61" r="7" fill="rgba(255,130,80,0.22)"/>
+</svg>`,
+    `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<circle cx="27" cy="28" r="13" fill="#2A2A2A"/><circle cx="73" cy="28" r="13" fill="#2A2A2A"/>
+<circle cx="50" cy="60" r="33" fill="#F5F5F0"/>
+<ellipse cx="35" cy="52" rx="13" ry="12" fill="#2A2A2A" transform="rotate(-12 35 52)"/>
+<ellipse cx="65" cy="52" rx="13" ry="12" fill="#2A2A2A" transform="rotate(12 65 52)"/>
+<circle cx="36" cy="53" r="8" fill="white"/><circle cx="64" cy="53" r="8" fill="white"/>
+<circle cx="36" cy="54" r="5.5" fill="#111"/><circle cx="64" cy="54" r="5.5" fill="#111"/>
+<circle cx="38" cy="52" r="2" fill="white"/><circle cx="66" cy="52" r="2" fill="white"/>
+<ellipse cx="50" cy="66" rx="4.5" ry="3.5" fill="#1A1A1A"/>
+<path d="M45,70 Q50,76 55,70" stroke="#444" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<circle cx="29" cy="67" r="6" fill="rgba(255,160,180,0.28)"/><circle cx="71" cy="67" r="6" fill="rgba(255,160,180,0.28)"/>
+</svg>`,
+    `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+<circle cx="19" cy="37" r="20" fill="#B0A8C0"/><circle cx="81" cy="37" r="20" fill="#B0A8C0"/>
+<circle cx="19" cy="37" r="13" fill="#D8D0E8"/><circle cx="81" cy="37" r="13" fill="#D8D0E8"/>
+<circle cx="50" cy="61" r="31" fill="#C8BCD8"/>
+<circle cx="37" cy="55" r="9" fill="white"/><circle cx="63" cy="55" r="9" fill="white"/>
+<circle cx="37" cy="56" r="6.5" fill="#2A2240"/><circle cx="63" cy="56" r="6.5" fill="#2A2240"/>
+<circle cx="39" cy="54" r="2.2" fill="white"/><circle cx="65" cy="54" r="2.2" fill="white"/>
+<ellipse cx="50" cy="67" rx="9" ry="6.5" fill="#5A4878"/>
+<ellipse cx="47.5" cy="65" rx="3" ry="2" fill="rgba(255,255,255,0.28)"/>
+<path d="M44,74 Q50,80 56,74" stroke="#7A6898" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<circle cx="27" cy="66" r="7" fill="rgba(200,180,230,0.38)"/><circle cx="73" cy="66" r="7" fill="rgba(200,180,230,0.38)"/>
+</svg>`
+  ];
+
+  function getEggStageSVG(stage, c) {
+    const fc = 'rgba(0,0,0,0.38)';
+    const bl = 'rgba(255,182,193,0.45)';
+    if (stage === 0) return `<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+<ellipse cx="50" cy="70" rx="36" ry="44" fill="${c.from}"/>
+<ellipse cx="37" cy="51" rx="8" ry="12" fill="rgba(255,255,255,0.28)" transform="rotate(-20 37 51)"/>
+<path d="M34,67 Q40,62 46,67" stroke="${fc}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+<path d="M54,67 Q60,62 66,67" stroke="${fc}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+<path d="M43,76 Q50,81 57,76" stroke="${fc}" stroke-width="2" fill="none" stroke-linecap="round"/>
+<circle cx="33" cy="73" r="5" fill="${bl}"/><circle cx="67" cy="73" r="5" fill="${bl}"/>
+<text x="66" y="51" font-family="Arial" font-size="10" fill="${fc}" font-weight="bold">z</text>
+<text x="73" y="40" font-family="Arial" font-size="12" fill="${fc}" font-weight="bold" opacity="0.7">z</text>
+<text x="81" y="29" font-family="Arial" font-size="14" fill="${fc}" font-weight="bold" opacity="0.45">z</text>
+</svg>`;
+    if (stage === 1) return `<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+<ellipse cx="50" cy="70" rx="36" ry="44" fill="${c.from}"/>
+<ellipse cx="37" cy="51" rx="8" ry="12" fill="rgba(255,255,255,0.28)" transform="rotate(-20 37 51)"/>
+<path d="M50,26 L47,36 L53,43 L50,50" stroke="${fc}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+<path d="M53,30 L57,38" stroke="${fc}" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+<circle cx="38" cy="67" r="8" fill="white"/><circle cx="62" cy="67" r="8" fill="white"/>
+<circle cx="38" cy="68" r="5.5" fill="#2A1A2A"/><circle cx="62" cy="68" r="5.5" fill="#2A1A2A"/>
+<circle cx="40" cy="66" r="2" fill="white"/><circle cx="64" cy="66" r="2" fill="white"/>
+<path d="M43,77 Q50,82 57,77" stroke="${fc}" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+<circle cx="32" cy="74" r="5" fill="${bl}"/><circle cx="68" cy="74" r="5" fill="${bl}"/>
+</svg>`;
+    return `<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+<ellipse cx="50" cy="70" rx="36" ry="44" fill="${c.from}"/>
+<path d="M18,56 Q28,35 50,29 Q72,35 82,56 Q70,51 64,58 Q58,45 52,52 Q46,41 40,49 Q34,45 30,55 Z" fill="${c.bg}" stroke="${fc}" stroke-width="1.5"/>
+<path d="M40,49 L44,61" stroke="${fc}" stroke-width="1.8" fill="none"/>
+<path d="M52,52 L50,64" stroke="${fc}" stroke-width="1.8" fill="none"/>
+<path d="M64,58 L59,64" stroke="${fc}" stroke-width="1.8" fill="none"/>
+<circle cx="38" cy="65" r="9" fill="white"/><circle cx="62" cy="65" r="9" fill="white"/>
+<circle cx="38" cy="66" r="6.5" fill="#2A1A2A"/><circle cx="62" cy="66" r="6.5" fill="#2A1A2A"/>
+<circle cx="40" cy="63.5" r="2.5" fill="white"/><circle cx="64" cy="63.5" r="2.5" fill="white"/>
+<path d="M33,57 Q38,52 44,57" stroke="${fc}" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M56,57 Q61,52 67,57" stroke="${fc}" stroke-width="2" fill="none" stroke-linecap="round"/>
+<circle cx="78" cy="73" r="8" fill="${c.from}" stroke="${fc}" stroke-width="1.5"/>
+<circle cx="74" cy="64" r="4" fill="${c.from}" stroke="${fc}" stroke-width="1.2"/>
+<circle cx="82" cy="64" r="4" fill="${c.from}" stroke="${fc}" stroke-width="1.2"/>
+<circle cx="68" cy="68" r="3.5" fill="${c.from}" stroke="${fc}" stroke-width="1.2"/>
+</svg>`;
+  }
 
   const token = localStorage.getItem('token');
   if (!token) location.href = '/';
@@ -181,12 +331,12 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
     const type = getEggType(myUsername);
     const { stage, progress, nextMins } = getEggInfo(lifetime_minutes);
     const c = EGG_COLORS[type];
-    const emoji = stage===3 ? ANIMALS[type] : (stage===2 ? '🐣' : '🥚');
+    const illust = stage === 3 ? ANIMAL_SVGS[type] : getEggStageSVG(stage, c);
     const eggEl = document.getElementById('eggBig');
-    eggEl.textContent = emoji;
-    eggEl.style.background = 'linear-gradient(135deg,' + c.bg + ',' + c.from + ')';
-    if (stage===3) eggEl.classList.add('hatched');
-    document.getElementById('eggTitle').textContent = stage===3 ? ANIMALS[type] + ' ' + ANIMAL_NAMES[type] + '!' : '내 알 🥚';
+    eggEl.innerHTML = '<div style="width:76px;height:76px">' + illust + '</div>';
+    eggEl.style.background = stage === 3 ? 'linear-gradient(135deg,#f8f8ff,#fff)' : 'linear-gradient(135deg,' + c.bg + ',' + c.from + ')';
+    if (stage===3) { eggEl.classList.add('hatched'); eggEl.classList.add('animal'); }
+    document.getElementById('eggTitle').textContent = stage===3 ? ANIMAL_NAMES[type] + '!' : '내 알 🥚';
     document.getElementById('eggStageLabel').textContent = STAGE_LABELS[stage];
     const bar = document.getElementById('eggProgressBar');
     bar.style.width = progress + '%';
