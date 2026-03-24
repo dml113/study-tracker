@@ -8,6 +8,7 @@ from auth import hash_password, get_current_superadmin
 from sqlalchemy import select
 import os
 import shutil
+import urllib.request
 
 CLIENT_DIR = "client_dist"
 VERSION_FILE = os.path.join(CLIENT_DIR, "version.txt")
@@ -83,3 +84,36 @@ async def upload_client(
     with open(VERSION_FILE, "w") as f:
         f.write(version)
     return {"message": f"버전 {version} 업로드 완료"}
+
+
+GITHUB_REPO = "dml113/study-tracker"
+
+@app.post("/admin/client/sync-github")
+async def sync_from_github(_: dict = Depends(get_current_superadmin)):
+    import json
+    try:
+        req = urllib.request.Request(
+            f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest",
+            headers={"User-Agent": "study-tracker-server"},
+        )
+        with urllib.request.urlopen(req, timeout=10) as res:
+            release = json.loads(res.read())
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"GitHub API 오류: {e}")
+
+    version = release["tag_name"].lstrip("v")
+    exe_asset = next(
+        (a for a in release.get("assets", []) if a["name"].endswith(".exe")), None
+    )
+    if not exe_asset:
+        raise HTTPException(status_code=404, detail="Release에 EXE 파일이 없습니다")
+
+    try:
+        urllib.request.urlretrieve(exe_asset["browser_download_url"], EXE_FILE)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"다운로드 오류: {e}")
+
+    with open(VERSION_FILE, "w") as f:
+        f.write(version)
+
+    return {"message": f"v{version} 동기화 완료"}

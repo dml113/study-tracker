@@ -41,17 +41,15 @@ jobs:
             --hidden-import=pynput.mouse._win32 `
             client.py
 
-      - name: Upload to server
+      - name: Create GitHub Release
         shell: bash
         env:
-          SERVER_URL: ${{ secrets.SERVER_URL }}
-          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.ver.outputs.version }}
         run: |
-          TOKEN=$(curl -s -X POST "${SERVER_URL}/auth/login" \
-            -d "username=admin&password=${ADMIN_PASSWORD}" \
-            | python -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
-
-          curl -X POST "${SERVER_URL}/admin/client/upload?version=${VERSION}" \
-            -H "Authorization: Bearer ${TOKEN}" \
-            -F "file=@client/dist/StudyTracker.exe"
+          gh release delete "v${VERSION}" --repo ${{ github.repository }} --yes 2>/dev/null || true
+          gh release create "v${VERSION}" \
+            --repo ${{ github.repository }} \
+            --title "Client v${VERSION}" \
+            --notes "자동 빌드 ($(date '+%Y-%m-%d %H:%M'))" \
+            client/dist/StudyTracker.exe

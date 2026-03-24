@@ -166,7 +166,12 @@
         </div>
       </div>
       <hr style="border-color:#334155;width:100%">
-      <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:4px">새 버전 업로드</div>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px">
+        <button class="btn btn-primary" onclick="syncGithub()" id="syncBtn">GitHub에서 동기화</button>
+        <span style="color:#475569;font-size:0.82rem">GitHub Release 최신 버전을 자동으로 가져옵니다</span>
+      </div>
+      <hr style="border-color:#334155;width:100%;margin-bottom:16px">
+      <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:4px">수동 업로드</div>
       <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
         <div class="form-group">
           <label>버전 번호</label>
@@ -524,6 +529,18 @@
   }
 
   // ── 클라이언트 배포 ──
+  async function syncGithub() {
+    const btn = document.getElementById('syncBtn');
+    btn.textContent = '동기화 중...';
+    btn.disabled = true;
+    const res = await fetch('/admin/client/sync-github', { method: 'POST', headers: authH() });
+    const data = await res.json();
+    btn.textContent = 'GitHub에서 동기화';
+    btn.disabled = false;
+    if (res.ok) { showToast(data.message); loadClientVersion(); }
+    else showToast(data.detail, 'error');
+  }
+
   async function loadClientVersion() {
     const res = await fetch('/client/version');
     const data = await res.json();
