@@ -3,32 +3,214 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>로그인 - 공부 트래커</title>
+<title>공부 트래커</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-  .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 40px; width: 360px; }
-  h1 { font-size: 1.5rem; font-weight: 700; color: #60a5fa; margin-bottom: 8px; text-align: center; }
-  p { color: #94a3b8; text-align: center; margin-bottom: 32px; font-size: 0.9rem; }
-  label { display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px; }
-  input { width: 100%; background: #0f172a; border: 1px solid #334155; color: #e2e8f0; padding: 10px 14px; border-radius: 8px; font-size: 0.95rem; margin-bottom: 18px; outline: none; }
-  input:focus { border-color: #3b82f6; }
-  .btn-login { width: 100%; background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; }
-  .btn-login:hover { background: #2563eb; }
-  .btn-download { width: 100%; background: transparent; color: #94a3b8; border: 1px solid #334155; padding: 10px; border-radius: 8px; font-size: 0.88rem; font-weight: 600; cursor: pointer; margin-top: 10px; display: none; }
-  .btn-download:hover { border-color: #64748b; color: #e2e8f0; }
-  .error { color: #f87171; font-size: 0.85rem; margin-bottom: 12px; display: none; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #06080f;
+  --cyan: #00d4ff;
+  --cyan-glow: rgba(0, 212, 255, 0.12);
+  --violet: #8b5cf6;
+  --border: rgba(255,255,255,0.08);
+  --text: #e2e8f0;
+  --muted: #4a5568;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Grid */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px);
+  background-size: 52px 52px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Orbs */
+.orbs { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  animation: drift 24s ease-in-out infinite;
+}
+.orb-1 {
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(0,80,255,0.18), transparent 70%);
+  top: -250px; left: -200px;
+  animation-delay: 0s;
+}
+.orb-2 {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(0,212,255,0.12), transparent 70%);
+  bottom: -150px; right: -100px;
+  animation-delay: -8s;
+}
+.orb-3 {
+  width: 350px; height: 350px;
+  background: radial-gradient(circle, rgba(139,92,246,0.1), transparent 70%);
+  top: 50%; left: 55%;
+  animation-delay: -16s;
+}
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(25px, -35px) scale(1.04); }
+  66% { transform: translate(-20px, 20px) scale(0.97); }
+}
+
+.card {
+  position: relative;
+  z-index: 1;
+  width: 400px;
+  padding: 52px 44px;
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.03) inset,
+    0 40px 80px rgba(0,0,0,0.6),
+    0 0 100px rgba(0,212,255,0.04);
+}
+
+.logo { text-align: center; margin-bottom: 12px; }
+.logo-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 3.4rem;
+  letter-spacing: 6px;
+  line-height: 0.92;
+  background: linear-gradient(135deg, #00d4ff 0%, #0066ff 50%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.logo-sub {
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,212,255,0.35), transparent);
+  margin: 30px 0;
+}
+
+.form-group { margin-bottom: 18px; }
+label {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+input {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text);
+  padding: 13px 16px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  outline: none;
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+}
+input:focus {
+  border-color: rgba(0,212,255,0.45);
+  background: rgba(0,212,255,0.04);
+  box-shadow: 0 0 24px rgba(0,212,255,0.1), 0 0 0 1px rgba(0,212,255,0.1) inset;
+}
+input::placeholder { color: #374151; }
+
+.btn-login {
+  width: 100%;
+  background: linear-gradient(135deg, #0057ff, #00d4ff);
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+  margin-top: 6px;
+  letter-spacing: 0.5px;
+  transition: opacity 0.2s, transform 0.15s, box-shadow 0.25s;
+  box-shadow: 0 6px 24px rgba(0,100,255,0.35);
+  position: relative;
+  overflow: hidden;
+}
+.btn-login::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent);
+  pointer-events: none;
+}
+.btn-login:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 32px rgba(0,100,255,0.45);
+}
+.btn-login:active { transform: translateY(0); }
+
+.error {
+  color: #fb7185;
+  font-size: 0.82rem;
+  margin-bottom: 16px;
+  padding: 11px 14px;
+  background: rgba(251,113,133,0.07);
+  border: 1px solid rgba(251,113,133,0.2);
+  border-radius: 10px;
+  display: none;
+}
 </style>
 </head>
 <body>
+<div class="orbs">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
 <div class="card">
-  <h1>공부 트래커</h1>
-  <p>동아리 공부 시간 모니터링</p>
+  <div class="logo">
+    <div class="logo-title">STUDY</div>
+    <div class="logo-title">TRACKER</div>
+    <div class="logo-sub">동아리 공부 모니터링</div>
+  </div>
+  <div class="divider"></div>
   <div class="error" id="error"></div>
-  <label>아이디</label>
-  <input type="text" id="username" placeholder="아이디 입력" autofocus>
-  <label>비밀번호</label>
-  <input type="password" id="password" placeholder="비밀번호 입력">
+  <div class="form-group">
+    <label>아이디</label>
+    <input type="text" id="username" placeholder="아이디를 입력하세요" autofocus>
+  </div>
+  <div class="form-group">
+    <label>비밀번호</label>
+    <input type="password" id="password" placeholder="비밀번호를 입력하세요">
+  </div>
   <button class="btn-login" onclick="login()">로그인</button>
 </div>
 <script>
@@ -67,11 +249,9 @@
     el.style.display = 'block';
   }
 
-  // 이미 로그인된 경우 리다이렉트
   const token = localStorage.getItem('token');
   const role = localStorage.getItem('role');
   if (token) location.href = ['superadmin','group_admin'].includes(role) ? '/admin' : '/dashboard';
-
 </script>
 </body>
 </html>
