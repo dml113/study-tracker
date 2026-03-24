@@ -18,7 +18,7 @@ import requests
 from datetime import datetime
 from pynput import keyboard, mouse
 
-VERSION = "1.0.3"
+VERSION = "1.0.4"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".study_tracker.json")
 SEND_INTERVAL = 30
@@ -61,8 +61,8 @@ def load_config() -> dict:
         with open(CONFIG_FILE) as f:
             cfg = json.load(f)
         # 구 서버 주소 자동 마이그레이션
-        if cfg.get("server") in ("http://172.16.145.81:8000", "http://172.16.145.16:8000"):
-            cfg["server"] = "http://traker.itnsa.cloud"
+        if cfg.get("server") in ("http://172.16.145.81:8000", "http://traker.itnsa.cloud"):
+            cfg["server"] = "http://172.16.145.16:8000"
             with open(CONFIG_FILE, "w") as f:
                 json.dump(cfg, f)
         return cfg
@@ -518,7 +518,7 @@ class LoginWindow:
         tk.Label(self.root, text="동아리 공부 시간 모니터링", bg=self.BG, fg="#475569",
                  font=("Segoe UI", 9)).pack(pady=(0, 20))
 
-        self.e_server = self._field("서버 주소", self.cfg.get("server", "http://traker.itnsa.cloud"))
+        self.e_server = self._field("서버 주소", self.cfg.get("server", "http://172.16.145.16:8000"))
         self.e_user = self._field("아이디", self.cfg.get("username", ""))
         self.e_pw = self._field("비밀번호", "", show="●")
 
