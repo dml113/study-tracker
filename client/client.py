@@ -258,10 +258,16 @@ class MainWindow:
         self.btn_absence = self._make_btn("외출", self.YELLOW, self.start_absence, fg="#0f172a")
         self.btn_return = self._make_btn("복귀", self.GREEN, self.end_absence)
 
-        tk.Button(self.root, text="웹 대시보드 열기", bg=self.BG, fg=self.MUTED,
+        foot = tk.Frame(self.root, bg=self.BG)
+        foot.pack(pady=(0, 8))
+        tk.Button(foot, text="웹 대시보드 열기", bg=self.BG, fg=self.MUTED,
                   relief="flat", font=("Segoe UI", 8), cursor="hand2",
                   command=lambda: __import__("webbrowser").open(state["server"])
-                  ).pack(pady=(0, 8))
+                  ).pack(side="left", padx=8)
+        tk.Button(foot, text="비밀번호 변경", bg=self.BG, fg=self.MUTED,
+                  relief="flat", font=("Segoe UI", 8), cursor="hand2",
+                  command=self.change_password
+                  ).pack(side="left", padx=8)
 
     def _make_btn(self, text, bg, cmd, fg="white"):
         btn = tk.Button(self.btn_frame, text=text, bg=bg, fg=fg, relief="flat",
@@ -366,6 +372,59 @@ class MainWindow:
                 messagebox.showerror("오류", data.get("detail", "복귀 처리 실패"))
         except Exception:
             messagebox.showerror("오류", "서버에 연결할 수 없습니다")
+
+    def change_password(self):
+        dialog = tk.Toplevel(self.root)
+        dialog.title("비밀번호 변경")
+        dialog.geometry("280x220")
+        dialog.resizable(False, False)
+        dialog.configure(bg=self.BG)
+        dialog.grab_set()
+
+        tk.Label(dialog, text="비밀번호 변경", bg=self.BG, fg=self.BLUE,
+                 font=("Segoe UI", 11, "bold")).pack(pady=(18, 12))
+
+        def field(label, show=""):
+            f = tk.Frame(dialog, bg=self.BG)
+            f.pack(fill="x", padx=20, pady=(0, 8))
+            tk.Label(f, text=label, bg=self.BG, fg=self.MUTED,
+                     font=("Segoe UI", 8)).pack(anchor="w")
+            e = tk.Entry(f, bg=self.CARD, fg=self.TEXT, insertbackground="white",
+                         relief="flat", font=("Segoe UI", 10), show=show)
+            e.pack(fill="x", ipady=5)
+            return e
+
+        e_cur = field("현재 비밀번호", "●")
+        e_new = field("새 비밀번호", "●")
+
+        lbl_err = tk.Label(dialog, text="", bg=self.BG, fg="#f87171", font=("Segoe UI", 8))
+        lbl_err.pack()
+
+        def submit():
+            cur = e_cur.get()
+            new = e_new.get()
+            if not cur or not new:
+                lbl_err.config(text="모든 항목을 입력하세요")
+                return
+            if len(new) < 4:
+                lbl_err.config(text="비밀번호는 4자 이상이어야 합니다")
+                return
+            try:
+                res = api("post", "/api/change-password",
+                          json={"current_password": cur, "new_password": new})
+                data = res.json()
+                if res.ok:
+                    dialog.destroy()
+                    messagebox.showinfo("완료", "비밀번호가 변경되었습니다")
+                else:
+                    lbl_err.config(text=data.get("detail", "변경 실패"))
+            except Exception:
+                lbl_err.config(text="서버에 연결할 수 없습니다")
+
+        tk.Button(dialog, text="변경", bg=self.BLUE, fg="white", relief="flat",
+                  font=("Segoe UI", 10, "bold"), cursor="hand2",
+                  command=submit).pack(fill="x", padx=20, pady=(6, 0), ipady=6)
+        dialog.bind("<Return>", lambda _: submit())
 
     def on_close(self):
         if state["checked_in"]:

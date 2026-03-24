@@ -13,10 +13,21 @@
   .logout-btn { background: none; border: 1px solid #475569; color: #94a3b8; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
   .logout-btn:hover { border-color: #64748b; color: #e2e8f0; }
   .container { max-width: 900px; margin: 32px auto; padding: 0 24px; }
-  .date-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
-  .date-bar input { background: #1e293b; border: 1px solid #334155; color: #e2e8f0; padding: 8px 14px; border-radius: 8px; font-size: 0.9rem; outline: none; }
-  .date-bar button { background: #3b82f6; color: white; border: none; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; }
-  .card { background: #1e293b; border-radius: 12px; padding: 20px 24px; margin-bottom: 14px; border: 1px solid #334155; display: flex; align-items: center; gap: 20px; }
+  .controls { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .controls input[type=date] { background: #1e293b; border: 1px solid #334155; color: #e2e8f0; padding: 8px 14px; border-radius: 8px; font-size: 0.9rem; outline: none; }
+  .controls button { background: #3b82f6; color: white; border: none; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; }
+  .period-tabs { display: flex; gap: 4px; background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 4px; }
+  .period-tab { padding: 6px 16px; border-radius: 8px; cursor: pointer; font-size: 0.88rem; color: #94a3b8; border: none; background: none; }
+  .period-tab.active { background: #3b82f6; color: white; font-weight: 600; }
+  .period-label { color: #475569; font-size: 0.82rem; margin-bottom: 20px; }
+  .live-section { margin-bottom: 24px; }
+  .live-title { font-size: 0.82rem; color: #94a3b8; margin-bottom: 10px; }
+  .live-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .live-chip { padding: 5px 12px; border-radius: 99px; font-size: 0.82rem; font-weight: 600; }
+  .chip-present { background: #22c55e22; border: 1px solid #22c55e44; color: #4ade80; }
+  .chip-absent { background: #f59e0b22; border: 1px solid #f59e0b44; color: #fbbf24; }
+  .chip-none { color: #475569; font-size: 0.82rem; }
+  .card { background: #1e293b; border-radius: 12px; padding: 18px 24px; margin-bottom: 14px; border: 1px solid #334155; display: flex; align-items: center; gap: 20px; }
   .me { border-color: #3b82f6; }
   .rank { font-size: 1.5rem; font-weight: 800; color: #475569; min-width: 36px; }
   .rank.gold { color: #f59e0b; }
@@ -25,8 +36,13 @@
   .info { flex: 1; }
   .name { font-size: 1rem; font-weight: 600; }
   .time { color: #60a5fa; font-size: 0.85rem; margin-top: 3px; }
-  .bar-wrap { flex: 2; background: #0f172a; border-radius: 99px; height: 10px; overflow: hidden; }
+  .bar-col { flex: 2; }
+  .bar-wrap { background: #0f172a; border-radius: 99px; height: 8px; overflow: hidden; margin-bottom: 4px; }
   .bar { height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); border-radius: 99px; transition: width 0.4s; }
+  .goal-row { display: flex; align-items: center; gap: 8px; }
+  .goal-bar-wrap { flex: 1; background: #0f172a; border-radius: 99px; height: 5px; overflow: hidden; }
+  .goal-bar { height: 100%; border-radius: 99px; transition: width 0.4s; }
+  .goal-text { font-size: 0.75rem; color: #64748b; white-space: nowrap; }
   .empty { text-align: center; color: #475569; padding: 60px 0; }
   .updated { text-align: right; color: #475569; font-size: 0.8rem; margin-top: 8px; }
 </style>
@@ -41,10 +57,22 @@
   </div>
 </div>
 <div class="container">
-  <div class="date-bar">
+  <div class="controls">
+    <div class="period-tabs">
+      <button class="period-tab active" onclick="setPeriod('daily', this)">일간</button>
+      <button class="period-tab" onclick="setPeriod('weekly', this)">주간</button>
+      <button class="period-tab" onclick="setPeriod('monthly', this)">월간</button>
+    </div>
     <input type="date" id="dateInput">
     <button onclick="loadStats()">조회</button>
   </div>
+  <div class="period-label" id="periodLabel"></div>
+
+  <div class="live-section">
+    <div class="live-title">현재 출근 중</div>
+    <div class="live-chips" id="liveList"><span class="chip-none">로딩 중...</span></div>
+  </div>
+
   <div id="board"></div>
   <div class="updated" id="updatedAt"></div>
 </div>
@@ -55,29 +83,79 @@
   document.getElementById('myName').textContent = myUsername;
   document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
 
+  let currentPeriod = 'daily';
+
   function logout() { localStorage.clear(); location.href = '/'; }
   function authHeaders() { return { 'Authorization': 'Bearer ' + token }; }
 
+  function setPeriod(p, el) {
+    currentPeriod = p;
+    document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    loadStats();
+  }
+
   async function loadStats() {
     const d = document.getElementById('dateInput').value;
-    const res = await fetch('/api/stats?target_date=' + d, { headers: authHeaders() });
+    const res = await fetch(`/api/stats?target_date=${d}&period=${currentPeriod}`, { headers: authHeaders() });
     if (res.status === 401) { logout(); return; }
     const data = await res.json();
+
+    if (data.length > 0) {
+      const { period, start_date, end_date } = data[0];
+      if (period === 'weekly') {
+        document.getElementById('periodLabel').textContent = `${start_date} (월) ~ ${end_date} (일) 주간 누적`;
+      } else if (period === 'monthly') {
+        document.getElementById('periodLabel').textContent = `${start_date.slice(0,7)} 월간 누적`;
+      } else {
+        document.getElementById('periodLabel').textContent = '';
+      }
+    } else {
+      document.getElementById('periodLabel').textContent = '';
+    }
+
     const board = document.getElementById('board');
     if (!data.length) { board.innerHTML = '<div class="empty">아직 기록이 없어요!</div>'; return; }
     const max = data[0].active_minutes;
     const rc = ['gold', 'silver', 'bronze'];
-    board.innerHTML = data.map((u, i) => `
+    board.innerHTML = data.map((u, i) => {
+      const rate = Math.min(u.achievement_rate, 100);
+      const goalColor = u.achievement_rate >= 100 ? '#22c55e' : u.achievement_rate >= 50 ? '#3b82f6' : '#475569';
+      return `
       <div class="card ${u.username === myUsername ? 'me' : ''}">
         <div class="rank ${rc[i] || ''}">${i + 1}</div>
         <div class="info">
           <div class="name">${u.username}${u.username === myUsername ? ' <span style="color:#60a5fa;font-size:0.8rem">(나)</span>' : ''}</div>
           <div class="time">${u.active_minutes}분 활동</div>
         </div>
-        <div class="bar-wrap"><div class="bar" style="width:${max > 0 ? u.active_minutes / max * 100 : 0}%"></div></div>
-      </div>
-    `).join('');
+        <div class="bar-col">
+          <div class="bar-wrap"><div class="bar" style="width:${max > 0 ? u.active_minutes / max * 100 : 0}%"></div></div>
+          <div class="goal-row">
+            <div class="goal-bar-wrap"><div class="goal-bar" style="width:${rate}%;background:${goalColor}"></div></div>
+            <span class="goal-text">목표 ${u.achievement_rate}% (${u.goal_minutes}분)</span>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
     document.getElementById('updatedAt').textContent = '마지막 업데이트: ' + new Date().toLocaleTimeString('ko-KR');
+  }
+
+  async function loadLive() {
+    try {
+      const res = await fetch('/api/attendance/live', { headers: authHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list = document.getElementById('liveList');
+      if (!data.length) {
+        list.innerHTML = '<span class="chip-none">아직 출근한 멤버가 없어요</span>';
+        return;
+      }
+      list.innerHTML = data.map(u => {
+        const cls = u.is_absent ? 'chip-absent' : 'chip-present';
+        const label = u.is_absent ? `${u.username} 외출` : `${u.username} ${u.checkin_at}~`;
+        return `<span class="live-chip ${cls}">${label}</span>`;
+      }).join('');
+    } catch {}
   }
 
   fetch('/client/version').then(r => r.json()).then(d => {
@@ -89,7 +167,9 @@
   }).catch(() => {});
 
   loadStats();
+  loadLive();
   setInterval(loadStats, 30000);
+  setInterval(loadLive, 30000);
 </script>
 </body>
 </html>

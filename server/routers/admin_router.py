@@ -1,12 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from pydantic import BaseModel
 from typing import Optional
-from models import User, ActivityLog, Attendance, Absence, Group, CheatLog
+from models import User, ActivityLog, Attendance, Absence, Group, CheatLog, StudyGoal
 from auth import hash_password, get_current_admin, get_current_superadmin
 from database import get_session
-from datetime import date
+from datetime import date, timedelta
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -259,6 +259,128 @@ async def get_attendance(
         }
         for u in users
     ]
+
+
+# ── 목표 시간 관리 ──────────────────────────────────────
+
+class GoalRequest(BaseModel):
+    group_id: Optional[int] = None
+    daily_target_minutes: int
+
+
+@router.get("/goals")
+async def list_goals(
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_admin),
+):
+    result = await session.execute(select(StudyGoal))
+    goals = result.scalars().all()
+
+    groups_result = await session.execute(select(Group))
+    group_names = {g.id: g.name for g in groups_result.scalars().all()}
+
+    return [
+        {
+            "id": g.id,
+            "group_id": g.group_id,
+            "group_name": group_names.get(g.group_id, "–") if g.group_id else "전체 기본",
+            "daily_target_minutes": g.daily_target_minutes,
+        }
+        for g in goals
+    ]
+
+
+@router.post("/goals")
+async def upsert_goal(
+    req: GoalRequest,
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_admin),
+):
+    if current["role"] == "group_admin":
+        if req.group_id != current.get("group_id"):
+            raise HTTPException(status_code=403, detail="자기 그룹 목표만 설정할 수 있습니다")
+
+    result = await session.execute(
+        select(StudyGoal).where(StudyGoal.group_id == req.group_id)
+    )
+    goal = result.scalar_one_or_none()
+    if goal:
+        goal.daily_target_minutes = req.daily_target_minutes
+    else:
+        goal = StudyGoal(group_id=req.group_id, daily_target_minutes=req.daily_target_minutes)
+        session.add(goal)
+    await session.commit()
+    return {"message": "목표 시간이 설정되었습니다"}
+
+
+@router.delete("/goals/{goal_id}")
+async def delete_goal(
+    goal_id: int,
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_superadmin),
+):
+    result = await session.execute(select(StudyGoal).where(StudyGoal.id == goal_id))
+    goal = result.scalar_one_or_none()
+    if not goal:
+        raise HTTPException(status_code=404, detail="목표를 찾을 수 없습니다")
+    await session.delete(goal)
+    await session.commit()
+    return {"message": "삭제되었습니다"}
+
+
+# ── 외출 통계 ───────────────────────────────────────────
+
+@router.get("/absence-stats")
+async def get_absence_stats(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_admin),
+):
+    today = date.today()
+    end_d = date.fromisoformat(end_date) if end_date else today
+    start_d = date.fromisoformat(start_date) if start_date else today - timedelta(days=6)
+
+    query = select(Absence).where(Absence.date.between(start_d.isoformat(), end_d.isoformat()))
+    if current["role"] == "group_admin":
+        users_result = await session.execute(
+            select(User.username).where(User.group_id == current.get("group_id"))
+        )
+        group_usernames = {row[0] for row in users_result.all()}
+        query = query.where(Absence.username.in_(group_usernames))
+
+    result = await session.execute(query)
+    absences = result.scalars().all()
+
+    reason_counts: dict = {}
+    user_counts: dict = {}
+    user_minutes: dict = {}
+
+    for ab in absences:
+        reason_counts[ab.reason] = reason_counts.get(ab.reason, 0) + 1
+        user_counts[ab.username] = user_counts.get(ab.username, 0) + 1
+        if ab.start_at and ab.end_at:
+            minutes = (ab.end_at - ab.start_at).total_seconds() / 60
+            user_minutes[ab.username] = user_minutes.get(ab.username, 0) + minutes
+
+    total = len(absences)
+    by_reason = sorted(
+        [{"reason": r, "count": c, "percentage": round(c / total * 100, 1) if total else 0}
+         for r, c in reason_counts.items()],
+        key=lambda x: -x["count"],
+    )
+    by_user = sorted(
+        [{"username": u, "count": user_counts[u], "total_minutes": round(user_minutes.get(u, 0), 1)}
+         for u in user_counts],
+        key=lambda x: -x["count"],
+    )
+
+    return {
+        "period": {"start": start_d.isoformat(), "end": end_d.isoformat()},
+        "total_count": total,
+        "by_reason": by_reason,
+        "by_user": by_user,
+    }
 
 
 # ── 치트 기록 ──────────────────────────────────────────

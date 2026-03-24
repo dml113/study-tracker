@@ -5,7 +5,9 @@ from database import init_db, SessionLocal
 from routers import auth_router, admin_router, api_router
 from models import User
 from auth import hash_password, get_current_superadmin
+from backup import backup_scheduler, run_backup, list_backups
 from sqlalchemy import select
+import asyncio
 import os
 import shutil
 import urllib.request
@@ -37,6 +39,7 @@ async def startup():
             session.add(admin)
             await session.commit()
             print("기본 관리자 계정 생성: admin / admin1234")
+    asyncio.create_task(backup_scheduler())
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -117,3 +120,16 @@ async def sync_from_github(_: dict = Depends(get_current_superadmin)):
         f.write(version)
 
     return {"message": f"v{version} 동기화 완료"}
+
+
+@app.post("/admin/backup")
+async def manual_backup(_: dict = Depends(get_current_superadmin)):
+    dest = await run_backup()
+    if not dest:
+        raise HTTPException(status_code=404, detail="백업할 DB 파일이 없습니다")
+    return {"message": f"백업 완료: {os.path.basename(dest)}"}
+
+
+@app.get("/admin/backups")
+async def get_backups(_: dict = Depends(get_current_superadmin)):
+    return list_backups()

@@ -88,8 +88,11 @@
     <button class="tab" onclick="switchTab('stats', this)">공부 통계</button>
     <button class="tab" onclick="switchTab('attendance', this)">출퇴근 기록</button>
     <button class="tab" onclick="switchTab('cheats', this)">치트 감지</button>
+    <button class="tab" onclick="switchTab('goals', this)">목표 설정</button>
+    <button class="tab" onclick="switchTab('absence-stats', this)">외출 통계</button>
     <button class="tab" id="groupTab" style="display:none" onclick="switchTab('groups', this)">그룹 관리</button>
     <button class="tab" id="clientTab" style="display:none" onclick="switchTab('client', this)">클라이언트 배포</button>
+    <button class="tab" id="backupTab" style="display:none" onclick="switchTab('backup', this)">DB 백업</button>
   </div>
 
   <!-- 유저 관리 -->
@@ -187,6 +190,46 @@
     </div>
   </div>
 
+  <!-- 목표 설정 -->
+  <div id="tab-goals" style="display:none">
+    <div class="create-form">
+      <div class="form-group">
+        <label>그룹</label>
+        <select id="goalGroupId">
+          <option value="">전체 기본</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>하루 목표 (분)</label>
+        <input type="number" id="goalMinutes" placeholder="예: 480" min="1" style="min-width:120px">
+      </div>
+      <button class="btn btn-primary" onclick="saveGoal()" style="align-self:flex-end">저장</button>
+    </div>
+    <div id="goalList"></div>
+  </div>
+
+  <!-- 외출 통계 -->
+  <div id="tab-absence-stats" style="display:none">
+    <div class="date-bar">
+      <input type="date" id="absStart">
+      <span style="color:#94a3b8">~</span>
+      <input type="date" id="absEnd">
+      <button class="btn btn-primary" onclick="loadAbsenceStats()">조회</button>
+    </div>
+    <div id="absStatsList"></div>
+  </div>
+
+  <!-- DB 백업 (슈퍼 어드민 전용) -->
+  <div id="tab-backup" style="display:none">
+    <div class="create-form" style="flex-direction:column;align-items:flex-start;gap:14px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="btn btn-primary" onclick="runBackup()" id="backupBtn">지금 백업</button>
+        <span style="color:#475569;font-size:0.82rem">최근 7일치 자동 보관 · 매일 자정 자동 실행</span>
+      </div>
+      <div id="backupList" style="width:100%"></div>
+    </div>
+  </div>
+
   <!-- 그룹 관리 (슈퍼 어드민 전용) -->
   <div id="tab-groups" style="display:none">
     <div class="create-form">
@@ -245,6 +288,7 @@
   if (isSuperAdmin) {
     document.getElementById('groupTab').style.display = '';
     document.getElementById('clientTab').style.display = '';
+    document.getElementById('backupTab').style.display = '';
   }
   // group_admin은 권한·그룹 폼 숨김
   if (isGroupAdmin) {
@@ -260,15 +304,18 @@
   function switchTab(tab, el) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
-    ['users','stats','attendance','cheats','groups','client'].forEach(t => {
-      const el = document.getElementById('tab-' + t);
-      if (el) el.style.display = t === tab ? 'block' : 'none';
+    ['users','stats','attendance','cheats','goals','absence-stats','groups','client','backup'].forEach(t => {
+      const div = document.getElementById('tab-' + t);
+      if (div) div.style.display = t === tab ? 'block' : 'none';
     });
     if (tab === 'stats') loadStats();
     if (tab === 'attendance') loadAttendance();
     if (tab === 'groups') loadGroups();
     if (tab === 'cheats') loadCheats();
     if (tab === 'client') loadClientVersion();
+    if (tab === 'goals') loadGoals();
+    if (tab === 'absence-stats') loadAbsenceStats();
+    if (tab === 'backup') loadBackups();
   }
 
   function showToast(msg, type = 'success') {
@@ -528,6 +575,148 @@
       </table>`;
   }
 
+  // ── 목표 설정 ──
+  async function loadGoals() {
+    await loadGroupOptions();
+    const sel = document.getElementById('goalGroupId');
+    sel.innerHTML = '<option value="">전체 기본</option>' +
+      groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+
+    const res = await fetch('/admin/goals', { headers: authH() });
+    const data = await res.json();
+    const list = document.getElementById('goalList');
+    if (!data.length) {
+      list.innerHTML = '<div style="text-align:center;color:#475569;padding:40px 0">설정된 목표가 없습니다 (기본값: 480분/일)</div>';
+      return;
+    }
+    list.innerHTML = `
+      <table>
+        <thead><tr><th>그룹</th><th>하루 목표</th><th>주간</th><th>관리</th></tr></thead>
+        <tbody>
+          ${data.map(g => `
+            <tr>
+              <td><strong>${g.group_name}</strong></td>
+              <td>${g.daily_target_minutes}분 (${Math.round(g.daily_target_minutes/60*10)/10}시간)</td>
+              <td style="color:#94a3b8">${g.daily_target_minutes * 7}분</td>
+              <td>${isSuperAdmin ? `<button class="btn-sm btn-danger" onclick="deleteGoal(${g.id})">삭제</button>` : ''}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  async function saveGoal() {
+    const group_id = document.getElementById('goalGroupId').value;
+    const minutes = parseInt(document.getElementById('goalMinutes').value);
+    if (!minutes || minutes < 1) { showToast('목표 시간을 입력하세요', 'error'); return; }
+    const res = await fetch('/admin/goals', {
+      method: 'POST', headers: authH(),
+      body: JSON.stringify({ group_id: group_id ? parseInt(group_id) : null, daily_target_minutes: minutes })
+    });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); document.getElementById('goalMinutes').value = ''; loadGoals(); }
+    else showToast(data.detail, 'error');
+  }
+
+  async function deleteGoal(id) {
+    if (!confirm('목표를 삭제하시겠습니까?')) return;
+    const res = await fetch('/admin/goals/'+id, { method: 'DELETE', headers: authH() });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); loadGoals(); }
+    else showToast(data.detail, 'error');
+  }
+
+  // ── 외출 통계 ──
+  async function loadAbsenceStats() {
+    const start = document.getElementById('absStart').value;
+    const end = document.getElementById('absEnd').value;
+    let url = '/admin/absence-stats';
+    const params = [];
+    if (start) params.push('start_date='+start);
+    if (end) params.push('end_date='+end);
+    if (params.length) url += '?' + params.join('&');
+    const res = await fetch(url, { headers: authH() });
+    const data = await res.json();
+    const list = document.getElementById('absStatsList');
+    if (data.total_count === 0) {
+      list.innerHTML = '<div style="text-align:center;color:#475569;padding:60px 0">외출 기록이 없습니다</div>';
+      return;
+    }
+    const byReasonRows = data.by_reason.map(r => `
+      <tr>
+        <td><strong>${r.reason}</strong></td>
+        <td>${r.count}회</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="flex:1;background:#0f172a;border-radius:99px;height:6px;overflow:hidden">
+              <div style="height:100%;background:#3b82f6;border-radius:99px;width:${r.percentage}%"></div>
+            </div>
+            <span style="font-size:0.8rem;color:#94a3b8;min-width:40px">${r.percentage}%</span>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+    const byUserRows = data.by_user.map(u => `
+      <tr>
+        <td><strong>${u.username}</strong></td>
+        <td>${u.count}회</td>
+        <td style="color:#94a3b8">${u.total_minutes}분</td>
+      </tr>
+    `).join('');
+    list.innerHTML = `
+      <div style="color:#94a3b8;font-size:0.82rem;margin-bottom:12px">
+        ${data.period.start} ~ ${data.period.end} · 총 ${data.total_count}건
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:8px">사유별</div>
+          <table><thead><tr><th>사유</th><th>횟수</th><th>비율</th></tr></thead>
+          <tbody>${byReasonRows}</tbody></table>
+        </div>
+        <div>
+          <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:8px">유저별</div>
+          <table><thead><tr><th>유저</th><th>횟수</th><th>총 시간</th></tr></thead>
+          <tbody>${byUserRows}</tbody></table>
+        </div>
+      </div>`;
+  }
+
+  // ── DB 백업 ──
+  async function loadBackups() {
+    const res = await fetch('/admin/backups', { headers: authH() });
+    const data = await res.json();
+    const list = document.getElementById('backupList');
+    if (!data.length) {
+      list.innerHTML = '<div style="color:#475569;font-size:0.85rem">백업 파일이 없습니다</div>';
+      return;
+    }
+    list.innerHTML = `
+      <table>
+        <thead><tr><th>파일명</th><th>크기</th><th>생성일시</th></tr></thead>
+        <tbody>
+          ${data.map(b => `
+            <tr>
+              <td style="font-size:0.82rem;color:#94a3b8">${b.filename}</td>
+              <td>${b.size_kb} KB</td>
+              <td style="color:#94a3b8;font-size:0.82rem">${b.created_at}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  async function runBackup() {
+    const btn = document.getElementById('backupBtn');
+    btn.textContent = '백업 중...';
+    btn.disabled = true;
+    const res = await fetch('/admin/backup', { method: 'POST', headers: authH() });
+    const data = await res.json();
+    btn.textContent = '지금 백업';
+    btn.disabled = false;
+    if (res.ok) { showToast(data.message); loadBackups(); }
+    else showToast(data.detail, 'error');
+  }
+
   // ── 클라이언트 배포 ──
   async function syncGithub() {
     const btn = document.getElementById('syncBtn');
@@ -576,9 +765,13 @@
   }
 
   // 초기화
-  document.getElementById('statsDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('attDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('cheatDate').value = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T')[0];
+  const weekAgo = new Date(Date.now() - 6*86400000).toISOString().split('T')[0];
+  document.getElementById('statsDate').value = today;
+  document.getElementById('attDate').value = today;
+  document.getElementById('cheatDate').value = today;
+  document.getElementById('absStart').value = weekAgo;
+  document.getElementById('absEnd').value = today;
   loadUsers();
 </script>
 </body>

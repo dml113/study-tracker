@@ -61,3 +61,11 @@ class CheatLog(Base):
     date: Mapped[str] = mapped_column(String, index=True)
     detected_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     reason: Mapped[str] = mapped_column(String)
+
+
+class StudyGoal(Base):
+    __tablename__ = "study_goals"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    group_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("groups.id"), nullable=True)
+    daily_target_minutes: Mapped[int] = mapped_column(Integer, default=480)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
