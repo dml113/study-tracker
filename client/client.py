@@ -13,6 +13,7 @@ import subprocess
 import tempfile
 import shutil
 import zipfile
+import webbrowser
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 from collections import deque
@@ -20,7 +21,7 @@ import requests
 from datetime import datetime
 from pynput import keyboard, mouse
 
-VERSION = "1.0.6"
+VERSION = "1.0.7"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".study_tracker.json")
 SEND_INTERVAL = 30
@@ -270,7 +271,7 @@ class MainWindow:
         foot.pack(pady=(0, 8))
         tk.Button(foot, text="웹 대시보드 열기", bg=self.BG, fg=self.MUTED,
                   relief="flat", font=("Segoe UI", 8), cursor="hand2",
-                  command=lambda: __import__("webbrowser").open("https://traker.itnsa.cloud/dashboard")
+                  command=lambda: webbrowser.open("https://traker.itnsa.cloud/dashboard")
                   ).pack(side="left", padx=8)
         tk.Button(foot, text="비밀번호 변경", bg=self.BG, fg=self.MUTED,
                   relief="flat", font=("Segoe UI", 8), cursor="hand2",
