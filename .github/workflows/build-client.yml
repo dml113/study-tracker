@@ -39,10 +39,11 @@ jobs:
         shell: pwsh
         run: |
           cd client
-          pyinstaller --onefile --windowed --name StudyTracker `
+          pyinstaller --onedir --windowed --name StudyTracker `
             --hidden-import=pynput.keyboard._win32 `
             --hidden-import=pynput.mouse._win32 `
             client.py
+          Compress-Archive -Path dist/StudyTracker/* -DestinationPath dist/StudyTracker.zip
 
       - name: Create GitHub Release
         shell: bash
@@ -55,4 +56,4 @@ jobs:
             --repo ${{ github.repository }} \
             --title "Client v${VERSION}" \
             --notes "자동 빌드 ($(date '+%Y-%m-%d %H:%M'))" \
-            client/dist/StudyTracker.exe
+            client/dist/StudyTracker.zip

@@ -14,7 +14,7 @@ import urllib.request
 
 CLIENT_DIR = "client_dist"
 VERSION_FILE = os.path.join(CLIENT_DIR, "version.txt")
-EXE_FILE = os.path.join(CLIENT_DIR, "StudyTracker.exe")
+ZIP_FILE = os.path.join(CLIENT_DIR, "StudyTracker.zip")
 
 app = FastAPI(title="Study Tracker")
 
@@ -74,9 +74,9 @@ async def client_version():
 
 @app.get("/client/download")
 async def client_download():
-    if not os.path.exists(EXE_FILE):
+    if not os.path.exists(ZIP_FILE):
         raise HTTPException(status_code=404, detail="배포된 클라이언트가 없습니다")
-    return FileResponse(EXE_FILE, filename="StudyTracker.exe", media_type="application/octet-stream")
+    return FileResponse(ZIP_FILE, filename="StudyTracker.zip", media_type="application/zip")
 
 
 @app.post("/admin/client/upload")
@@ -85,9 +85,9 @@ async def upload_client(
     file: UploadFile = File(...),
     _: dict = Depends(get_current_superadmin),
 ):
-    if not file.filename.endswith(".exe"):
-        raise HTTPException(status_code=400, detail=".exe 파일만 업로드 가능합니다")
-    with open(EXE_FILE, "wb") as f:
+    if not file.filename.endswith(".zip"):
+        raise HTTPException(status_code=400, detail=".zip 파일만 업로드 가능합니다")
+    with open(ZIP_FILE, "wb") as f:
         shutil.copyfileobj(file.file, f)
     with open(VERSION_FILE, "w") as f:
         f.write(version)
@@ -110,14 +110,14 @@ async def sync_from_github(_: dict = Depends(get_current_superadmin)):
         raise HTTPException(status_code=502, detail=f"GitHub API 오류: {e}")
 
     version = release["tag_name"].lstrip("v")
-    exe_asset = next(
-        (a for a in release.get("assets", []) if a["name"].endswith(".exe")), None
+    zip_asset = next(
+        (a for a in release.get("assets", []) if a["name"].endswith(".zip")), None
     )
-    if not exe_asset:
-        raise HTTPException(status_code=404, detail="Release에 EXE 파일이 없습니다")
+    if not zip_asset:
+        raise HTTPException(status_code=404, detail="Release에 ZIP 파일이 없습니다")
 
     try:
-        urllib.request.urlretrieve(exe_asset["browser_download_url"], EXE_FILE)
+        urllib.request.urlretrieve(zip_asset["browser_download_url"], ZIP_FILE)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"다운로드 오류: {e}")
 

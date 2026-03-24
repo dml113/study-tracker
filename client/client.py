@@ -11,6 +11,8 @@ import os
 import sys
 import subprocess
 import tempfile
+import shutil
+import zipfile
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 from collections import deque
@@ -18,7 +20,7 @@ import requests
 from datetime import datetime
 from pynput import keyboard, mouse
 
-VERSION = "1.0.4"
+VERSION = "1.0.5"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".study_tracker.json")
 SEND_INTERVAL = 30
@@ -601,26 +603,37 @@ def check_for_update(server: str):
         ):
             return
 
-        # 다운로드
-        dl = requests.get(f"{server}/client/download", timeout=60, stream=True)
+        # 다운로드 (zip)
+        dl = requests.get(f"{server}/client/download", timeout=120, stream=True)
         if not dl.ok:
             messagebox.showerror("오류", "다운로드 실패")
             return
 
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".exe")
-        for chunk in dl.iter_content(chunk_size=65536):
-            tmp.write(chunk)
-        tmp.close()
+        tmp_zip = os.path.join(tempfile.gettempdir(), "st_update.zip")
+        with open(tmp_zip, "wb") as f:
+            for chunk in dl.iter_content(chunk_size=65536):
+                f.write(chunk)
+
+        # zip 압축 해제
+        tmp_dir = os.path.join(tempfile.gettempdir(), "st_update_extract")
+        if os.path.exists(tmp_dir):
+            shutil.rmtree(tmp_dir)
+        with zipfile.ZipFile(tmp_zip, "r") as z:
+            z.extractall(tmp_dir)
+        os.remove(tmp_zip)
 
         current = sys.executable
-        # 배치 스크립트로 자기 자신 교체 후 재시작
+        app_dir = os.path.dirname(current)
+
+        # 배치 스크립트로 폴더 전체 교체 후 재시작
         bat = os.path.join(tempfile.gettempdir(), "st_update.bat")
         with open(bat, "w") as f:
             f.write(
                 f"@echo off\n"
                 f"timeout /t 2 /nobreak > nul\n"
-                f"move /y \"{tmp.name}\" \"{current}\"\n"
+                f"xcopy /E /Y /I \"{tmp_dir}\\*\" \"{app_dir}\\\"\n"
                 f"start \"\" \"{current}\"\n"
+                f"rmdir /s /q \"{tmp_dir}\"\n"
                 f"del \"%~f0\"\n"
             )
         subprocess.Popen(bat, shell=True)
