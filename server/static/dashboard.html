@@ -427,8 +427,8 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
   fetch('/client/version').then(r => r.json()).then(d => {
     const btn = document.getElementById('downloadBtn');
     btn.textContent = '⬇ 클라이언트' + (d.version && d.version !== '0.0.0' ? ' v' + d.version : '');
-    btn.style.display = '';
-  }).catch(() => { document.getElementById('downloadBtn').style.display = ''; });
+    btn.style.display = 'inline-block';
+  }).catch(() => {});
   loadStats(); loadLive();
   setInterval(loadStats, 30000); setInterval(loadLive, 30000);
 </script>
