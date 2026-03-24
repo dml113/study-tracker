@@ -5,250 +5,168 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>공부 트래커</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
+* { margin:0; padding:0; box-sizing:border-box; }
 :root {
-  --bg: #06080f;
-  --cyan: #00d4ff;
-  --cyan-glow: rgba(0, 212, 255, 0.12);
-  --violet: #8b5cf6;
-  --border: rgba(255,255,255,0.08);
-  --text: #e2e8f0;
-  --muted: #4a5568;
+  --bg:#06080f; --card:#0c1020; --blue:#00b4ff; --green:#00ff88;
+  --gold:#ffd700; --text:#e8f0fe; --muted:#3a4a6a; --muted-light:#5a7090;
 }
-
 body {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  font-family:'Rajdhani',sans-serif; background:var(--bg); color:var(--text);
+  min-height:100vh; display:flex; align-items:center; justify-content:center; overflow:hidden;
 }
 
-/* Grid */
+/* Scanline */
+body::after {
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:999;
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,0.03) 0px, rgba(0,0,0,0.03) 1px, transparent 1px, transparent 3px);
+}
+
+/* Grid bg */
 body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
   background-image:
-    linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px);
-  background-size: 52px 52px;
-  z-index: 0;
-  pointer-events: none;
+    linear-gradient(rgba(0,180,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,180,255,0.04) 1px, transparent 1px);
+  background-size:40px 40px;
 }
 
-/* Orbs */
-.orbs { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-.orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(90px);
-  animation: drift 24s ease-in-out infinite;
-}
-.orb-1 {
-  width: 600px; height: 600px;
-  background: radial-gradient(circle, rgba(0,80,255,0.18), transparent 70%);
-  top: -250px; left: -200px;
-  animation-delay: 0s;
-}
-.orb-2 {
-  width: 400px; height: 400px;
-  background: radial-gradient(circle, rgba(0,212,255,0.12), transparent 70%);
-  bottom: -150px; right: -100px;
-  animation-delay: -8s;
-}
-.orb-3 {
-  width: 350px; height: 350px;
-  background: radial-gradient(circle, rgba(139,92,246,0.1), transparent 70%);
-  top: 50%; left: 55%;
-  animation-delay: -16s;
-}
-@keyframes drift {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(25px, -35px) scale(1.04); }
-  66% { transform: translate(-20px, 20px) scale(0.97); }
+/* Glow orbs */
+.orb { position:fixed; border-radius:50%; filter:blur(120px); pointer-events:none; z-index:0; animation:orbDrift 20s ease-in-out infinite; }
+.orb-1 { width:500px; height:500px; background:rgba(0,60,180,0.2); top:-200px; left:-150px; }
+.orb-2 { width:400px; height:400px; background:rgba(0,180,255,0.08); bottom:-150px; right:-100px; animation-delay:-10s; }
+@keyframes orbDrift { 0%,100%{transform:translate(0,0)} 50%{transform:translate(20px,-20px)} }
+
+.panel {
+  position:relative; z-index:1; width:420px;
+  background:linear-gradient(135deg, rgba(12,16,32,0.95), rgba(8,12,24,0.95));
+  border:1px solid rgba(0,180,255,0.2);
+  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+  padding:48px 40px 40px;
+  box-shadow: 0 0 60px rgba(0,0,0,0.8), 0 0 120px rgba(0,180,255,0.06), inset 0 0 40px rgba(0,180,255,0.02);
 }
 
-.card {
-  position: relative;
-  z-index: 1;
-  width: 400px;
-  padding: 52px 44px;
-  background: rgba(255,255,255,0.025);
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.03) inset,
-    0 40px 80px rgba(0,0,0,0.6),
-    0 0 100px rgba(0,212,255,0.04);
+/* Corner accents */
+.panel::before, .panel::after {
+  content:''; position:absolute; width:12px; height:12px; border-color:var(--blue); border-style:solid; z-index:2;
 }
+.panel::before { top:6px; left:6px; border-width:2px 0 0 2px; }
+.panel::after { bottom:6px; right:6px; border-width:0 2px 2px 0; }
 
-.logo { text-align: center; margin-bottom: 12px; }
+.logo-area { text-align:center; margin-bottom:8px; }
+.season-tag {
+  display:inline-block; font-family:'Orbitron',monospace; font-size:0.58rem;
+  letter-spacing:4px; color:var(--blue); background:rgba(0,180,255,0.08);
+  border:1px solid rgba(0,180,255,0.2); padding:3px 12px; border-radius:2px; margin-bottom:14px;
+}
 .logo-title {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 3.4rem;
-  letter-spacing: 6px;
-  line-height: 0.92;
-  background: linear-gradient(135deg, #00d4ff 0%, #0066ff 50%, #8b5cf6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-family:'Orbitron',monospace; font-size:2rem; font-weight:900;
+  letter-spacing:3px; line-height:1.1;
+  background:linear-gradient(180deg,#fff 0%,#00b4ff 100%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
 }
 .logo-sub {
-  font-size: 0.72rem;
-  color: var(--muted);
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  margin-top: 8px;
-  font-weight: 500;
+  font-size:0.78rem; color:var(--muted-light); letter-spacing:3px;
+  text-transform:uppercase; margin-top:6px; font-weight:500;
 }
 
 .divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(0,212,255,0.35), transparent);
-  margin: 30px 0;
+  display:flex; align-items:center; gap:10px; margin:24px 0;
 }
+.divider-line { flex:1; height:1px; background:linear-gradient(90deg,transparent,rgba(0,180,255,0.3),transparent); }
+.divider-text { font-family:'Orbitron',monospace; font-size:0.58rem; letter-spacing:2px; color:var(--muted-light); }
 
-.form-group { margin-bottom: 18px; }
-label {
-  display: block;
-  font-size: 0.7rem;
-  color: var(--muted);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  font-weight: 600;
-  margin-bottom: 8px;
+.field-label {
+  font-family:'Orbitron',monospace; font-size:0.6rem; letter-spacing:3px;
+  color:var(--muted-light); text-transform:uppercase; margin-bottom:6px; display:block;
+}
+.field-wrap { position:relative; margin-bottom:16px; }
+.field-wrap::before {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:2px;
+  background:linear-gradient(180deg, var(--blue), transparent); border-radius:2px;
 }
 input {
-  width: 100%;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
-  color: var(--text);
-  padding: 13px 16px;
-  border-radius: 12px;
-  font-size: 0.95rem;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  outline: none;
-  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+  width:100%; background:rgba(0,180,255,0.04); border:1px solid rgba(0,180,255,0.12);
+  border-left:none; color:var(--text); padding:12px 14px 12px 16px;
+  font-family:'Rajdhani',sans-serif; font-size:1rem; font-weight:500; outline:none;
+  transition:border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  clip-path:polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px));
 }
 input:focus {
-  border-color: rgba(0,212,255,0.45);
-  background: rgba(0,212,255,0.04);
-  box-shadow: 0 0 24px rgba(0,212,255,0.1), 0 0 0 1px rgba(0,212,255,0.1) inset;
+  border-color:rgba(0,180,255,0.4); background:rgba(0,180,255,0.06);
+  box-shadow:0 0 20px rgba(0,180,255,0.1);
 }
-input::placeholder { color: #374151; }
+input::placeholder { color:var(--muted); }
 
 .btn-login {
-  width: 100%;
-  background: linear-gradient(135deg, #0057ff, #00d4ff);
-  color: white;
-  border: none;
-  padding: 14px;
-  border-radius: 12px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  cursor: pointer;
-  margin-top: 6px;
-  letter-spacing: 0.5px;
-  transition: opacity 0.2s, transform 0.15s, box-shadow 0.25s;
-  box-shadow: 0 6px 24px rgba(0,100,255,0.35);
-  position: relative;
-  overflow: hidden;
+  width:100%; margin-top:6px; padding:14px;
+  background:linear-gradient(90deg,#0057ff,#00b4ff);
+  border:none; color:white; font-family:'Orbitron',monospace;
+  font-size:0.8rem; font-weight:700; letter-spacing:4px;
+  cursor:pointer; position:relative; overflow:hidden;
+  clip-path:polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+  transition:opacity 0.2s, box-shadow 0.2s;
+  box-shadow:0 0 30px rgba(0,100,255,0.4);
 }
 .btn-login::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent);
-  pointer-events: none;
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.15) 50%,transparent 100%);
+  transform:translateX(-100%); transition:transform 0.5s;
 }
-.btn-login:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 32px rgba(0,100,255,0.45);
-}
-.btn-login:active { transform: translateY(0); }
+.btn-login:hover::before { transform:translateX(100%); }
+.btn-login:hover { opacity:0.9; box-shadow:0 0 40px rgba(0,100,255,0.5); }
 
 .error {
-  color: #fb7185;
-  font-size: 0.82rem;
-  margin-bottom: 16px;
-  padding: 11px 14px;
-  background: rgba(251,113,133,0.07);
-  border: 1px solid rgba(251,113,133,0.2);
-  border-radius: 10px;
-  display: none;
+  font-family:'Rajdhani',sans-serif; font-size:0.85rem; font-weight:600;
+  margin-bottom:14px; padding:10px 14px;
+  background:rgba(255,68,68,0.08); border:1px solid rgba(255,68,68,0.25);
+  color:#ff6b6b; display:none; letter-spacing:0.5px;
+  clip-path:polygon(0 0,100% 0,100% 100%,6px 100%,0 calc(100% - 6px));
 }
 </style>
 </head>
 <body>
-<div class="orbs">
-  <div class="orb orb-1"></div>
-  <div class="orb orb-2"></div>
-  <div class="orb orb-3"></div>
-</div>
-<div class="card">
-  <div class="logo">
-    <div class="logo-title">STUDY</div>
-    <div class="logo-title">TRACKER</div>
-    <div class="logo-sub">동아리 공부 모니터링</div>
+<div class="orb orb-1"></div><div class="orb orb-2"></div>
+<div class="panel">
+  <div class="logo-area">
+    <div class="season-tag">SEASON 1</div>
+    <div class="logo-title">STUDY<br>TRACKER</div>
+    <div class="logo-sub">동아리 공부 랭킹 시스템</div>
   </div>
-  <div class="divider"></div>
+  <div class="divider"><div class="divider-line"></div><div class="divider-text">AUTHENTICATE</div><div class="divider-line"></div></div>
   <div class="error" id="error"></div>
-  <div class="form-group">
-    <label>아이디</label>
-    <input type="text" id="username" placeholder="아이디를 입력하세요" autofocus>
+  <div class="field-wrap">
+    <label class="field-label">Player ID</label>
+    <input type="text" id="username" placeholder="아이디 입력" autofocus>
   </div>
-  <div class="form-group">
-    <label>비밀번호</label>
-    <input type="password" id="password" placeholder="비밀번호를 입력하세요">
+  <div class="field-wrap">
+    <label class="field-label">Access Code</label>
+    <input type="password" id="password" placeholder="비밀번호 입력">
   </div>
-  <button class="btn-login" onclick="login()">로그인</button>
+  <button class="btn-login" onclick="login()">ENTER GAME</button>
 </div>
 <script>
   document.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
-
   async function login() {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value;
     const errEl = document.getElementById('error');
     errEl.style.display = 'none';
-
     if (!username || !password) { showError('아이디와 비밀번호를 입력하세요'); return; }
-
     const form = new URLSearchParams();
-    form.append('username', username);
-    form.append('password', password);
-
+    form.append('username', username); form.append('password', password);
     try {
-      const res = await fetch('/auth/login', { method: 'POST', body: form });
+      const res = await fetch('/auth/login', { method:'POST', body:form });
       const data = await res.json();
       if (!res.ok) { showError(data.detail || '로그인 실패'); return; }
-
       localStorage.setItem('token', data.access_token);
       localStorage.setItem('role', data.role);
       localStorage.setItem('username', data.username);
-
       location.href = ['superadmin','group_admin'].includes(data.role) ? '/admin' : '/dashboard';
-    } catch (e) {
-      showError('서버 연결에 실패했습니다');
-    }
+    } catch(e) { showError('서버 연결에 실패했습니다'); }
   }
-
-  function showError(msg) {
-    const el = document.getElementById('error');
-    el.textContent = msg;
-    el.style.display = 'block';
-  }
-
+  function showError(msg) { const el = document.getElementById('error'); el.textContent = msg; el.style.display='block'; }
   const token = localStorage.getItem('token');
   const role = localStorage.getItem('role');
   if (token) location.href = ['superadmin','group_admin'].includes(role) ? '/admin' : '/dashboard';
