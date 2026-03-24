@@ -13,8 +13,10 @@
   label { display: block; font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px; }
   input { width: 100%; background: #0f172a; border: 1px solid #334155; color: #e2e8f0; padding: 10px 14px; border-radius: 8px; font-size: 0.95rem; margin-bottom: 18px; outline: none; }
   input:focus { border-color: #3b82f6; }
-  button { width: 100%; background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; }
-  button:hover { background: #2563eb; }
+  .btn-login { width: 100%; background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+  .btn-login:hover { background: #2563eb; }
+  .btn-download { width: 100%; background: transparent; color: #94a3b8; border: 1px solid #334155; padding: 10px; border-radius: 8px; font-size: 0.88rem; font-weight: 600; cursor: pointer; margin-top: 10px; display: none; }
+  .btn-download:hover { border-color: #64748b; color: #e2e8f0; }
   .error { color: #f87171; font-size: 0.85rem; margin-bottom: 12px; display: none; }
 </style>
 </head>
@@ -27,7 +29,7 @@
   <input type="text" id="username" placeholder="아이디 입력" autofocus>
   <label>비밀번호</label>
   <input type="password" id="password" placeholder="비밀번호 입력">
-  <button onclick="login()">로그인</button>
+  <button class="btn-login" onclick="login()">로그인</button>
 </div>
 <script>
   document.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
@@ -53,7 +55,7 @@
       localStorage.setItem('role', data.role);
       localStorage.setItem('username', data.username);
 
-      location.href = data.role === 'admin' ? '/admin' : '/dashboard';
+      location.href = ['superadmin','group_admin'].includes(data.role) ? '/admin' : '/dashboard';
     } catch (e) {
       showError('서버 연결에 실패했습니다');
     }
@@ -68,7 +70,8 @@
   // 이미 로그인된 경우 리다이렉트
   const token = localStorage.getItem('token');
   const role = localStorage.getItem('role');
-  if (token) location.href = role === 'admin' ? '/admin' : '/dashboard';
+  if (token) location.href = ['superadmin','group_admin'].includes(role) ? '/admin' : '/dashboard';
+
 </script>
 </body>
 </html>

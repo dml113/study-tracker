@@ -1,0 +1,57 @@
+name: Build & Deploy Client
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'client/VERSION'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyinstaller pynput requests
+
+      - name: Read version
+        id: ver
+        shell: bash
+        run: echo "version=$(cat client/VERSION | tr -d '[:space:]')" >> $GITHUB_OUTPUT
+
+      - name: Set version in client.py
+        shell: bash
+        run: sed -i "s/^VERSION = .*/VERSION = \"${{ steps.ver.outputs.version }}\"/" client/client.py
+
+      - name: Build EXE
+        shell: pwsh
+        run: |
+          cd client
+          pyinstaller --onefile --windowed --name StudyTracker `
+            --hidden-import=pynput.keyboard._win32 `
+            --hidden-import=pynput.mouse._win32 `
+            client.py
+
+      - name: Upload to server
+        shell: bash
+        env:
+          SERVER_URL: ${{ secrets.SERVER_URL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          TOKEN=$(curl -s -X POST "${SERVER_URL}/auth/login" \
+            -d "username=admin&password=${ADMIN_PASSWORD}" \
+            | python -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+
+          curl -X POST "${SERVER_URL}/admin/client/upload?version=${VERSION}" \
+            -H "Authorization: Bearer ${TOKEN}" \
+            -F "file=@client/dist/StudyTracker.exe"

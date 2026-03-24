@@ -10,7 +10,9 @@
   .header { background: #1e293b; padding: 16px 32px; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; }
   .header h1 { font-size: 1.3rem; font-weight: 700; color: #60a5fa; }
   .header-right { display: flex; align-items: center; gap: 16px; }
-  .badge { background: #7c3aed; color: white; font-size: 0.75rem; padding: 3px 10px; border-radius: 99px; font-weight: 600; }
+  .badge { font-size: 0.75rem; padding: 3px 10px; border-radius: 99px; font-weight: 600; }
+  .badge-superadmin { background: #dc2626; color: white; }
+  .badge-group_admin { background: #7c3aed; color: white; }
   .logout-btn { background: none; border: 1px solid #475569; color: #94a3b8; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
   .logout-btn:hover { border-color: #64748b; color: #e2e8f0; }
   .container { max-width: 1100px; margin: 32px auto; padding: 0 24px; }
@@ -36,12 +38,13 @@
   .dot-active { background: #22c55e; }
   .dot-inactive { background: #475569; }
   .role-badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 99px; font-weight: 600; }
-  .role-admin { background: #7c3aed33; color: #a78bfa; }
+  .role-superadmin { background: #dc262633; color: #f87171; }
+  .role-group_admin { background: #7c3aed33; color: #a78bfa; }
   .role-member { background: #0f172a; color: #64748b; }
+  .group-badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 99px; background: #0369a133; color: #38bdf8; font-weight: 600; }
   .td-actions { display: flex; gap: 6px; flex-wrap: wrap; }
   .time-bar-wrap { background: #0f172a; border-radius: 99px; height: 6px; width: 80px; display: inline-block; vertical-align: middle; margin-left: 8px; overflow: hidden; }
   .time-bar { height: 100%; background: #3b82f6; border-radius: 99px; }
-  /* 출퇴근 탭 */
   .date-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
   .date-bar input { background: #1e293b; border: 1px solid #334155; color: #e2e8f0; padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; outline: none; }
   .att-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px 22px; margin-bottom: 12px; }
@@ -56,6 +59,9 @@
   .absence-chip { background: #f59e0b22; border: 1px solid #f59e0b44; border-radius: 6px; padding: 4px 10px; font-size: 0.78rem; color: #fbbf24; }
   .absence-chip .reason { color: #e2e8f0; font-weight: 600; }
   .no-checkin { color: #475569; font-size: 0.85rem; }
+  .group-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px 22px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+  .group-name { font-weight: 600; font-size: 1rem; }
+  .group-meta { color: #94a3b8; font-size: 0.82rem; margin-top: 4px; }
   .toast { position: fixed; bottom: 24px; right: 24px; background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; font-size: 0.9rem; display: none; z-index: 100; }
   .toast.success { border-color: #22c55e; color: #22c55e; }
   .toast.error { border-color: #ef4444; color: #ef4444; }
@@ -63,7 +69,7 @@
   .modal-bg.show { display: flex; }
   .modal { background: #1e293b; border: 1px solid #334155; border-radius: 14px; padding: 28px; width: 320px; }
   .modal h3 { margin-bottom: 16px; font-size: 1rem; }
-  .modal input { width: 100%; background: #0f172a; border: 1px solid #334155; color: #e2e8f0; padding: 9px 12px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 14px; outline: none; }
+  .modal input, .modal select { width: 100%; background: #0f172a; border: 1px solid #334155; color: #e2e8f0; padding: 9px 12px; border-radius: 8px; font-size: 0.9rem; margin-bottom: 14px; outline: none; }
   .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 </style>
 </head>
@@ -72,15 +78,18 @@
   <h1>공부 트래커 관리자</h1>
   <div class="header-right">
     <span id="adminName" style="color:#94a3b8;font-size:0.9rem"></span>
-    <span class="badge">ADMIN</span>
+    <span id="roleBadge" class="badge"></span>
     <button class="logout-btn" onclick="logout()">로그아웃</button>
   </div>
 </div>
 <div class="container">
-  <div class="tabs">
+  <div class="tabs" id="tabBar">
     <button class="tab active" onclick="switchTab('users', this)">유저 관리</button>
     <button class="tab" onclick="switchTab('stats', this)">공부 통계</button>
     <button class="tab" onclick="switchTab('attendance', this)">출퇴근 기록</button>
+    <button class="tab" onclick="switchTab('cheats', this)">치트 감지</button>
+    <button class="tab" id="groupTab" style="display:none" onclick="switchTab('groups', this)">그룹 관리</button>
+    <button class="tab" id="clientTab" style="display:none" onclick="switchTab('client', this)">클라이언트 배포</button>
   </div>
 
   <!-- 유저 관리 -->
@@ -94,11 +103,17 @@
         <label>비밀번호</label>
         <input type="password" id="newPassword" placeholder="비밀번호">
       </div>
-      <div class="form-group">
+      <div class="form-group" id="roleFormGroup">
         <label>권한</label>
         <select id="newRole">
           <option value="member">일반 유저</option>
-          <option value="admin">관리자</option>
+          <option value="group_admin">그룹 관리자</option>
+        </select>
+      </div>
+      <div class="form-group" id="groupFormGroup">
+        <label>그룹</label>
+        <select id="newGroupId">
+          <option value="">그룹 없음</option>
         </select>
       </div>
       <button class="btn btn-primary" onclick="createUser()" style="align-self:flex-end">유저 생성</button>
@@ -106,7 +121,7 @@
     <table>
       <thead>
         <tr>
-          <th>아이디</th><th>권한</th><th>상태</th><th>오늘 활동</th><th>생성일</th><th>관리</th>
+          <th>아이디</th><th>권한</th><th>그룹</th><th>상태</th><th>오늘 활동</th><th>생성일</th><th>관리</th>
         </tr>
       </thead>
       <tbody id="userTableBody"></tbody>
@@ -130,6 +145,54 @@
     </div>
     <div id="attList"></div>
   </div>
+
+  <!-- 치트 감지 -->
+  <div id="tab-cheats" style="display:none">
+    <div class="date-bar">
+      <input type="date" id="cheatDate">
+      <button class="btn btn-primary" onclick="loadCheats()">조회</button>
+    </div>
+    <div id="cheatList"></div>
+  </div>
+
+  <!-- 클라이언트 배포 (슈퍼 어드민 전용) -->
+  <div id="tab-client" style="display:none">
+    <div class="create-form" style="flex-direction:column;align-items:flex-start;gap:16px">
+      <div style="width:100%">
+        <div style="color:#94a3b8;font-size:0.85rem;margin-bottom:6px">현재 배포 버전</div>
+        <div id="currentVersion" style="font-size:1.4rem;font-weight:700;color:#60a5fa">로딩 중...</div>
+        <div style="margin-top:6px">
+          <a id="downloadLink" href="/client/download" style="color:#94a3b8;font-size:0.82rem;text-decoration:none">다운로드 링크: /client/download</a>
+        </div>
+      </div>
+      <hr style="border-color:#334155;width:100%">
+      <div style="font-size:0.9rem;color:#94a3b8;margin-bottom:4px">새 버전 업로드</div>
+      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+        <div class="form-group">
+          <label>버전 번호</label>
+          <input type="text" id="uploadVersion" placeholder="예: 1.0.1" style="min-width:120px">
+        </div>
+        <div class="form-group">
+          <label>EXE 파일</label>
+          <input type="file" id="uploadFile" accept=".exe" style="min-width:200px;color:#e2e8f0">
+        </div>
+        <button class="btn btn-primary" onclick="uploadClient()">업로드</button>
+      </div>
+      <div id="uploadStatus" style="font-size:0.85rem;color:#94a3b8"></div>
+    </div>
+  </div>
+
+  <!-- 그룹 관리 (슈퍼 어드민 전용) -->
+  <div id="tab-groups" style="display:none">
+    <div class="create-form">
+      <div class="form-group">
+        <label>그룹명</label>
+        <input type="text" id="newGroupName" placeholder="예: C.C, IT, C.S">
+      </div>
+      <button class="btn btn-primary" onclick="createGroup()" style="align-self:flex-end">그룹 생성</button>
+    </div>
+    <div id="groupList"></div>
+  </div>
 </div>
 
 <!-- 비밀번호 변경 모달 -->
@@ -138,31 +201,69 @@
     <h3>비밀번호 변경</h3>
     <input type="password" id="newPw" placeholder="새 비밀번호">
     <div class="modal-actions">
-      <button class="btn" style="background:#334155;color:#e2e8f0" onclick="closeModal()">취소</button>
+      <button class="btn" style="background:#334155;color:#e2e8f0" onclick="closeModal('pwModal')">취소</button>
       <button class="btn btn-primary" onclick="confirmPwChange()">변경</button>
     </div>
   </div>
 </div>
+
+<!-- 그룹 이동 모달 -->
+<div class="modal-bg" id="groupModal">
+  <div class="modal">
+    <h3>그룹 변경</h3>
+    <select id="moveGroupId">
+      <option value="">그룹 없음</option>
+    </select>
+    <div class="modal-actions">
+      <button class="btn" style="background:#334155;color:#e2e8f0" onclick="closeModal('groupModal')">취소</button>
+      <button class="btn btn-primary" onclick="confirmGroupChange()">변경</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
   const token = localStorage.getItem('token');
   const role = localStorage.getItem('role');
-  if (!token || role !== 'admin') location.href = '/';
+  const isSuperAdmin = role === 'superadmin';
+  const isGroupAdmin = role === 'group_admin';
+
+  if (!token || !['superadmin', 'group_admin'].includes(role)) location.href = '/';
+
   document.getElementById('adminName').textContent = localStorage.getItem('username');
+  const badge = document.getElementById('roleBadge');
+  badge.textContent = isSuperAdmin ? 'SUPER ADMIN' : 'GROUP ADMIN';
+  badge.className = 'badge badge-' + role;
+
+  // 슈퍼 어드민만 그룹/클라이언트 탭 표시
+  if (isSuperAdmin) {
+    document.getElementById('groupTab').style.display = '';
+    document.getElementById('clientTab').style.display = '';
+  }
+  // group_admin은 권한·그룹 폼 숨김
+  if (isGroupAdmin) {
+    document.getElementById('roleFormGroup').style.display = 'none';
+    document.getElementById('groupFormGroup').style.display = 'none';
+  }
 
   let editingUserId = null;
+  let groups = [];
   function authH() { return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }; }
   function logout() { localStorage.clear(); location.href = '/'; }
 
   function switchTab(tab, el) {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
-    ['users','stats','attendance'].forEach(t => {
-      document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+    ['users','stats','attendance','cheats','groups','client'].forEach(t => {
+      const el = document.getElementById('tab-' + t);
+      if (el) el.style.display = t === tab ? 'block' : 'none';
     });
     if (tab === 'stats') loadStats();
     if (tab === 'attendance') loadAttendance();
+    if (tab === 'groups') loadGroups();
+    if (tab === 'cheats') loadCheats();
+    if (tab === 'client') loadClientVersion();
   }
 
   function showToast(msg, type = 'success') {
@@ -173,8 +274,30 @@
     setTimeout(() => el.style.display = 'none', 2500);
   }
 
+  function roleName(r) {
+    if (r === 'superadmin') return '슈퍼 어드민';
+    if (r === 'group_admin') return '그룹 관리자';
+    return '일반';
+  }
+
+  // ── 그룹 목록 로드 (공통) ──
+  async function loadGroupOptions() {
+    const res = await fetch('/admin/groups', { headers: authH() });
+    if (!res.ok) return;
+    groups = await res.json();
+    ['newGroupId', 'moveGroupId'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">그룹 없음</option>' +
+        groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+      if (cur) sel.value = cur;
+    });
+  }
+
   // ── 유저 관리 ──
   async function loadUsers() {
+    await loadGroupOptions();
     const res = await fetch('/admin/users', { headers: authH() });
     if (!res.ok) { logout(); return; }
     const users = await res.json();
@@ -182,7 +305,8 @@
     document.getElementById('userTableBody').innerHTML = users.map(u => `
       <tr>
         <td><strong>${u.username}</strong></td>
-        <td><span class="role-badge role-${u.role}">${u.role === 'admin' ? '관리자' : '일반'}</span></td>
+        <td><span class="role-badge role-${u.role}">${roleName(u.role)}</span></td>
+        <td>${u.group_name ? `<span class="group-badge">${u.group_name}</span>` : '<span style="color:#475569">–</span>'}</td>
         <td><span class="status-dot ${u.is_active ? 'dot-active' : 'dot-inactive'}"></span>${u.is_active ? '활성' : '비활성'}</td>
         <td>
           ${u.today_minutes}분
@@ -192,8 +316,10 @@
         <td>
           <div class="td-actions">
             <button class="btn-sm btn-warning" onclick="openPwModal(${u.id})">비밀번호</button>
-            <button class="btn-sm" style="background:#1e40af;color:white" onclick="toggleActive(${u.id},${u.is_active})">${u.is_active ? '비활성화' : '활성화'}</button>
-            <button class="btn-sm btn-danger" onclick="deleteUser(${u.id},'${u.username}')">삭제</button>
+            ${u.role !== 'superadmin' ? `<button class="btn-sm" style="background:#1e40af;color:white" onclick="toggleActive(${u.id},${u.is_active})">${u.is_active ? '비활성화' : '활성화'}</button>` : ''}
+            ${isSuperAdmin && u.role !== 'superadmin' ? `<button class="btn-sm" style="background:#0369a1;color:white" onclick="openGroupModal(${u.id}, ${u.group_id||'null'})">그룹</button>` : ''}
+            ${isSuperAdmin && u.role !== 'superadmin' ? `<button class="btn-sm" style="background:#475569;color:white" onclick="toggleRole(${u.id},'${u.role}')">${u.role === 'group_admin' ? '일반으로' : '그룹관리자로'}</button>` : ''}
+            ${u.role !== 'superadmin' ? `<button class="btn-sm btn-danger" onclick="deleteUser(${u.id},'${u.username}')">삭제</button>` : ''}
           </div>
         </td>
       </tr>
@@ -203,12 +329,20 @@
   async function createUser() {
     const username = document.getElementById('newUsername').value.trim();
     const password = document.getElementById('newPassword').value;
-    const role = document.getElementById('newRole').value;
+    const role = isSuperAdmin ? document.getElementById('newRole').value : 'member';
+    const group_id = isSuperAdmin ? (document.getElementById('newGroupId').value || null) : null;
     if (!username || !password) { showToast('아이디와 비밀번호를 입력하세요', 'error'); return; }
-    const res = await fetch('/admin/users', { method: 'POST', headers: authH(), body: JSON.stringify({username, password, role}) });
+    const res = await fetch('/admin/users', {
+      method: 'POST', headers: authH(),
+      body: JSON.stringify({ username, password, role, group_id: group_id ? parseInt(group_id) : null })
+    });
     const data = await res.json();
-    if (res.ok) { showToast(data.message); document.getElementById('newUsername').value = ''; document.getElementById('newPassword').value = ''; loadUsers(); }
-    else showToast(data.detail, 'error');
+    if (res.ok) {
+      showToast(data.message);
+      document.getElementById('newUsername').value = '';
+      document.getElementById('newPassword').value = '';
+      loadUsers();
+    } else showToast(data.detail, 'error');
   }
 
   async function deleteUser(id, username) {
@@ -226,15 +360,90 @@
     else showToast(data.detail, 'error');
   }
 
-  function openPwModal(id) { editingUserId = id; document.getElementById('newPw').value = ''; document.getElementById('pwModal').classList.add('show'); }
-  function closeModal() { document.getElementById('pwModal').classList.remove('show'); editingUserId = null; }
+  async function toggleRole(id, currentRole) {
+    const newRole = currentRole === 'group_admin' ? 'member' : 'group_admin';
+    const res = await fetch('/admin/users/'+id, { method: 'PATCH', headers: authH(), body: JSON.stringify({role: newRole}) });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); loadUsers(); }
+    else showToast(data.detail, 'error');
+  }
+
+  function openPwModal(id) {
+    editingUserId = id;
+    document.getElementById('newPw').value = '';
+    document.getElementById('pwModal').classList.add('show');
+  }
+
+  function openGroupModal(id, currentGroupId) {
+    editingUserId = id;
+    const sel = document.getElementById('moveGroupId');
+    sel.value = currentGroupId || '';
+    document.getElementById('groupModal').classList.add('show');
+  }
+
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+    editingUserId = null;
+  }
 
   async function confirmPwChange() {
     const pw = document.getElementById('newPw').value;
     if (!pw) { showToast('비밀번호를 입력하세요', 'error'); return; }
     const res = await fetch('/admin/users/'+editingUserId, { method: 'PATCH', headers: authH(), body: JSON.stringify({password: pw}) });
     const data = await res.json();
-    if (res.ok) { showToast(data.message); closeModal(); }
+    if (res.ok) { showToast(data.message); closeModal('pwModal'); }
+    else showToast(data.detail, 'error');
+  }
+
+  async function confirmGroupChange() {
+    const group_id = document.getElementById('moveGroupId').value;
+    const res = await fetch('/admin/users/'+editingUserId, {
+      method: 'PATCH', headers: authH(),
+      body: JSON.stringify({ group_id: group_id ? parseInt(group_id) : null })
+    });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); closeModal('groupModal'); loadUsers(); }
+    else showToast(data.detail, 'error');
+  }
+
+  // ── 그룹 관리 ──
+  async function loadGroups() {
+    const res = await fetch('/admin/groups', { headers: authH() });
+    const data = await res.json();
+    const list = document.getElementById('groupList');
+    if (!data.length) {
+      list.innerHTML = '<div style="text-align:center;color:#475569;padding:60px 0">그룹이 없습니다</div>';
+      return;
+    }
+    list.innerHTML = data.map(g => `
+      <div class="group-card">
+        <div>
+          <div class="group-name">${g.name}</div>
+          <div class="group-meta">생성일: ${g.created_at.slice(0,10)}</div>
+        </div>
+        <button class="btn-sm btn-danger" onclick="deleteGroup(${g.id},'${g.name}')">삭제</button>
+      </div>
+    `).join('');
+  }
+
+  async function createGroup() {
+    const name = document.getElementById('newGroupName').value.trim();
+    if (!name) { showToast('그룹명을 입력하세요', 'error'); return; }
+    const res = await fetch('/admin/groups', { method: 'POST', headers: authH(), body: JSON.stringify({name}) });
+    const data = await res.json();
+    if (res.ok) {
+      showToast(data.message);
+      document.getElementById('newGroupName').value = '';
+      loadGroups();
+      loadGroupOptions();
+    } else showToast(data.detail, 'error');
+  }
+
+  async function deleteGroup(id, name) {
+    if (!confirm(`'${name}' 그룹을 삭제하시겠습니까?\n소속 유저의 그룹이 해제됩니다.`)) return;
+    const res = await fetch('/admin/groups/'+id, { method: 'DELETE', headers: authH() });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); loadGroups(); loadGroupOptions(); }
     else showToast(data.detail, 'error');
   }
 
@@ -289,9 +498,70 @@
     `).join('');
   }
 
+  // ── 치트 감지 ──
+  async function loadCheats() {
+    const d = document.getElementById('cheatDate').value || new Date().toISOString().split('T')[0];
+    const res = await fetch('/admin/cheats?target_date=' + d, { headers: authH() });
+    const data = await res.json();
+    const list = document.getElementById('cheatList');
+    if (!data.length) {
+      list.innerHTML = '<div style="text-align:center;color:#475569;padding:60px 0">감지된 치트가 없습니다</div>';
+      return;
+    }
+    list.innerHTML = `
+      <table>
+        <thead><tr><th>시각</th><th>유저</th><th>감지 내용</th></tr></thead>
+        <tbody>
+          ${data.map(c => `
+            <tr>
+              <td style="color:#94a3b8">${c.detected_at}</td>
+              <td><strong>${c.username}</strong></td>
+              <td><span style="color:#ef4444">${c.reason}</span></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  // ── 클라이언트 배포 ──
+  async function loadClientVersion() {
+    const res = await fetch('/client/version');
+    const data = await res.json();
+    document.getElementById('currentVersion').textContent = 'v' + data.version;
+  }
+
+  async function uploadClient() {
+    const version = document.getElementById('uploadVersion').value.trim();
+    const file = document.getElementById('uploadFile').files[0];
+    const status = document.getElementById('uploadStatus');
+    if (!version) { showToast('버전 번호를 입력하세요', 'error'); return; }
+    if (!file) { showToast('EXE 파일을 선택하세요', 'error'); return; }
+
+    status.textContent = '업로드 중...';
+    status.style.color = '#94a3b8';
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`/admin/client/upload?version=${encodeURIComponent(version)}`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token },
+      body: form,
+    });
+    const data = await res.json();
+    if (res.ok) {
+      showToast(data.message);
+      status.textContent = `마지막 업로드: v${version} (${new Date().toLocaleString()})`;
+      status.style.color = '#22c55e';
+      loadClientVersion();
+    } else {
+      showToast(data.detail, 'error');
+      status.textContent = '';
+    }
+  }
+
   // 초기화
   document.getElementById('statsDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('attDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('cheatDate').value = new Date().toISOString().split('T')[0];
   loadUsers();
 </script>
 </body>

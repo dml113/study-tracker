@@ -41,6 +41,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
 
 async def get_current_admin(token: str = Depends(oauth2_scheme)) -> dict:
     payload = decode_token(token)
-    if payload.get("role") != "admin":
+    if payload.get("role") not in ("superadmin", "group_admin"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="관리자 권한 필요")
+    return payload
+
+
+async def get_current_superadmin(token: str = Depends(oauth2_scheme)) -> dict:
+    payload = decode_token(token)
+    if payload.get("role") != "superadmin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="슈퍼 어드민 권한 필요")
     return payload

@@ -22,5 +22,5 @@ async def login(
     if not user.is_active:
         raise HTTPException(status_code=403, detail="비활성화된 계정입니다")
 
-    token = create_access_token({"sub": user.username, "role": user.role})
-    return {"access_token": token, "token_type": "bearer", "role": user.role, "username": user.username}
+    token = create_access_token({"sub": user.username, "role": user.role, "group_id": user.group_id})
+    return {"access_token": token, "token_type": "bearer", "role": user.role, "username": user.username, "group_id": user.group_id}

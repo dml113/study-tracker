@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel
 from typing import Optional
-from models import ActivityLog, Attendance, Absence
+from models import ActivityLog, Attendance, Absence, CheatLog
 from auth import get_current_user
 from database import get_session
 from datetime import date, datetime
@@ -13,6 +13,10 @@ router = APIRouter(prefix="/api", tags=["api"])
 
 class HeartbeatRequest(BaseModel):
     active_seconds: float
+
+
+class CheatReportRequest(BaseModel):
+    reason: str
 
 
 class AbsenceStartRequest(BaseModel):
@@ -198,6 +202,20 @@ async def heartbeat(
         log = ActivityLog(username=username, date=today, active_seconds=req.active_seconds)
         session.add(log)
 
+    await session.commit()
+    return {"status": "ok"}
+
+
+@router.post("/cheat-report")
+async def cheat_report(
+    req: CheatReportRequest,
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_user),
+):
+    username = current["sub"]
+    today = date.today().isoformat()
+    log = CheatLog(username=username, date=today, reason=req.reason)
+    session.add(log)
     await session.commit()
     return {"status": "ok"}
 

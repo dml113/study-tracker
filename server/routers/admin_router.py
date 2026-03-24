@@ -3,33 +3,94 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel
 from typing import Optional
-from models import User, ActivityLog, Attendance, Absence
-from auth import hash_password, get_current_admin
+from models import User, ActivityLog, Attendance, Absence, Group, CheatLog
+from auth import hash_password, get_current_admin, get_current_superadmin
 from database import get_session
 from datetime import date
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
+# ── 그룹 관리 (슈퍼 어드민 전용) ───────────────────────
+
+class CreateGroupRequest(BaseModel):
+    name: str
+
+
+@router.get("/groups")
+async def list_groups(
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_admin),
+):
+    result = await session.execute(select(Group).order_by(Group.name))
+    groups = result.scalars().all()
+    return [{"id": g.id, "name": g.name, "created_at": g.created_at.isoformat()} for g in groups]
+
+
+@router.post("/groups")
+async def create_group(
+    req: CreateGroupRequest,
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_superadmin),
+):
+    existing = await session.execute(select(Group).where(Group.name == req.name))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="이미 존재하는 그룹명입니다")
+    group = Group(name=req.name)
+    session.add(group)
+    await session.commit()
+    await session.refresh(group)
+    return {"message": f"'{req.name}' 그룹이 생성되었습니다", "id": group.id}
+
+
+@router.delete("/groups/{group_id}")
+async def delete_group(
+    group_id: int,
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_superadmin),
+):
+    result = await session.execute(select(Group).where(Group.id == group_id))
+    group = result.scalar_one_or_none()
+    if not group:
+        raise HTTPException(status_code=404, detail="그룹을 찾을 수 없습니다")
+
+    # 소속 유저 group_id 해제
+    users_result = await session.execute(select(User).where(User.group_id == group_id))
+    for user in users_result.scalars().all():
+        user.group_id = None
+
+    await session.delete(group)
+    await session.commit()
+    return {"message": "삭제되었습니다"}
+
+
+# ── 유저 관리 ──────────────────────────────────────────
+
 class CreateUserRequest(BaseModel):
     username: str
     password: str
     role: str = "member"
+    group_id: Optional[int] = None
 
 
 class UpdateUserRequest(BaseModel):
     password: Optional[str] = None
     is_active: Optional[bool] = None
     role: Optional[str] = None
+    group_id: Optional[int] = None
 
 
 @router.get("/users")
 async def list_users(
     session: AsyncSession = Depends(get_session),
-    _: dict = Depends(get_current_admin),
+    current: dict = Depends(get_current_admin),
 ):
-    result = await session.execute(select(User).order_by(User.created_at))
-    users = result.scalars().all()
+    query = select(User).order_by(User.created_at)
+    if current["role"] == "group_admin":
+        query = query.where(User.group_id == current.get("group_id"))
+
+    users_result = await session.execute(query)
+    users = users_result.scalars().all()
 
     today = date.today().isoformat()
     stats_result = await session.execute(
@@ -37,11 +98,16 @@ async def list_users(
     )
     today_stats = {row.username: row.active_seconds for row in stats_result}
 
+    groups_result = await session.execute(select(Group))
+    group_names = {g.id: g.name for g in groups_result.scalars().all()}
+
     return [
         {
             "id": u.id,
             "username": u.username,
             "role": u.role,
+            "group_id": u.group_id,
+            "group_name": group_names.get(u.group_id) if u.group_id else None,
             "is_active": u.is_active,
             "created_at": u.created_at.isoformat(),
             "today_seconds": today_stats.get(u.username, 0),
@@ -55,13 +121,26 @@ async def list_users(
 async def create_user(
     req: CreateUserRequest,
     session: AsyncSession = Depends(get_session),
-    _: dict = Depends(get_current_admin),
+    current: dict = Depends(get_current_admin),
 ):
+    if req.role == "superadmin":
+        raise HTTPException(status_code=403, detail="슈퍼 어드민 계정은 생성할 수 없습니다")
+
+    if current["role"] == "group_admin":
+        if req.role != "member":
+            raise HTTPException(status_code=403, detail="그룹 관리자는 일반 유저만 생성할 수 있습니다")
+        req.group_id = current.get("group_id")
+
     existing = await session.execute(select(User).where(User.username == req.username))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="이미 존재하는 사용자명입니다")
 
-    user = User(username=req.username, password_hash=hash_password(req.password), role=req.role)
+    user = User(
+        username=req.username,
+        password_hash=hash_password(req.password),
+        role=req.role,
+        group_id=req.group_id,
+    )
     session.add(user)
     await session.commit()
     return {"message": f"'{req.username}' 계정이 생성되었습니다"}
@@ -79,12 +158,26 @@ async def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
 
+    if current["role"] == "group_admin":
+        if user.group_id != current.get("group_id"):
+            raise HTTPException(status_code=403, detail="다른 그룹의 유저는 수정할 수 없습니다")
+        if user.role != "member":
+            raise HTTPException(status_code=403, detail="관리자 계정은 수정할 수 없습니다")
+        if req.role is not None and req.role != "member":
+            raise HTTPException(status_code=403, detail="그룹 관리자는 권한을 변경할 수 없습니다")
+        req.group_id = None  # 그룹 이동 불가
+
+    if user.role == "superadmin" and req.role is not None and req.role != "superadmin":
+        raise HTTPException(status_code=403, detail="슈퍼 어드민 권한은 변경할 수 없습니다")
+
     if req.password is not None:
         user.password_hash = hash_password(req.password)
     if req.is_active is not None:
         user.is_active = req.is_active
     if req.role is not None:
         user.role = req.role
+    if req.group_id is not None:
+        user.group_id = req.group_id
 
     await session.commit()
     return {"message": "수정되었습니다"}
@@ -102,47 +195,57 @@ async def delete_user(
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다")
     if user.username == current["sub"]:
         raise HTTPException(status_code=400, detail="자기 자신은 삭제할 수 없습니다")
+    if user.role == "superadmin":
+        raise HTTPException(status_code=403, detail="슈퍼 어드민 계정은 삭제할 수 없습니다")
+
+    if current["role"] == "group_admin":
+        if user.group_id != current.get("group_id"):
+            raise HTTPException(status_code=403, detail="다른 그룹의 유저는 삭제할 수 없습니다")
+        if user.role != "member":
+            raise HTTPException(status_code=403, detail="관리자 계정은 삭제할 수 없습니다")
 
     await session.delete(user)
     await session.commit()
     return {"message": "삭제되었습니다"}
 
 
+# ── 출퇴근 기록 ────────────────────────────────────────
+
 @router.get("/attendance")
 async def get_attendance(
     target_date: Optional[str] = None,
     session: AsyncSession = Depends(get_session),
-    _: dict = Depends(get_current_admin),
+    current: dict = Depends(get_current_admin),
 ):
     today = target_date or date.today().isoformat()
 
-    # 전체 유저
-    users_result = await session.execute(select(User).order_by(User.username))
+    query = select(User).order_by(User.username)
+    if current["role"] == "group_admin":
+        query = query.where(User.group_id == current.get("group_id"))
+
+    users_result = await session.execute(query)
     users = users_result.scalars().all()
+    usernames = {u.username for u in users}
 
-    # 출퇴근
-    att_result = await session.execute(
-        select(Attendance).where(Attendance.date == today)
-    )
-    attendances = {a.username: a for a in att_result.scalars().all()}
+    att_result = await session.execute(select(Attendance).where(Attendance.date == today))
+    attendances = {a.username: a for a in att_result.scalars().all() if a.username in usernames}
 
-    # 활동 시간
     stats_result = await session.execute(
         select(ActivityLog.username, ActivityLog.active_seconds).where(ActivityLog.date == today)
     )
-    stats = {row.username: row.active_seconds for row in stats_result}
+    stats = {row.username: row.active_seconds for row in stats_result if row.username in usernames}
 
-    # 외출 기록
     absence_result = await session.execute(
         select(Absence).where(Absence.date == today).order_by(Absence.start_at)
     )
     absences_by_user: dict[str, list] = {}
     for ab in absence_result.scalars().all():
-        absences_by_user.setdefault(ab.username, []).append({
-            "start": ab.start_at.strftime("%H:%M"),
-            "end": ab.end_at.strftime("%H:%M") if ab.end_at else None,
-            "reason": ab.reason,
-        })
+        if ab.username in usernames:
+            absences_by_user.setdefault(ab.username, []).append({
+                "start": ab.start_at.strftime("%H:%M"),
+                "end": ab.end_at.strftime("%H:%M") if ab.end_at else None,
+                "reason": ab.reason,
+            })
 
     return [
         {
@@ -155,4 +258,35 @@ async def get_attendance(
             "absences": absences_by_user.get(u.username, []),
         }
         for u in users
+    ]
+
+
+# ── 치트 기록 ──────────────────────────────────────────
+
+@router.get("/cheats")
+async def get_cheats(
+    target_date: Optional[str] = None,
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_admin),
+):
+    today = target_date or date.today().isoformat()
+
+    query = select(CheatLog).where(CheatLog.date == today).order_by(CheatLog.detected_at.desc())
+    if current["role"] == "group_admin":
+        # 자기 그룹 유저만
+        users_result = await session.execute(
+            select(User.username).where(User.group_id == current.get("group_id"))
+        )
+        group_usernames = {row[0] for row in users_result.all()}
+        query = query.where(CheatLog.username.in_(group_usernames))
+
+    result = await session.execute(query)
+    logs = result.scalars().all()
+    return [
+        {
+            "username": log.username,
+            "detected_at": log.detected_at.strftime("%H:%M:%S"),
+            "reason": log.reason,
+        }
+        for log in logs
     ]
