@@ -27,7 +27,11 @@ server/
 
 client/
 ├── client.py            # Windows 클라이언트 (tkinter UI + pynput 감지 + 자동 업데이트 + 치트 감지)
-└── build.bat            # PyInstaller EXE 빌드 스크립트
+├── build.bat            # PyInstaller EXE 빌드 스크립트 (로컬 빌드용)
+└── VERSION              # 클라이언트 버전 파일 (변경 시 GitHub Actions 빌드 트리거)
+
+.github/workflows/
+└── build-client.yml     # GitHub Actions: Windows EXE 자동 빌드 → Release 업로드
 ```
 
 ## 역할(Role) 체계
@@ -122,15 +126,29 @@ sudo systemctl restart study-tracker
 - **배포 후 반드시 `__pycache__` 삭제** — 남아있으면 이전 .pyc 실행됨
 - `WorkingDirectory`가 `~/study-tracker`임에 주의 (scp 경로 혼동 주의)
 
-### 클라이언트 EXE 빌드
+### 클라이언트 EXE 빌드 및 배포
+- **기본 방식: GitHub Actions 자동 빌드** (권장)
+  1. `client/VERSION` 파일을 새 버전으로 수정 (예: `1.0.1`)
+  2. commit & push → GitHub Actions가 Windows runner에서 자동 빌드 (약 1~2분)
+  3. 빌드된 EXE가 GitHub Release에 자동 업로드 (태그: `v{버전}`)
+  4. 관리자 페이지 → 클라이언트 배포 탭 → **"GitHub에서 동기화"** 클릭
+  5. 부원들 다음 실행 시 자동 업데이트 알림
+- **수동 빌드** (보조 수단): 로컬 Windows에서 `build.bat` 실행 후 관리자 페이지에서 직접 업로드
 - Python **3.11** 권장 (3.12+ PyInstaller/pynput 호환 이슈)
 - pynput은 반드시 `--hidden-import` 명시 필요:
   ```
   --hidden-import=pynput.keyboard._win32
   --hidden-import=pynput.mouse._win32
   ```
-- 빌드는 반드시 **Windows**에서 (Linux에서 Windows EXE 크로스컴파일 불가)
-- 빌드 후 관리자 페이지 `/admin` → **클라이언트 배포** 탭에서 버전 + EXE 업로드
+
+### GitHub Actions CI/CD
+- 워크플로우: `.github/workflows/build-client.yml`
+- 트리거: `client/VERSION` 변경 후 main push, 또는 수동 실행(workflow_dispatch)
+- `permissions: contents: write` 설정됨
+- GitHub Secrets (이미 등록):
+  - `SERVER_URL`: `http://172.16.145.81:8000`
+  - `ADMIN_PASSWORD`: 관리자 비밀번호
+- 서버가 사설IP(`172.16.145.x`)라 GitHub Actions에서 직접 업로드 불가 → `sync-github` 엔드포인트로 우회
 
 ### HTML 페이지
 - 순수 HTML + Vanilla JS (프레임워크 없음)
@@ -145,7 +163,8 @@ sudo systemctl restart study-tracker
 | POST | `/auth/login` | 없음 | 로그인 → JWT 반환 |
 | GET | `/client/version` | 없음 | 클라이언트 최신 버전 조회 |
 | GET | `/client/download` | 없음 | 클라이언트 EXE 다운로드 |
-| POST | `/admin/client/upload` | superadmin | 새 클라이언트 EXE 업로드 |
+| POST | `/admin/client/upload` | superadmin | 새 클라이언트 EXE 업로드 (수동) |
+| POST | `/admin/client/sync-github` | superadmin | GitHub Release에서 최신 EXE 동기화 |
 | GET | `/api/attendance/today` | member+ | 오늘 출퇴근 상태 조회 |
 | POST | `/api/checkin` | member+ | 출근 |
 | POST | `/api/checkout` | member+ | 퇴근 |
