@@ -512,7 +512,7 @@ class LoginWindow:
         tk.Label(self.root, text="동아리 공부 시간 모니터링", bg=self.BG, fg="#475569",
                  font=("Segoe UI", 9)).pack(pady=(0, 20))
 
-        self.e_server = self._field("서버 주소", self.cfg.get("server", "http://172.16.145.81:8000"))
+        self.e_server = self._field("서버 주소", self.cfg.get("server", "http://traker.itnsa.cloud"))
         self.e_user = self._field("아이디", self.cfg.get("username", ""))
         self.e_pw = self._field("비밀번호", "", show="●")
 
