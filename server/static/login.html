@@ -3,148 +3,121 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>공부 트래커</title>
+<title>공부 트래커 🌸</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 :root {
-  --bg:#06080f; --card:#0c1020; --blue:#00b4ff; --green:#00ff88;
-  --gold:#ffd700; --text:#e8f0fe; --muted:#3a4a6a; --muted-light:#5a7090;
+  --bg:#fdf6f0; --surface:#fff; --primary:#ff8fab; --primary-dark:#e8738f;
+  --accent:#ffd166; --text:#3d2b56; --text-light:#7b6b8d; --muted:#c4b5d5;
+  --border:rgba(200,180,220,0.35); --shadow:0 8px 32px rgba(180,120,200,0.12);
 }
 body {
-  font-family:'Rajdhani',sans-serif; background:var(--bg); color:var(--text);
-  min-height:100vh; display:flex; align-items:center; justify-content:center; overflow:hidden;
+  font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
 }
-
-/* Scanline */
-body::after {
-  content:''; position:fixed; inset:0; pointer-events:none; z-index:999;
-  background:repeating-linear-gradient(0deg, rgba(0,0,0,0.03) 0px, rgba(0,0,0,0.03) 1px, transparent 1px, transparent 3px);
-}
-
-/* Grid bg */
 body::before {
-  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
-  background-image:
-    linear-gradient(rgba(0,180,255,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,180,255,0.04) 1px, transparent 1px);
-  background-size:40px 40px;
+  content:''; position:fixed; inset:0; pointer-events:none;
+  background-image:radial-gradient(circle,rgba(200,180,220,0.18) 1px,transparent 1px);
+  background-size:22px 22px; z-index:0;
 }
-
-/* Glow orbs */
-.orb { position:fixed; border-radius:50%; filter:blur(120px); pointer-events:none; z-index:0; animation:orbDrift 20s ease-in-out infinite; }
-.orb-1 { width:500px; height:500px; background:rgba(0,60,180,0.2); top:-200px; left:-150px; }
-.orb-2 { width:400px; height:400px; background:rgba(0,180,255,0.08); bottom:-150px; right:-100px; animation-delay:-10s; }
-@keyframes orbDrift { 0%,100%{transform:translate(0,0)} 50%{transform:translate(20px,-20px)} }
-
-.panel {
-  position:relative; z-index:1; width:420px;
-  background:linear-gradient(135deg, rgba(12,16,32,0.95), rgba(8,12,24,0.95));
-  border:1px solid rgba(0,180,255,0.2);
-  clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
-  padding:48px 40px 40px;
-  box-shadow: 0 0 60px rgba(0,0,0,0.8), 0 0 120px rgba(0,180,255,0.06), inset 0 0 40px rgba(0,180,255,0.02);
+.blobs { position:fixed; inset:0; z-index:0; pointer-events:none; }
+.blob {
+  position:absolute; border-radius:50%; filter:blur(80px); animation:blobFloat 18s ease-in-out infinite;
 }
+.blob-1 { width:400px; height:400px; background:rgba(255,143,171,0.18); top:-150px; left:-120px; }
+.blob-2 { width:350px; height:350px; background:rgba(255,209,102,0.15); bottom:-120px; right:-100px; animation-delay:-9s; }
+.blob-3 { width:250px; height:250px; background:rgba(168,216,234,0.2); top:50%; left:60%; animation-delay:-4s; }
+@keyframes blobFloat { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(15px,-15px) scale(1.05)} }
 
-/* Corner accents */
-.panel::before, .panel::after {
-  content:''; position:absolute; width:12px; height:12px; border-color:var(--blue); border-style:solid; z-index:2;
-}
-.panel::before { top:6px; left:6px; border-width:2px 0 0 2px; }
-.panel::after { bottom:6px; right:6px; border-width:0 2px 2px 0; }
+.floaties { position:fixed; inset:0; z-index:0; pointer-events:none; }
+.floaty { position:absolute; font-size:1.8rem; animation:floatUp 6s ease-in-out infinite; opacity:0.5; }
+.floaty:nth-child(1){left:8%;top:20%;animation-delay:0s}
+.floaty:nth-child(2){left:88%;top:15%;animation-delay:-2s}
+.floaty:nth-child(3){left:5%;bottom:25%;animation-delay:-4s}
+.floaty:nth-child(4){left:90%;bottom:30%;animation-delay:-1s}
+.floaty:nth-child(5){left:50%;top:8%;animation-delay:-3s}
+@keyframes floatUp { 0%,100%{transform:translateY(0) rotate(-5deg)} 50%{transform:translateY(-12px) rotate(5deg)} }
 
-.logo-area { text-align:center; margin-bottom:8px; }
-.season-tag {
-  display:inline-block; font-family:'Orbitron',monospace; font-size:0.58rem;
-  letter-spacing:4px; color:var(--blue); background:rgba(0,180,255,0.08);
-  border:1px solid rgba(0,180,255,0.2); padding:3px 12px; border-radius:2px; margin-bottom:14px;
+.card {
+  position:relative; z-index:1; width:400px;
+  background:var(--surface); border-radius:28px;
+  box-shadow:var(--shadow), 0 2px 0 rgba(255,255,255,0.8) inset;
+  border:1.5px solid var(--border); padding:44px 36px 36px;
 }
+.logo-area { text-align:center; margin-bottom:6px; }
+.logo-icon { font-size:3rem; display:block; margin-bottom:8px; animation:bounce 2s ease-in-out infinite; }
+@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
 .logo-title {
-  font-family:'Orbitron',monospace; font-size:2rem; font-weight:900;
-  letter-spacing:3px; line-height:1.1;
-  background:linear-gradient(180deg,#fff 0%,#00b4ff 100%);
-  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  font-size:1.7rem; font-weight:900; letter-spacing:1px;
+  background:linear-gradient(135deg,var(--primary),#c77dff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
 }
-.logo-sub {
-  font-size:0.78rem; color:var(--muted-light); letter-spacing:3px;
-  text-transform:uppercase; margin-top:6px; font-weight:500;
+.logo-sub { font-size:0.85rem; color:var(--text-light); margin-top:4px; font-weight:600; }
+.season-badge {
+  display:inline-block; background:linear-gradient(135deg,#ffecd2,#fcb69f);
+  color:#c25e3a; font-size:0.7rem; font-weight:800; padding:3px 12px; border-radius:99px;
+  letter-spacing:1.5px; margin-top:8px; margin-bottom:2px;
 }
+.divider { display:flex; align-items:center; gap:10px; margin:22px 0; }
+.divider-line { flex:1; height:1.5px; background:linear-gradient(90deg,transparent,var(--border),transparent); border-radius:99px; }
+.divider-text { font-size:0.72rem; font-weight:700; color:var(--muted); letter-spacing:1px; }
 
-.divider {
-  display:flex; align-items:center; gap:10px; margin:24px 0;
-}
-.divider-line { flex:1; height:1px; background:linear-gradient(90deg,transparent,rgba(0,180,255,0.3),transparent); }
-.divider-text { font-family:'Orbitron',monospace; font-size:0.58rem; letter-spacing:2px; color:var(--muted-light); }
-
-.field-label {
-  font-family:'Orbitron',monospace; font-size:0.6rem; letter-spacing:3px;
-  color:var(--muted-light); text-transform:uppercase; margin-bottom:6px; display:block;
-}
-.field-wrap { position:relative; margin-bottom:16px; }
-.field-wrap::before {
-  content:''; position:absolute; left:0; top:0; bottom:0; width:2px;
-  background:linear-gradient(180deg, var(--blue), transparent); border-radius:2px;
-}
+.field-wrap { margin-bottom:14px; }
+.field-label { font-size:0.78rem; font-weight:700; color:var(--text-light); margin-bottom:6px; display:block; }
 input {
-  width:100%; background:rgba(0,180,255,0.04); border:1px solid rgba(0,180,255,0.12);
-  border-left:none; color:var(--text); padding:12px 14px 12px 16px;
-  font-family:'Rajdhani',sans-serif; font-size:1rem; font-weight:500; outline:none;
-  transition:border-color 0.2s, background 0.2s, box-shadow 0.2s;
-  clip-path:polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  width:100%; background:#faf7fd; border:1.5px solid var(--border); border-radius:14px;
+  color:var(--text); padding:12px 16px; font-family:'Nunito',sans-serif; font-size:0.95rem; font-weight:600; outline:none;
+  transition:border-color 0.2s, box-shadow 0.2s;
 }
-input:focus {
-  border-color:rgba(0,180,255,0.4); background:rgba(0,180,255,0.06);
-  box-shadow:0 0 20px rgba(0,180,255,0.1);
-}
-input::placeholder { color:var(--muted); }
+input:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(255,143,171,0.15); }
+input::placeholder { color:var(--muted); font-weight:500; }
 
 .btn-login {
-  width:100%; margin-top:6px; padding:14px;
-  background:linear-gradient(90deg,#0057ff,#00b4ff);
-  border:none; color:white; font-family:'Orbitron',monospace;
-  font-size:0.8rem; font-weight:700; letter-spacing:4px;
-  cursor:pointer; position:relative; overflow:hidden;
-  clip-path:polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
-  transition:opacity 0.2s, box-shadow 0.2s;
-  box-shadow:0 0 30px rgba(0,100,255,0.4);
+  width:100%; margin-top:8px; padding:14px;
+  background:linear-gradient(135deg,var(--primary),#c77dff);
+  border:none; color:white; font-family:'Nunito',sans-serif;
+  font-size:0.95rem; font-weight:800; letter-spacing:0.5px;
+  border-radius:14px; cursor:pointer;
+  box-shadow:0 4px 18px rgba(255,143,171,0.4);
+  transition:opacity 0.2s, transform 0.15s, box-shadow 0.2s;
 }
-.btn-login::before {
-  content:''; position:absolute; inset:0;
-  background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.15) 50%,transparent 100%);
-  transform:translateX(-100%); transition:transform 0.5s;
-}
-.btn-login:hover::before { transform:translateX(100%); }
-.btn-login:hover { opacity:0.9; box-shadow:0 0 40px rgba(0,100,255,0.5); }
+.btn-login:hover { opacity:0.93; transform:translateY(-1px); box-shadow:0 6px 24px rgba(255,143,171,0.5); }
+.btn-login:active { transform:translateY(0); }
 
 .error {
-  font-family:'Rajdhani',sans-serif; font-size:0.85rem; font-weight:600;
-  margin-bottom:14px; padding:10px 14px;
-  background:rgba(255,68,68,0.08); border:1px solid rgba(255,68,68,0.25);
-  color:#ff6b6b; display:none; letter-spacing:0.5px;
-  clip-path:polygon(0 0,100% 0,100% 100%,6px 100%,0 calc(100% - 6px));
+  background:rgba(255,100,100,0.08); border:1.5px solid rgba(255,100,100,0.25);
+  border-radius:12px; padding:10px 14px; color:#e05050;
+  font-size:0.85rem; font-weight:600; margin-bottom:12px; display:none;
 }
+.animals-row { text-align:center; font-size:1.3rem; margin-top:18px; opacity:0.6; letter-spacing:4px; }
 </style>
 </head>
 <body>
-<div class="orb orb-1"></div><div class="orb orb-2"></div>
-<div class="panel">
+<div class="blobs"><div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div></div>
+<div class="floaties">
+  <span class="floaty">🥚</span><span class="floaty">⭐</span>
+  <span class="floaty">🌸</span><span class="floaty">✨</span><span class="floaty">🐣</span>
+</div>
+<div class="card">
   <div class="logo-area">
-    <div class="season-tag">SEASON 1</div>
-    <div class="logo-title">STUDY<br>TRACKER</div>
+    <span class="logo-icon">🌸</span>
+    <div class="logo-title">공부 트래커</div>
     <div class="logo-sub">동아리 공부 랭킹 시스템</div>
+    <div class="season-badge">SEASON 1</div>
   </div>
-  <div class="divider"><div class="divider-line"></div><div class="divider-text">AUTHENTICATE</div><div class="divider-line"></div></div>
+  <div class="divider"><div class="divider-line"></div><div class="divider-text">로그인</div><div class="divider-line"></div></div>
   <div class="error" id="error"></div>
   <div class="field-wrap">
-    <label class="field-label">Player ID</label>
+    <label class="field-label">아이디</label>
     <input type="text" id="username" placeholder="아이디 입력" autofocus>
   </div>
   <div class="field-wrap">
-    <label class="field-label">Access Code</label>
+    <label class="field-label">비밀번호</label>
     <input type="password" id="password" placeholder="비밀번호 입력">
   </div>
-  <button class="btn-login" onclick="login()">ENTER GAME</button>
+  <button class="btn-login" onclick="login()">입장하기 🚀</button>
+  <div class="animals-row">🐱 🐶 🐹 🐰 🐸 🦊 🐼 🐨</div>
 </div>
 <script>
   document.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });

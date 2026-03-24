@@ -389,12 +389,22 @@ async def get_stats(
     goal_by_group = {g.group_id: g.daily_target_minutes for g in goals}
     default_goal = goal_by_group.get(None, 480)
 
+    # 알 부화 계산용 평생 누적 공부시간
+    lifetime_rows = (await session.execute(
+        select(ActivityLog.username, func.sum(ActivityLog.active_seconds).label("total"))
+        .group_by(ActivityLog.username)
+    )).all()
+    lifetime_map = {row.username: row.total or 0 for row in lifetime_rows}
+
     result = []
     for row in rows:
+        if row.username not in user_groups:
+            continue
         group_id = user_groups.get(row.username)
         daily_goal = goal_by_group.get(group_id, default_goal)
         period_goal = daily_goal * period_days
         active_minutes = round(row.total / 60, 1)
+        lifetime_minutes = round(lifetime_map.get(row.username, 0) / 60, 1)
         result.append({
             "username": row.username,
             "active_seconds": row.total,
@@ -404,5 +414,6 @@ async def get_stats(
             "period": period,
             "start_date": start.isoformat(),
             "end_date": end.isoformat(),
+            "lifetime_minutes": lifetime_minutes,
         })
     return result

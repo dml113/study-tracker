@@ -3,146 +3,115 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>관리자 - 공부 트래커</title>
+<title>관리자 🌸</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 :root {
-  --bg:#06080f; --card:#0c1020; --blue:#00b4ff; --green:#00ff88;
-  --gold:#ffd700; --text:#e8f0fe; --muted:#3a4a6a; --muted-light:#5a7090;
-  --red:#ff4455; --amber:#ffaa00;
+  --bg:#fdf6f0; --surface:#fff; --primary:#ff8fab; --primary-dark:#e8738f;
+  --text:#3d2b56; --text-light:#7b6b8d; --muted:#c4b5d5;
+  --border:rgba(200,180,220,0.3); --shadow:0 4px 20px rgba(180,120,200,0.1);
+  --mint:#6bcb77; --red:#ff6b6b; --amber:#ffb347;
 }
-body { font-family:'Rajdhani',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
-body::after {
-  content:''; position:fixed; inset:0; pointer-events:none; z-index:999;
-  background:repeating-linear-gradient(0deg,rgba(0,0,0,0.03) 0px,rgba(0,0,0,0.03) 1px,transparent 1px,transparent 3px);
-}
-body::before {
-  content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
-  background-image:linear-gradient(rgba(0,180,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,180,255,0.03) 1px,transparent 1px);
-  background-size:40px 40px;
-}
-.header {
-  position:relative; z-index:10;
-  background:rgba(6,8,15,0.92); backdrop-filter:blur(20px);
-  border-bottom:1px solid rgba(0,180,255,0.15);
-  padding:0 32px; height:58px; display:flex; align-items:center; justify-content:space-between;
-}
-.header::after {
-  content:''; position:absolute; bottom:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg,transparent,rgba(0,180,255,0.4),transparent);
-}
-.header h1 {
-  font-family:'Orbitron',monospace; font-size:1rem; font-weight:900; letter-spacing:4px;
-  background:linear-gradient(135deg,#fff,var(--blue)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
-}
+body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+body::before { content:''; position:fixed; inset:0; pointer-events:none; background-image:radial-gradient(circle,rgba(200,180,220,0.15) 1px,transparent 1px); background-size:22px 22px; z-index:0; }
+.blob { position:fixed; border-radius:50%; filter:blur(90px); pointer-events:none; z-index:0; animation:blobFloat 18s ease-in-out infinite; }
+.blob-1 { width:500px; height:500px; background:rgba(255,143,171,0.1); top:-200px; left:-150px; }
+.blob-2 { width:400px; height:400px; background:rgba(168,216,234,0.09); bottom:-150px; right:-120px; animation-delay:-9s; }
+@keyframes blobFloat { 0%,100%{transform:translate(0,0)} 50%{transform:translate(18px,-15px)} }
+
+.header { position:relative; z-index:10; background:rgba(255,255,255,0.9); backdrop-filter:blur(20px); border-bottom:1.5px solid var(--border); padding:0 28px; height:60px; display:flex; align-items:center; justify-content:space-between; }
+.header h1 { font-size:1.15rem; font-weight:900; background:linear-gradient(135deg,var(--primary),#c77dff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
 .header-right { display:flex; align-items:center; gap:10px; }
-#adminName { font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--muted-light); }
-.badge { font-family:'Orbitron',monospace; font-size:0.55rem; letter-spacing:2px; padding:4px 10px; }
-.badge-superadmin { background:rgba(255,68,85,0.1); border:1px solid rgba(255,68,85,0.3); color:var(--red); clip-path:polygon(0 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%); }
-.badge-group_admin { background:rgba(139,92,246,0.1); border:1px solid rgba(139,92,246,0.3); color:#a78bfa; clip-path:polygon(0 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%); }
-.logout-btn {
-  font-family:'Orbitron',monospace; font-size:0.6rem; letter-spacing:2px;
-  background:rgba(0,180,255,0.05); border:1px solid rgba(0,180,255,0.18); color:var(--muted-light);
-  padding:7px 14px; cursor:pointer;
-  clip-path:polygon(0 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%);
-  transition:border-color 0.2s,color 0.2s;
-}
-.logout-btn:hover { border-color:rgba(0,180,255,0.4); color:var(--blue); }
-.container { position:relative; z-index:1; max-width:1100px; margin:28px auto; padding:0 24px; }
-.tabs { display:flex; gap:3px; margin-bottom:28px; flex-wrap:wrap; }
-.tab {
-  font-family:'Orbitron',monospace; font-size:0.58rem; letter-spacing:2px;
-  background:rgba(0,180,255,0.04); border:1px solid rgba(0,180,255,0.1); color:var(--muted-light);
-  padding:8px 14px; cursor:pointer;
-  clip-path:polygon(0 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%);
-  transition:all 0.2s;
-}
-.tab:hover { border-color:rgba(0,180,255,0.3); color:var(--blue); background:rgba(0,180,255,0.08); }
-.tab.active { background:linear-gradient(90deg,#0057ff,#00b4ff); border-color:transparent; color:white; box-shadow:0 0 18px rgba(0,100,255,0.35); }
-.create-form {
-  position:relative; padding:20px 24px; margin-bottom:24px;
-  background:linear-gradient(135deg,rgba(12,16,32,0.95),rgba(8,12,24,0.95));
-  border:1px solid rgba(0,180,255,0.12);
-  clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));
-  display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;
-}
-.create-form::before {
-  content:''; position:absolute; top:0; left:0; right:0; height:1px;
-  background:linear-gradient(90deg,transparent,rgba(0,180,255,0.2),transparent);
-}
+#adminName { font-size:0.82rem; font-weight:700; color:var(--text-light); }
+.badge { font-size:0.7rem; font-weight:800; padding:3px 12px; border-radius:99px; letter-spacing:0.5px; }
+.badge-superadmin { background:rgba(255,107,107,0.12); border:1.5px solid rgba(255,107,107,0.3); color:var(--red); }
+.badge-group_admin { background:rgba(199,125,255,0.12); border:1.5px solid rgba(199,125,255,0.3); color:#a855f7; }
+.logout-btn { background:var(--surface); border:1.5px solid var(--border); color:var(--text-light); padding:7px 16px; border-radius:99px; cursor:pointer; font-size:0.82rem; font-family:'Nunito',sans-serif; font-weight:700; transition:all 0.2s; }
+.logout-btn:hover { border-color:var(--primary); color:var(--primary); }
+.container { position:relative; z-index:1; max-width:1100px; margin:24px auto; padding:0 20px; }
+
+.tabs { display:flex; gap:5px; margin-bottom:24px; flex-wrap:wrap; }
+.tab { padding:8px 16px; border-radius:99px; cursor:pointer; font-size:0.82rem; font-weight:700; font-family:'Nunito',sans-serif; color:var(--text-light); border:1.5px solid var(--border); background:var(--surface); transition:all 0.2s; }
+.tab:hover { border-color:var(--primary); color:var(--primary); }
+.tab.active { background:linear-gradient(135deg,var(--primary),#c77dff); border-color:transparent; color:white; box-shadow:0 2px 10px rgba(255,143,171,0.35); }
+
+.create-form { background:var(--surface); border:1.5px solid var(--border); border-radius:18px; padding:20px 22px; margin-bottom:22px; display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; box-shadow:var(--shadow); }
 .form-group { display:flex; flex-direction:column; gap:5px; }
-.form-group label { font-family:'Orbitron',monospace; font-size:0.55rem; letter-spacing:2.5px; color:var(--muted-light); text-transform:uppercase; }
-.form-group input, .form-group select {
-  background:rgba(0,180,255,0.04); border:1px solid rgba(0,180,255,0.12); color:var(--text);
-  padding:9px 12px; font-family:'Rajdhani',sans-serif; font-size:0.9rem; outline:none; min-width:140px;
-  transition:border-color 0.2s; border-left:2px solid rgba(0,180,255,0.3);
-}
-.form-group input:focus, .form-group select:focus { border-color:rgba(0,180,255,0.4); box-shadow:0 0 16px rgba(0,180,255,0.06); }
-.form-group select option { background:#0d1117; }
-.btn { padding:9px 18px; border:none; cursor:pointer; font-family:'Orbitron',monospace; font-size:0.62rem; letter-spacing:2px; font-weight:700; transition:all 0.2s; }
-.btn-primary { background:linear-gradient(90deg,#0057ff,#00b4ff); color:white; clip-path:polygon(0 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%); box-shadow:0 0 20px rgba(0,100,255,0.3); }
-.btn-primary:hover { opacity:0.88; box-shadow:0 0 28px rgba(0,100,255,0.45); }
-.btn-sm { padding:5px 11px; font-family:'Orbitron',monospace; font-size:0.55rem; letter-spacing:1.5px; cursor:pointer; border:none; clip-path:polygon(0 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%); font-weight:700; }
-.btn-danger { background:rgba(255,68,85,0.12); border:1px solid rgba(255,68,85,0.25); color:var(--red); clip-path:none; }
-.btn-danger:hover { background:rgba(255,68,85,0.22); }
-.btn-warning { background:rgba(255,170,0,0.12); border:1px solid rgba(255,170,0,0.25); color:var(--amber); clip-path:none; }
-.btn-warning:hover { background:rgba(255,170,0,0.22); }
-table { width:100%; border-collapse:collapse; border:1px solid rgba(0,180,255,0.1); }
-th { background:rgba(0,180,255,0.04); color:var(--muted-light); font-family:'Orbitron',monospace; font-size:0.58rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; padding:12px 14px; text-align:left; border-bottom:1px solid rgba(0,180,255,0.12); }
-td { padding:12px 14px; border-top:1px solid rgba(0,180,255,0.05); font-size:0.9rem; vertical-align:middle; font-family:'Rajdhani',sans-serif; }
-tr:hover td { background:rgba(0,180,255,0.02); }
-.status-dot { width:6px; height:6px; border-radius:50%; display:inline-block; margin-right:6px; }
-.dot-active { background:var(--green); box-shadow:0 0 6px rgba(0,255,136,0.5); }
+.form-group label { font-size:0.72rem; font-weight:800; color:var(--text-light); letter-spacing:0.5px; text-transform:uppercase; }
+.form-group input, .form-group select { background:#faf7fd; border:1.5px solid var(--border); border-radius:12px; color:var(--text); padding:9px 13px; font-family:'Nunito',sans-serif; font-size:0.9rem; font-weight:600; outline:none; min-width:140px; transition:border-color 0.2s; }
+.form-group input:focus, .form-group select:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(255,143,171,0.12); }
+.form-group select option { background:#fff; }
+
+.btn { padding:9px 20px; border-radius:12px; border:none; cursor:pointer; font-size:0.88rem; font-weight:800; font-family:'Nunito',sans-serif; transition:all 0.2s; }
+.btn-primary { background:linear-gradient(135deg,var(--primary),#c77dff); color:white; box-shadow:0 3px 12px rgba(255,143,171,0.3); }
+.btn-primary:hover { opacity:0.9; transform:translateY(-1px); }
+.btn-sm { padding:5px 12px; font-size:0.78rem; font-weight:800; border:none; border-radius:8px; cursor:pointer; font-family:'Nunito',sans-serif; }
+.btn-danger { background:rgba(255,107,107,0.1); border:1.5px solid rgba(255,107,107,0.25); color:var(--red); }
+.btn-danger:hover { background:rgba(255,107,107,0.2); }
+.btn-warning { background:rgba(255,179,71,0.1); border:1.5px solid rgba(255,179,71,0.25); color:var(--amber); }
+.btn-warning:hover { background:rgba(255,179,71,0.2); }
+
+table { width:100%; border-collapse:collapse; background:var(--surface); border-radius:16px; overflow:hidden; border:1.5px solid var(--border); box-shadow:var(--shadow); }
+th { background:rgba(200,180,220,0.1); color:var(--text-light); font-size:0.72rem; font-weight:800; letter-spacing:1px; text-transform:uppercase; padding:12px 16px; text-align:left; border-bottom:1.5px solid var(--border); }
+td { padding:12px 16px; border-top:1px solid rgba(200,180,220,0.12); font-size:0.9rem; vertical-align:middle; }
+tr:hover td { background:rgba(255,143,171,0.03); }
+
+.status-dot { width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:6px; }
+.dot-active { background:var(--mint); box-shadow:0 0 6px rgba(107,203,119,0.5); }
 .dot-inactive { background:var(--muted); }
-.role-badge { font-family:'Orbitron',monospace; font-size:0.55rem; letter-spacing:1.5px; padding:2px 8px; }
-.role-superadmin { background:rgba(255,68,85,0.1); border:1px solid rgba(255,68,85,0.2); color:var(--red); }
-.role-group_admin { background:rgba(139,92,246,0.1); border:1px solid rgba(139,92,246,0.2); color:#a78bfa; }
-.role-member { background:rgba(0,180,255,0.06); border:1px solid rgba(0,180,255,0.1); color:var(--muted-light); }
-.group-badge { font-family:'Orbitron',monospace; font-size:0.55rem; letter-spacing:1.5px; padding:2px 8px; background:rgba(0,180,255,0.1); border:1px solid rgba(0,180,255,0.2); color:var(--blue); }
+.role-badge { font-size:0.7rem; font-weight:800; padding:2px 10px; border-radius:99px; }
+.role-superadmin { background:rgba(255,107,107,0.1); border:1.5px solid rgba(255,107,107,0.2); color:var(--red); }
+.role-group_admin { background:rgba(199,125,255,0.1); border:1.5px solid rgba(199,125,255,0.2); color:#a855f7; }
+.role-member { background:rgba(200,180,220,0.12); border:1.5px solid rgba(200,180,220,0.25); color:var(--text-light); }
+.group-badge { font-size:0.7rem; font-weight:800; padding:2px 10px; border-radius:99px; background:rgba(255,143,171,0.1); border:1.5px solid rgba(255,143,171,0.25); color:var(--primary); }
 .td-actions { display:flex; gap:5px; flex-wrap:wrap; }
-.time-bar-wrap { background:rgba(0,0,0,0.4); height:4px; width:70px; display:inline-block; vertical-align:middle; margin-left:8px; overflow:hidden; }
-.time-bar { height:100%; background:linear-gradient(90deg,#0057ff,#00b4ff); }
-.date-bar { display:flex; align-items:center; gap:8px; margin-bottom:18px; }
-.date-bar input { background:rgba(0,180,255,0.04); border:1px solid rgba(0,180,255,0.12); color:var(--text); padding:8px 12px; font-family:'JetBrains Mono',monospace; font-size:0.8rem; outline:none; border-left:2px solid rgba(0,180,255,0.3); }
-.date-bar input:focus { border-color:rgba(0,180,255,0.4); }
-.att-card { position:relative; padding:16px 20px; margin-bottom:10px; background:linear-gradient(135deg,rgba(12,16,32,0.95),rgba(8,12,24,0.95)); border:1px solid rgba(0,180,255,0.1); clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px)); transition:border-color 0.2s; }
-.att-card:hover { border-color:rgba(0,180,255,0.2); }
-.att-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(0,180,255,0.15),transparent); }
-.att-header { display:flex; align-items:center; gap:14px; margin-bottom:10px; }
-.att-name { font-weight:700; font-size:1rem; flex:1; }
+.time-bar-wrap { background:rgba(200,180,220,0.15); border-radius:99px; height:5px; width:70px; display:inline-block; vertical-align:middle; margin-left:8px; overflow:hidden; }
+.time-bar { height:100%; background:linear-gradient(90deg,var(--primary),#c77dff); border-radius:99px; }
+
+.date-bar { display:flex; align-items:center; gap:10px; margin-bottom:18px; }
+.date-bar input { background:#faf7fd; border:1.5px solid var(--border); border-radius:12px; color:var(--text); padding:8px 13px; font-size:0.88rem; font-family:'Nunito',sans-serif; font-weight:600; outline:none; }
+.date-bar input:focus { border-color:var(--primary); }
+
+.att-card { background:var(--surface); border:1.5px solid var(--border); border-radius:16px; padding:16px 20px; margin-bottom:10px; transition:border-color 0.2s, transform 0.2s; box-shadow:var(--shadow); }
+.att-card:hover { border-color:rgba(255,143,171,0.3); transform:translateY(-1px); }
+.att-header { display:flex; align-items:center; gap:14px; margin-bottom:8px; }
+.att-name { font-weight:800; font-size:1rem; flex:1; }
 .att-times { display:flex; gap:20px; }
-.att-time-item { font-size:0.84rem; font-family:'Rajdhani',sans-serif; }
-.att-time-item span { color:var(--muted-light); }
-.att-time-item strong { color:var(--text); font-family:'JetBrains Mono',monospace; }
-.att-active { color:var(--blue); font-family:'JetBrains Mono',monospace; font-size:0.82rem; }
-.absence-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
-.absence-chip { background:rgba(255,170,0,0.07); border:1px solid rgba(255,170,0,0.2); padding:3px 10px; font-size:0.75rem; color:var(--amber); font-family:'Rajdhani',sans-serif; clip-path:polygon(0 0,100% 0,100% calc(100% - 4px),calc(100% - 4px) 100%,0 100%); }
-.absence-chip .reason { color:var(--text); font-weight:700; }
-.no-checkin { color:var(--muted-light); font-size:0.84rem; }
-.group-card { position:relative; padding:16px 20px; margin-bottom:10px; background:linear-gradient(135deg,rgba(12,16,32,0.95),rgba(8,12,24,0.95)); border:1px solid rgba(0,180,255,0.1); clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px)); display:flex; align-items:center; justify-content:space-between; transition:border-color 0.2s; }
-.group-card:hover { border-color:rgba(0,180,255,0.2); }
-.group-name { font-weight:700; font-size:1rem; }
-.group-meta { color:var(--muted-light); font-size:0.78rem; margin-top:3px; font-family:'JetBrains Mono',monospace; }
-.toast { position:fixed; bottom:24px; right:24px; padding:12px 20px; font-family:'Orbitron',monospace; font-size:0.62rem; letter-spacing:2px; display:none; z-index:1000; backdrop-filter:blur(12px); clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px)); }
-.toast.success { background:rgba(0,255,136,0.08); border:1px solid rgba(0,255,136,0.3); color:var(--green); }
-.toast.error { background:rgba(255,68,85,0.08); border:1px solid rgba(255,68,85,0.3); color:var(--red); }
-.modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(10px); z-index:200; align-items:center; justify-content:center; }
+.att-time-item { font-size:0.85rem; font-weight:600; }
+.att-time-item span { color:var(--muted); }
+.att-time-item strong { color:var(--text); }
+.att-active { color:var(--primary); font-size:0.85rem; font-weight:800; }
+.absence-list { display:flex; flex-wrap:wrap; gap:7px; margin-top:8px; }
+.absence-chip { background:rgba(255,179,71,0.1); border:1.5px solid rgba(255,179,71,0.25); border-radius:99px; padding:3px 12px; font-size:0.78rem; font-weight:700; color:var(--amber); }
+.absence-chip .reason { color:var(--text); }
+.no-checkin { color:var(--muted); font-size:0.85rem; font-weight:600; }
+
+.group-card { background:var(--surface); border:1.5px solid var(--border); border-radius:16px; padding:16px 20px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; transition:all 0.2s; box-shadow:var(--shadow); }
+.group-card:hover { border-color:rgba(255,143,171,0.3); transform:translateY(-1px); }
+.group-name { font-weight:800; font-size:1rem; }
+.group-meta { color:var(--muted); font-size:0.78rem; font-weight:600; margin-top:3px; }
+
+.toast { position:fixed; bottom:24px; right:24px; background:var(--surface); border:1.5px solid var(--border); border-radius:16px; padding:13px 22px; font-size:0.88rem; font-weight:700; display:none; z-index:100; backdrop-filter:blur(12px); box-shadow:0 8px 28px rgba(180,120,200,0.2); }
+.toast.success { border-color:rgba(107,203,119,0.4); color:#3a9b44; background:rgba(107,203,119,0.08); }
+.toast.error { border-color:rgba(255,107,107,0.35); color:var(--red); background:rgba(255,107,107,0.07); }
+
+.modal-bg { display:none; position:fixed; inset:0; background:rgba(61,43,86,0.4); backdrop-filter:blur(8px); z-index:200; align-items:center; justify-content:center; }
 .modal-bg.show { display:flex; }
-.modal { position:relative; padding:28px; width:340px; background:linear-gradient(135deg,rgba(12,16,32,0.99),rgba(8,12,24,0.99)); border:1px solid rgba(0,180,255,0.2); clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px)); box-shadow:0 40px 80px rgba(0,0,0,0.7); }
-.modal::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(0,180,255,0.3),transparent); }
-.modal h3 { font-family:'Orbitron',monospace; font-size:0.72rem; letter-spacing:3px; margin-bottom:18px; color:var(--text); }
-.modal input, .modal select { width:100%; background:rgba(0,180,255,0.04); border:1px solid rgba(0,180,255,0.12); color:var(--text); padding:10px 12px; font-family:'Rajdhani',sans-serif; font-size:0.9rem; margin-bottom:14px; outline:none; border-left:2px solid rgba(0,180,255,0.3); }
-.modal input:focus, .modal select:focus { border-color:rgba(0,180,255,0.4); }
-.modal select option { background:#0d1117; }
-.modal-actions { display:flex; gap:8px; justify-content:flex-end; }
-.empty-state { text-align:center; color:var(--muted-light); padding:60px 0; font-family:'Orbitron',monospace; font-size:0.65rem; letter-spacing:3px; }
+.modal { background:var(--surface); border:1.5px solid var(--border); border-radius:22px; padding:28px; width:340px; box-shadow:0 20px 60px rgba(180,120,200,0.3); }
+.modal h3 { font-size:1rem; font-weight:900; margin-bottom:16px; color:var(--text); }
+.modal input, .modal select { width:100%; background:#faf7fd; border:1.5px solid var(--border); border-radius:12px; color:var(--text); padding:10px 13px; font-size:0.9rem; font-family:'Nunito',sans-serif; font-weight:600; margin-bottom:14px; outline:none; }
+.modal input:focus, .modal select:focus { border-color:var(--primary); }
+.modal select option { background:#fff; }
+.modal-actions { display:flex; gap:10px; justify-content:flex-end; }
+.empty-state { text-align:center; color:var(--muted); padding:60px 0; font-size:0.9rem; font-weight:700; }
 </style>
 </head>
 <body>
+<div class="blob blob-1"></div><div class="blob blob-2"></div>
 <div class="header">
-  <h1>공부 트래커 관리자</h1>
+  <h1>🌸 공부 트래커 관리자</h1>
   <div class="header-right">
     <span id="adminName"></span>
     <span id="roleBadge" class="badge"></span>
@@ -151,31 +120,25 @@ tr:hover td { background:rgba(0,180,255,0.02); }
 </div>
 <div class="container">
   <div class="tabs" id="tabBar">
-    <button class="tab active" onclick="switchTab('users', this)">유저 관리</button>
-    <button class="tab" onclick="switchTab('stats', this)">공부 통계</button>
-    <button class="tab" onclick="switchTab('attendance', this)">출퇴근 기록</button>
-    <button class="tab" onclick="switchTab('cheats', this)">치트 감지</button>
-    <button class="tab" onclick="switchTab('activity', this)">기록 수정</button>
-    <button class="tab" onclick="switchTab('goals', this)">목표 설정</button>
-    <button class="tab" onclick="switchTab('absence-stats', this)">외출 통계</button>
-    <button class="tab" id="groupTab" style="display:none" onclick="switchTab('groups', this)">그룹 관리</button>
-    <button class="tab" id="clientTab" style="display:none" onclick="switchTab('client', this)">클라이언트 배포</button>
-    <button class="tab" id="backupTab" style="display:none" onclick="switchTab('backup', this)">DB 백업</button>
+    <button class="tab active" onclick="switchTab('users', this)">👥 유저 관리</button>
+    <button class="tab" onclick="switchTab('stats', this)">📊 공부 통계</button>
+    <button class="tab" onclick="switchTab('attendance', this)">🕐 출퇴근 기록</button>
+    <button class="tab" onclick="switchTab('cheats', this)">🚨 치트 감지</button>
+    <button class="tab" onclick="switchTab('activity', this)">✏️ 기록 수정</button>
+    <button class="tab" onclick="switchTab('goals', this)">🎯 목표 설정</button>
+    <button class="tab" onclick="switchTab('absence-stats', this)">🚶 외출 통계</button>
+    <button class="tab" id="groupTab" style="display:none" onclick="switchTab('groups', this)">🏠 그룹 관리</button>
+    <button class="tab" id="clientTab" style="display:none" onclick="switchTab('client', this)">💻 클라이언트 배포</button>
+    <button class="tab" id="backupTab" style="display:none" onclick="switchTab('backup', this)">💾 DB 백업</button>
   </div>
 
   <div id="tab-users">
     <div class="create-form">
       <div class="form-group"><label>아이디</label><input type="text" id="newUsername" placeholder="아이디"></div>
       <div class="form-group"><label>비밀번호</label><input type="password" id="newPassword" placeholder="비밀번호"></div>
-      <div class="form-group" id="roleFormGroup">
-        <label>권한</label>
-        <select id="newRole"><option value="member">일반 유저</option><option value="group_admin">그룹 관리자</option></select>
-      </div>
-      <div class="form-group" id="groupFormGroup">
-        <label>그룹</label>
-        <select id="newGroupId"><option value="">그룹 없음</option></select>
-      </div>
-      <button class="btn btn-primary" onclick="createUser()" style="align-self:flex-end">유저 생성</button>
+      <div class="form-group" id="roleFormGroup"><label>권한</label><select id="newRole"><option value="member">일반 유저</option><option value="group_admin">그룹 관리자</option></select></div>
+      <div class="form-group" id="groupFormGroup"><label>그룹</label><select id="newGroupId"><option value="">그룹 없음</option></select></div>
+      <button class="btn btn-primary" onclick="createUser()" style="align-self:flex-end">+ 유저 생성</button>
     </div>
     <table>
       <thead><tr><th>아이디</th><th>권한</th><th>그룹</th><th>상태</th><th>오늘 활동</th><th>생성일</th><th>관리</th></tr></thead>
@@ -184,57 +147,45 @@ tr:hover td { background:rgba(0,180,255,0.02); }
   </div>
 
   <div id="tab-stats" style="display:none">
-    <div class="date-bar">
-      <input type="date" id="statsDate">
-      <button class="btn btn-primary" onclick="loadStats()">조회</button>
-    </div>
+    <div class="date-bar"><input type="date" id="statsDate"><button class="btn btn-primary" onclick="loadStats()">조회</button></div>
     <div id="statsList"></div>
   </div>
 
   <div id="tab-attendance" style="display:none">
-    <div class="date-bar">
-      <input type="date" id="attDate">
-      <button class="btn btn-primary" onclick="loadAttendance()">조회</button>
-    </div>
+    <div class="date-bar"><input type="date" id="attDate"><button class="btn btn-primary" onclick="loadAttendance()">조회</button></div>
     <div id="attList"></div>
   </div>
 
   <div id="tab-cheats" style="display:none">
-    <div class="date-bar">
-      <input type="date" id="cheatDate">
-      <button class="btn btn-primary" onclick="loadCheats()">조회</button>
-    </div>
+    <div class="date-bar"><input type="date" id="cheatDate"><button class="btn btn-primary" onclick="loadCheats()">조회</button></div>
     <div id="cheatList"></div>
   </div>
 
   <div id="tab-client" style="display:none">
     <div class="create-form" style="flex-direction:column;align-items:flex-start;gap:16px">
       <div style="width:100%">
-        <div style="font-family:'Orbitron',monospace;font-size:0.6rem;letter-spacing:2px;color:var(--muted-light);margin-bottom:8px">현재 배포 버전</div>
-        <div id="currentVersion" style="font-family:'Orbitron',monospace;font-size:1.6rem;font-weight:900;color:var(--blue)">로딩 중...</div>
-        <a id="downloadLink" href="/client/download" style="font-family:'JetBrains Mono',monospace;color:var(--muted-light);font-size:0.75rem;text-decoration:none;display:block;margin-top:6px">다운로드: /client/download</a>
+        <div style="font-size:0.78rem;font-weight:800;color:var(--text-light);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase">현재 배포 버전</div>
+        <div id="currentVersion" style="font-size:1.8rem;font-weight:900;color:var(--primary)">로딩 중...</div>
+        <a id="downloadLink" href="/client/download" style="font-size:0.8rem;font-weight:700;color:var(--muted);text-decoration:none;display:block;margin-top:5px">다운로드: /client/download</a>
       </div>
-      <hr style="border-color:rgba(0,180,255,0.1);width:100%">
+      <hr style="border-color:var(--border);width:100%">
       <div style="display:flex;gap:10px;align-items:center">
-        <button class="btn btn-primary" onclick="syncGithub()" id="syncBtn">GitHub에서 동기화</button>
-        <span style="font-family:'Rajdhani',sans-serif;color:var(--muted-light);font-size:0.85rem">GitHub Release 최신 버전을 자동으로 가져옵니다</span>
+        <button class="btn btn-primary" onclick="syncGithub()" id="syncBtn">🔄 GitHub에서 동기화</button>
+        <span style="font-size:0.85rem;font-weight:600;color:var(--text-light)">GitHub Release 최신 버전 자동 가져오기</span>
       </div>
-      <hr style="border-color:rgba(0,180,255,0.1);width:100%">
-      <div style="font-family:'Orbitron',monospace;font-size:0.6rem;letter-spacing:2px;color:var(--muted-light)">수동 업로드</div>
+      <hr style="border-color:var(--border);width:100%">
+      <div style="font-size:0.78rem;font-weight:800;color:var(--text-light);letter-spacing:1px;text-transform:uppercase">수동 업로드</div>
       <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
         <div class="form-group"><label>버전 번호</label><input type="text" id="uploadVersion" placeholder="예: 1.0.1" style="min-width:120px"></div>
         <div class="form-group"><label>ZIP 파일</label><input type="file" id="uploadFile" accept=".zip" style="min-width:200px;color:var(--text)"></div>
         <button class="btn btn-primary" onclick="uploadClient()">업로드</button>
       </div>
-      <div id="uploadStatus" style="font-family:'Rajdhani',sans-serif;font-size:0.85rem;color:var(--muted-light)"></div>
+      <div id="uploadStatus" style="font-size:0.85rem;font-weight:600;color:var(--muted)"></div>
     </div>
   </div>
 
   <div id="tab-activity" style="display:none">
-    <div class="date-bar">
-      <input type="date" id="actDate">
-      <button class="btn btn-primary" onclick="loadActivity()">조회</button>
-    </div>
+    <div class="date-bar"><input type="date" id="actDate"><button class="btn btn-primary" onclick="loadActivity()">조회</button></div>
     <div id="actList"></div>
   </div>
 
@@ -250,7 +201,7 @@ tr:hover td { background:rgba(0,180,255,0.02); }
   <div id="tab-absence-stats" style="display:none">
     <div class="date-bar">
       <input type="date" id="absStart">
-      <span style="color:var(--muted-light);font-family:'Rajdhani',sans-serif">~</span>
+      <span style="color:var(--muted);font-weight:700">~</span>
       <input type="date" id="absEnd">
       <button class="btn btn-primary" onclick="loadAbsenceStats()">조회</button>
     </div>
@@ -260,8 +211,8 @@ tr:hover td { background:rgba(0,180,255,0.02); }
   <div id="tab-backup" style="display:none">
     <div class="create-form" style="flex-direction:column;align-items:flex-start;gap:14px">
       <div style="display:flex;align-items:center;gap:12px">
-        <button class="btn btn-primary" onclick="runBackup()" id="backupBtn">지금 백업</button>
-        <span style="font-family:'Rajdhani',sans-serif;color:var(--muted-light);font-size:0.85rem">최근 7일치 자동 보관 · 매일 자정 자동 실행</span>
+        <button class="btn btn-primary" onclick="runBackup()" id="backupBtn">💾 지금 백업</button>
+        <span style="font-size:0.85rem;font-weight:600;color:var(--text-light)">최근 7일치 자동 보관 · 매일 자정 자동 실행</span>
       </div>
       <div id="backupList" style="width:100%"></div>
     </div>
@@ -270,7 +221,7 @@ tr:hover td { background:rgba(0,180,255,0.02); }
   <div id="tab-groups" style="display:none">
     <div class="create-form">
       <div class="form-group"><label>그룹명</label><input type="text" id="newGroupName" placeholder="예: C.C, IT, C.S"></div>
-      <button class="btn btn-primary" onclick="createGroup()" style="align-self:flex-end">그룹 생성</button>
+      <button class="btn btn-primary" onclick="createGroup()" style="align-self:flex-end">+ 그룹 생성</button>
     </div>
     <div id="groupList"></div>
   </div>
@@ -278,10 +229,10 @@ tr:hover td { background:rgba(0,180,255,0.02); }
 
 <div class="modal-bg" id="pwModal">
   <div class="modal">
-    <h3>비밀번호 변경</h3>
+    <h3>🔑 비밀번호 변경</h3>
     <input type="password" id="newPw" placeholder="새 비밀번호">
     <div class="modal-actions">
-      <button class="btn" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted-light);clip-path:polygon(0 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%)" onclick="closeModal('pwModal')">취소</button>
+      <button class="btn" style="background:rgba(200,180,220,0.15);border:1.5px solid var(--border);color:var(--text-light)" onclick="closeModal('pwModal')">취소</button>
       <button class="btn btn-primary" onclick="confirmPwChange()">변경</button>
     </div>
   </div>
@@ -289,10 +240,10 @@ tr:hover td { background:rgba(0,180,255,0.02); }
 
 <div class="modal-bg" id="groupModal">
   <div class="modal">
-    <h3>그룹 변경</h3>
+    <h3>🏠 그룹 변경</h3>
     <select id="moveGroupId"><option value="">그룹 없음</option></select>
     <div class="modal-actions">
-      <button class="btn" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted-light);clip-path:polygon(0 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%)" onclick="closeModal('groupModal')">취소</button>
+      <button class="btn" style="background:rgba(200,180,220,0.15);border:1.5px solid var(--border);color:var(--text-light)" onclick="closeModal('groupModal')">취소</button>
       <button class="btn btn-primary" onclick="confirmGroupChange()">변경</button>
     </div>
   </div>
@@ -305,26 +256,15 @@ tr:hover td { background:rgba(0,180,255,0.02); }
   const role = localStorage.getItem('role');
   const isSuperAdmin = role === 'superadmin';
   const isGroupAdmin = role === 'group_admin';
-
   if (!token || !['superadmin', 'group_admin'].includes(role)) location.href = '/';
-
   document.getElementById('adminName').textContent = localStorage.getItem('username');
   const badge = document.getElementById('roleBadge');
   badge.textContent = isSuperAdmin ? 'SUPER ADMIN' : 'GROUP ADMIN';
   badge.className = 'badge badge-' + role;
+  if (isSuperAdmin) { document.getElementById('groupTab').style.display=''; document.getElementById('clientTab').style.display=''; document.getElementById('backupTab').style.display=''; }
+  if (isGroupAdmin) { document.getElementById('roleFormGroup').style.display='none'; document.getElementById('groupFormGroup').style.display='none'; }
 
-  if (isSuperAdmin) {
-    document.getElementById('groupTab').style.display = '';
-    document.getElementById('clientTab').style.display = '';
-    document.getElementById('backupTab').style.display = '';
-  }
-  if (isGroupAdmin) {
-    document.getElementById('roleFormGroup').style.display = 'none';
-    document.getElementById('groupFormGroup').style.display = 'none';
-  }
-
-  let editingUserId = null;
-  let groups = [];
+  let editingUserId = null, groups = [];
   function authH() { return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }; }
   function logout() { localStorage.clear(); location.href = '/'; }
 
@@ -349,29 +289,20 @@ tr:hover td { background:rgba(0,180,255,0.02); }
   }
 
   function showToast(msg, type = 'success') {
-    const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.className = 'toast ' + type;
-    el.style.display = 'block';
+    const el = document.getElementById('toast'); el.textContent = msg;
+    el.className = 'toast ' + type; el.style.display = 'block';
     setTimeout(() => el.style.display = 'none', 2500);
   }
-
-  function roleName(r) {
-    if (r === 'superadmin') return '슈퍼 어드민';
-    if (r === 'group_admin') return '그룹 관리자';
-    return '일반';
-  }
+  function roleName(r) { if (r==='superadmin') return '슈퍼 어드민'; if (r==='group_admin') return '그룹 관리자'; return '일반'; }
 
   async function loadGroupOptions() {
     const res = await fetch('/admin/groups', { headers: authH() });
     if (!res.ok) return;
     groups = await res.json();
-    ['newGroupId', 'moveGroupId'].forEach(id => {
-      const sel = document.getElementById(id);
-      if (!sel) return;
+    ['newGroupId','moveGroupId'].forEach(id => {
+      const sel = document.getElementById(id); if (!sel) return;
       const cur = sel.value;
-      sel.innerHTML = '<option value="">그룹 없음</option>' +
-        groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+      sel.innerHTML = '<option value="">그룹 없음</option>' + groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
       if (cur) sel.value = cur;
     });
   }
@@ -389,20 +320,15 @@ tr:hover td { background:rgba(0,180,255,0.02); }
         <td><span class="role-badge role-${u.role}">${roleName(u.role)}</span></td>
         <td>${u.group_name ? `<span class="group-badge">${u.group_name}</span>` : '<span style="color:var(--muted)">–</span>'}</td>
         <td><span class="status-dot ${u.is_active ? 'dot-active' : 'dot-inactive'}"></span>${u.is_active ? '활성' : '비활성'}</td>
-        <td>
-          ${u.today_minutes}분
-          <span class="time-bar-wrap"><span class="time-bar" style="width:${u.today_seconds/maxSec*100}%"></span></span>
-        </td>
-        <td style="font-family:'JetBrains Mono',monospace;color:var(--muted-light);font-size:0.78rem">${u.created_at.slice(0,10)}</td>
-        <td>
-          <div class="td-actions">
-            <button class="btn-sm btn-warning" onclick="openPwModal(${u.id})">비밀번호</button>
-            ${u.role !== 'superadmin' ? `<button class="btn-sm" style="background:rgba(0,87,255,0.15);border:1px solid rgba(0,87,255,0.3);color:#60a5fa;clip-path:none" onclick="toggleActive(${u.id},${u.is_active})">${u.is_active ? '비활성화' : '활성화'}</button>` : ''}
-            ${isSuperAdmin && u.role !== 'superadmin' ? `<button class="btn-sm" style="background:rgba(0,100,160,0.15);border:1px solid rgba(0,100,160,0.3);color:#38bdf8;clip-path:none" onclick="openGroupModal(${u.id}, ${u.group_id||'null'})">그룹</button>` : ''}
-            ${isSuperAdmin && u.role !== 'superadmin' ? `<button class="btn-sm" style="background:rgba(100,100,140,0.15);border:1px solid rgba(100,100,140,0.3);color:var(--muted-light);clip-path:none" onclick="toggleRole(${u.id},'${u.role}')">${u.role === 'group_admin' ? '일반으로' : '그룹관리자로'}</button>` : ''}
-            ${u.role !== 'superadmin' ? `<button class="btn-sm btn-danger" onclick="deleteUser(${u.id},'${u.username}')">삭제</button>` : ''}
-          </div>
-        </td>
+        <td>${u.today_minutes}분 <span class="time-bar-wrap"><span class="time-bar" style="width:${u.today_seconds/maxSec*100}%"></span></span></td>
+        <td style="color:var(--muted);font-size:0.82rem">${u.created_at.slice(0,10)}</td>
+        <td><div class="td-actions">
+          <button class="btn-sm btn-warning" onclick="openPwModal(${u.id})">🔑 비번</button>
+          ${u.role !== 'superadmin' ? `<button class="btn-sm" style="background:rgba(116,185,255,0.12);border:1.5px solid rgba(116,185,255,0.3);color:#0984e3" onclick="toggleActive(${u.id},${u.is_active})">${u.is_active ? '비활성화' : '활성화'}</button>` : ''}
+          ${isSuperAdmin && u.role !== 'superadmin' ? `<button class="btn-sm" style="background:rgba(255,143,171,0.1);border:1.5px solid rgba(255,143,171,0.25);color:var(--primary)" onclick="openGroupModal(${u.id}, ${u.group_id||'null'})">🏠 그룹</button>` : ''}
+          ${isSuperAdmin && u.role !== 'superadmin' ? `<button class="btn-sm" style="background:rgba(200,180,220,0.12);border:1.5px solid var(--border);color:var(--text-light)" onclick="toggleRole(${u.id},'${u.role}')">${u.role === 'group_admin' ? '일반으로' : '관리자로'}</button>` : ''}
+          ${u.role !== 'superadmin' ? `<button class="btn-sm btn-danger" onclick="deleteUser(${u.id},'${u.username}')">🗑️ 삭제</button>` : ''}
+        </div></td>
       </tr>
     `).join('');
   }
@@ -413,101 +339,73 @@ tr:hover td { background:rgba(0,180,255,0.02); }
     const role = isSuperAdmin ? document.getElementById('newRole').value : 'member';
     const group_id = isSuperAdmin ? (document.getElementById('newGroupId').value || null) : null;
     if (!username || !password) { showToast('아이디와 비밀번호를 입력하세요', 'error'); return; }
-    const res = await fetch('/admin/users', {
-      method: 'POST', headers: authH(),
-      body: JSON.stringify({ username, password, role, group_id: group_id ? parseInt(group_id) : null })
-    });
+    const res = await fetch('/admin/users', { method:'POST', headers:authH(), body:JSON.stringify({ username, password, role, group_id: group_id ? parseInt(group_id) : null }) });
     const data = await res.json();
-    if (res.ok) { showToast(data.message); document.getElementById('newUsername').value = ''; document.getElementById('newPassword').value = ''; loadUsers(); }
+    if (res.ok) { showToast(data.message); document.getElementById('newUsername').value=''; document.getElementById('newPassword').value=''; loadUsers(); }
     else showToast(data.detail, 'error');
   }
 
   async function deleteUser(id, username) {
-    if (!confirm(`'${username}' 계정을 삭제하시겠습니까?`)) return;
-    const res = await fetch('/admin/users/'+id, { method: 'DELETE', headers: authH() });
+    if (!confirm(`'${username}' 계정을 삭제할까요?`)) return;
+    const res = await fetch('/admin/users/'+id, { method:'DELETE', headers:authH() });
     const data = await res.json();
-    if (res.ok) { showToast(data.message); loadUsers(); }
-    else showToast(data.detail, 'error');
+    if (res.ok) { showToast(data.message); loadUsers(); } else showToast(data.detail, 'error');
   }
 
   async function toggleActive(id, current) {
-    const res = await fetch('/admin/users/'+id, { method: 'PATCH', headers: authH(), body: JSON.stringify({is_active: !current}) });
+    const res = await fetch('/admin/users/'+id, { method:'PATCH', headers:authH(), body:JSON.stringify({is_active:!current}) });
     const data = await res.json();
-    if (res.ok) { showToast(data.message); loadUsers(); }
-    else showToast(data.detail, 'error');
+    if (res.ok) { showToast(data.message); loadUsers(); } else showToast(data.detail, 'error');
   }
 
   async function toggleRole(id, currentRole) {
     const newRole = currentRole === 'group_admin' ? 'member' : 'group_admin';
-    const res = await fetch('/admin/users/'+id, { method: 'PATCH', headers: authH(), body: JSON.stringify({role: newRole}) });
+    const res = await fetch('/admin/users/'+id, { method:'PATCH', headers:authH(), body:JSON.stringify({role:newRole}) });
     const data = await res.json();
-    if (res.ok) { showToast(data.message); loadUsers(); }
-    else showToast(data.detail, 'error');
+    if (res.ok) { showToast(data.message); loadUsers(); } else showToast(data.detail, 'error');
   }
 
-  function openPwModal(id) {
-    editingUserId = id;
-    document.getElementById('newPw').value = '';
-    document.getElementById('pwModal').classList.add('show');
-  }
-
-  function openGroupModal(id, currentGroupId) {
-    editingUserId = id;
-    const sel = document.getElementById('moveGroupId');
-    sel.value = currentGroupId || '';
-    document.getElementById('groupModal').classList.add('show');
-  }
-
-  function closeModal(id) {
-    document.getElementById(id).classList.remove('show');
-    editingUserId = null;
-  }
+  function openPwModal(id) { editingUserId=id; document.getElementById('newPw').value=''; document.getElementById('pwModal').classList.add('show'); }
+  function openGroupModal(id, currentGroupId) { editingUserId=id; document.getElementById('moveGroupId').value=currentGroupId||''; document.getElementById('groupModal').classList.add('show'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('show'); editingUserId=null; }
 
   async function confirmPwChange() {
     const pw = document.getElementById('newPw').value;
     if (!pw) { showToast('비밀번호를 입력하세요', 'error'); return; }
-    const res = await fetch('/admin/users/'+editingUserId, { method: 'PATCH', headers: authH(), body: JSON.stringify({password: pw}) });
+    const res = await fetch('/admin/users/'+editingUserId, { method:'PATCH', headers:authH(), body:JSON.stringify({password:pw}) });
     const data = await res.json();
-    if (res.ok) { showToast(data.message); closeModal('pwModal'); }
-    else showToast(data.detail, 'error');
+    if (res.ok) { showToast(data.message); closeModal('pwModal'); } else showToast(data.detail, 'error');
   }
 
   async function confirmGroupChange() {
     const group_id = document.getElementById('moveGroupId').value;
-    const res = await fetch('/admin/users/'+editingUserId, { method: 'PATCH', headers: authH(), body: JSON.stringify({ group_id: group_id ? parseInt(group_id) : null }) });
+    const res = await fetch('/admin/users/'+editingUserId, { method:'PATCH', headers:authH(), body:JSON.stringify({ group_id: group_id ? parseInt(group_id) : null }) });
     const data = await res.json();
-    if (res.ok) { showToast(data.message); closeModal('groupModal'); loadUsers(); }
-    else showToast(data.detail, 'error');
+    if (res.ok) { showToast(data.message); closeModal('groupModal'); loadUsers(); } else showToast(data.detail, 'error');
   }
 
   async function loadGroups() {
     const res = await fetch('/admin/groups', { headers: authH() });
     const data = await res.json();
     const list = document.getElementById('groupList');
-    if (!data.length) { list.innerHTML = '<div class="empty-state">그룹이 없습니다</div>'; return; }
-    list.innerHTML = data.map(g => `
-      <div class="group-card">
-        <div><div class="group-name">${g.name}</div><div class="group-meta">생성일: ${g.created_at.slice(0,10)}</div></div>
-        <button class="btn-sm btn-danger" onclick="deleteGroup(${g.id},'${g.name}')">삭제</button>
-      </div>
-    `).join('');
+    if (!data.length) { list.innerHTML = '<div class="empty-state">🏠 그룹이 없습니다</div>'; return; }
+    list.innerHTML = data.map(g => `<div class="group-card"><div><div class="group-name">${g.name}</div><div class="group-meta">생성일: ${g.created_at.slice(0,10)}</div></div><button class="btn-sm btn-danger" onclick="deleteGroup(${g.id},'${g.name}')">🗑️ 삭제</button></div>`).join('');
   }
 
   async function createGroup() {
     const name = document.getElementById('newGroupName').value.trim();
     if (!name) { showToast('그룹명을 입력하세요', 'error'); return; }
-    const res = await fetch('/admin/groups', { method: 'POST', headers: authH(), body: JSON.stringify({name}) });
+    const res = await fetch('/admin/groups', { method:'POST', headers:authH(), body:JSON.stringify({name}) });
     const data = await res.json();
-    if (res.ok) { showToast(data.message); document.getElementById('newGroupName').value = ''; loadGroups(); loadGroupOptions(); }
+    if (res.ok) { showToast(data.message); document.getElementById('newGroupName').value=''; loadGroups(); loadGroupOptions(); }
     else showToast(data.detail, 'error');
   }
 
   async function deleteGroup(id, name) {
-    if (!confirm(`'${name}' 그룹을 삭제하시겠습니까?\n소속 유저의 그룹이 해제됩니다.`)) return;
-    const res = await fetch('/admin/groups/'+id, { method: 'DELETE', headers: authH() });
+    if (!confirm(`'${name}' 그룹을 삭제할까요?\n소속 유저의 그룹이 해제됩니다.`)) return;
+    const res = await fetch('/admin/groups/'+id, { method:'DELETE', headers:authH() });
     const data = await res.json();
-    if (res.ok) { showToast(data.message); loadGroups(); loadGroupOptions(); }
-    else showToast(data.detail, 'error');
+    if (res.ok) { showToast(data.message); loadGroups(); loadGroupOptions(); } else showToast(data.detail, 'error');
   }
 
   async function loadStats() {
@@ -515,14 +413,14 @@ tr:hover td { background:rgba(0,180,255,0.02); }
     const res = await fetch('/api/stats?target_date='+d, { headers: authH() });
     const data = await res.json();
     const list = document.getElementById('statsList');
-    if (!data.length) { list.innerHTML = '<div class="empty-state">기록이 없습니다</div>'; return; }
+    if (!data.length) { list.innerHTML = '<div class="empty-state">📊 기록이 없습니다</div>'; return; }
     const max = data[0].active_minutes;
-    const rankColors = ['#ffd700','#c0c0d0','#cd7f32'];
+    const medals = ['🥇','🥈','🥉'];
     list.innerHTML = data.map((u,i) => `
-      <div style="position:relative;background:linear-gradient(135deg,rgba(12,16,32,0.95),rgba(8,12,24,0.95));border:1px solid ${i===0?'rgba(255,215,0,0.25)':i===1?'rgba(192,192,208,0.15)':i===2?'rgba(205,127,50,0.15)':'rgba(0,180,255,0.08)'};clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));padding:16px 20px;margin-bottom:10px;display:flex;align-items:center;gap:16px">
-        <div style="font-family:'Orbitron',monospace;font-size:1.3rem;font-weight:900;color:${rankColors[i]||'var(--muted-light)'};min-width:32px">${i+1}</div>
-        <div style="flex:1"><div style="font-size:1rem;font-weight:700">${u.username}</div><div style="font-family:'JetBrains Mono',monospace;color:var(--blue);font-size:0.78rem;margin-top:2px">${u.active_minutes}분 활동</div></div>
-        <div style="flex:2;background:rgba(0,0,0,0.4);height:5px;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,#0057ff,#00b4ff);width:${max>0?u.active_minutes/max*100:0}%"></div></div>
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:14px 20px;margin-bottom:10px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow)">
+        <div style="font-size:1.4rem;min-width:32px;text-align:center">${medals[i]||'#'+(i+1)}</div>
+        <div style="flex:1"><div style="font-weight:800">${u.username}</div><div style="color:var(--primary);font-size:0.82rem;font-weight:700;margin-top:2px">${u.active_minutes}분 활동</div></div>
+        <div style="flex:2;background:rgba(200,180,220,0.15);border-radius:99px;height:8px;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,var(--primary),#c77dff);border-radius:99px;width:${max>0?u.active_minutes/max*100:0}%"></div></div>
       </div>
     `).join('');
   }
@@ -536,150 +434,121 @@ tr:hover td { background:rgba(0,180,255,0.02); }
       <div class="att-card">
         <div class="att-header">
           <div class="att-name">${u.username}</div>
-          <div class="att-active">${u.active_minutes}분 활동</div>
+          <div class="att-active">📚 ${u.active_minutes}분</div>
         </div>
-        ${u.checkin_at ? `
-          <div class="att-times">
-            <div class="att-time-item"><span>출근 </span><strong>${u.checkin_at}</strong></div>
-            <div class="att-time-item"><span>퇴근 </span><strong>${u.checkout_at || '–'}</strong></div>
-          </div>
-        ` : `<div class="no-checkin">출근 기록 없음</div>`}
-        ${u.absences.length ? `<div class="absence-list">${u.absences.map(a => `<div class="absence-chip"><span class="reason">${a.reason}</span> ${a.start}~${a.end || '진행중'}</div>`).join('')}</div>` : ''}
+        ${u.checkin_at ? `<div class="att-times"><div class="att-time-item"><span>출근 </span><strong>${u.checkin_at}</strong></div><div class="att-time-item"><span>퇴근 </span><strong>${u.checkout_at || '–'}</strong></div></div>` : '<div class="no-checkin">출근 기록 없음</div>'}
+        ${u.absences.length ? `<div class="absence-list">${u.absences.map(a=>`<div class="absence-chip"><span class="reason">${a.reason}</span> ${a.start}~${a.end||'진행중'}</div>`).join('')}</div>` : ''}
       </div>
     `).join('');
   }
 
   async function loadCheats() {
     const d = document.getElementById('cheatDate').value || new Date().toISOString().split('T')[0];
-    const res = await fetch('/admin/cheats?target_date=' + d, { headers: authH() });
+    const res = await fetch('/admin/cheats?target_date='+d, { headers: authH() });
     const data = await res.json();
     const list = document.getElementById('cheatList');
-    if (!data.length) { list.innerHTML = '<div class="empty-state">감지된 치트가 없습니다</div>'; return; }
-    list.innerHTML = `<table><thead><tr><th>시각</th><th>유저</th><th>감지 내용</th></tr></thead><tbody>${data.map(c => `<tr><td style="font-family:'JetBrains Mono',monospace;color:var(--muted-light);font-size:0.8rem">${c.detected_at}</td><td><strong>${c.username}</strong></td><td><span style="color:var(--red)">${c.reason}</span></td></tr>`).join('')}</tbody></table>`;
+    if (!data.length) { list.innerHTML = '<div class="empty-state">✅ 감지된 치트가 없습니다</div>'; return; }
+    list.innerHTML = `<table><thead><tr><th>시각</th><th>유저</th><th>감지 내용</th></tr></thead><tbody>${data.map(c=>`<tr><td style="color:var(--muted);font-size:0.82rem">${c.detected_at}</td><td><strong>${c.username}</strong></td><td style="color:var(--red)">${c.reason}</td></tr>`).join('')}</tbody></table>`;
   }
 
   let editingLogId = null;
-
   async function loadActivity() {
     const d = document.getElementById('actDate').value || new Date().toISOString().split('T')[0];
-    const res = await fetch('/admin/activity?target_date=' + d, { headers: authH() });
+    const res = await fetch('/admin/activity?target_date='+d, { headers: authH() });
     const data = await res.json();
     const list = document.getElementById('actList');
-    const addRow = `<div style="position:relative;background:linear-gradient(135deg,rgba(12,16,32,0.95),rgba(8,12,24,0.95));border:1px solid rgba(0,180,255,0.12);clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));padding:18px 22px;margin-bottom:16px"><div style="font-family:'Orbitron',monospace;font-size:0.6rem;letter-spacing:2px;color:var(--muted-light);margin-bottom:10px">기록 직접 추가</div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end"><div class="form-group"><label>유저</label><select id="newActUser" style="min-width:120px">${(window._allUsers||[]).map(u=>`<option value="${u.username}">${u.username}</option>`).join('')}</select></div><div class="form-group"><label>날짜</label><input type="date" id="newActDate" value="${d}"></div><div class="form-group"><label>활동 시간 (분)</label><input type="number" id="newActMinutes" min="0" placeholder="예: 120" style="min-width:100px"></div><button class="btn btn-primary" onclick="createActivity()">추가</button></div></div>`;
+    const addRow = `<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)"><div style="font-size:0.78rem;font-weight:800;color:var(--text-light);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">📝 기록 직접 추가</div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end"><div class="form-group"><label>유저</label><select id="newActUser" style="min-width:120px">${(window._allUsers||[]).map(u=>`<option value="${u.username}">${u.username}</option>`).join('')}</select></div><div class="form-group"><label>날짜</label><input type="date" id="newActDate" value="${d}"></div><div class="form-group"><label>활동 시간 (분)</label><input type="number" id="newActMinutes" min="0" placeholder="예: 120" style="min-width:100px"></div><button class="btn btn-primary" onclick="createActivity()">추가</button></div></div>`;
     if (!data.length) { list.innerHTML = addRow + '<div class="empty-state">기록이 없습니다</div>'; return; }
-    list.innerHTML = addRow + `<table><thead><tr><th>유저</th><th>날짜</th><th>활동 시간</th><th>마지막 업데이트</th><th>수정</th></tr></thead><tbody>${data.map(r => `<tr id="row-${r.id}"><td><strong>${r.username}</strong></td><td style="font-family:'JetBrains Mono',monospace;color:var(--muted-light);font-size:0.8rem">${r.date}</td><td><span id="disp-${r.id}">${r.active_minutes}분</span><input type="number" id="inp-${r.id}" value="${r.active_minutes}" min="0" style="display:none;width:80px;background:rgba(0,180,255,0.04);border:1px solid rgba(0,180,255,0.2);color:var(--text);padding:4px 8px;font-family:'Rajdhani',sans-serif;font-size:0.9rem"></td><td style="font-family:'JetBrains Mono',monospace;color:var(--muted-light);font-size:0.75rem">${r.last_updated.slice(0,16).replace('T',' ')}</td><td><div class="td-actions"><button class="btn-sm" style="background:rgba(0,100,160,0.15);border:1px solid rgba(0,100,160,0.3);color:#38bdf8;clip-path:none" id="editBtn-${r.id}" onclick="startEdit(${r.id})">수정</button><button class="btn-sm btn-primary" id="saveBtn-${r.id}" style="display:none" onclick="saveActivity(${r.id})">저장</button><button class="btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--muted-light);clip-path:none;display:none" id="cancelBtn-${r.id}" onclick="cancelEdit(${r.id}, ${r.active_minutes})">취소</button></div></td></tr>`).join('')}</tbody></table>`;
+    list.innerHTML = addRow + `<table><thead><tr><th>유저</th><th>날짜</th><th>활동 시간</th><th>마지막 업데이트</th><th>수정</th></tr></thead><tbody>${data.map(r=>`<tr id="row-${r.id}"><td><strong>${r.username}</strong></td><td style="color:var(--muted);font-size:0.82rem">${r.date}</td><td><span id="disp-${r.id}">${r.active_minutes}분</span><input type="number" id="inp-${r.id}" value="${r.active_minutes}" min="0" style="display:none;width:80px;background:#faf7fd;border:1.5px solid var(--border);border-radius:8px;color:var(--text);padding:4px 8px;font-family:'Nunito',sans-serif;font-size:0.9rem;font-weight:600"></td><td style="color:var(--muted);font-size:0.78rem">${r.last_updated.slice(0,16).replace('T',' ')}</td><td><div class="td-actions"><button class="btn-sm" style="background:rgba(116,185,255,0.12);border:1.5px solid rgba(116,185,255,0.3);color:#0984e3" id="editBtn-${r.id}" onclick="startEdit(${r.id})">✏️ 수정</button><button class="btn-sm btn-primary" id="saveBtn-${r.id}" style="display:none" onclick="saveActivity(${r.id})">저장</button><button class="btn-sm" style="background:rgba(200,180,220,0.12);border:1.5px solid var(--border);color:var(--text-light);display:none" id="cancelBtn-${r.id}" onclick="cancelEdit(${r.id},${r.active_minutes})">취소</button></div></td></tr>`).join('')}</tbody></table>`;
   }
 
-  function startEdit(id) {
-    document.getElementById('disp-'+id).style.display = 'none';
-    document.getElementById('inp-'+id).style.display = '';
-    document.getElementById('editBtn-'+id).style.display = 'none';
-    document.getElementById('saveBtn-'+id).style.display = '';
-    document.getElementById('cancelBtn-'+id).style.display = '';
-  }
-
-  function cancelEdit(id, origMinutes) {
-    document.getElementById('inp-'+id).value = origMinutes;
-    document.getElementById('disp-'+id).style.display = '';
-    document.getElementById('inp-'+id).style.display = 'none';
-    document.getElementById('editBtn-'+id).style.display = '';
-    document.getElementById('saveBtn-'+id).style.display = 'none';
-    document.getElementById('cancelBtn-'+id).style.display = 'none';
-  }
+  function startEdit(id) { document.getElementById('disp-'+id).style.display='none'; document.getElementById('inp-'+id).style.display=''; document.getElementById('editBtn-'+id).style.display='none'; document.getElementById('saveBtn-'+id).style.display=''; document.getElementById('cancelBtn-'+id).style.display=''; }
+  function cancelEdit(id, origMinutes) { document.getElementById('inp-'+id).value=origMinutes; document.getElementById('disp-'+id).style.display=''; document.getElementById('inp-'+id).style.display='none'; document.getElementById('editBtn-'+id).style.display=''; document.getElementById('saveBtn-'+id).style.display='none'; document.getElementById('cancelBtn-'+id).style.display='none'; }
 
   async function saveActivity(id) {
     const minutes = parseFloat(document.getElementById('inp-'+id).value);
-    if (isNaN(minutes) || minutes < 0) { showToast('올바른 값을 입력하세요', 'error'); return; }
-    const res = await fetch('/admin/activity/'+id, { method: 'PATCH', headers: authH(), body: JSON.stringify({ active_seconds: minutes * 60 }) });
+    if (isNaN(minutes)||minutes<0) { showToast('올바른 값을 입력하세요','error'); return; }
+    const res = await fetch('/admin/activity/'+id, { method:'PATCH', headers:authH(), body:JSON.stringify({active_seconds:minutes*60}) });
     const data = await res.json();
-    if (res.ok) { showToast(data.message); document.getElementById('disp-'+id).textContent = minutes + '분'; cancelEdit(id, minutes); }
-    else showToast(data.detail, 'error');
+    if (res.ok) { showToast(data.message); document.getElementById('disp-'+id).textContent=minutes+'분'; cancelEdit(id,minutes); }
+    else showToast(data.detail,'error');
   }
 
   async function createActivity() {
     const username = document.getElementById('newActUser').value;
     const date = document.getElementById('newActDate').value;
     const minutes = parseFloat(document.getElementById('newActMinutes').value);
-    if (!username || !date) { showToast('유저와 날짜를 입력하세요', 'error'); return; }
-    if (isNaN(minutes) || minutes < 0) { showToast('활동 시간을 입력하세요', 'error'); return; }
-    const res = await fetch('/admin/activity', { method: 'POST', headers: authH(), body: JSON.stringify({ username, date, active_seconds: minutes * 60 }) });
+    if (!username||!date) { showToast('유저와 날짜를 입력하세요','error'); return; }
+    if (isNaN(minutes)||minutes<0) { showToast('활동 시간을 입력하세요','error'); return; }
+    const res = await fetch('/admin/activity', { method:'POST', headers:authH(), body:JSON.stringify({username,date,active_seconds:minutes*60}) });
     const data = await res.json();
-    if (res.ok) { showToast(data.message); loadActivity(); }
-    else showToast(data.detail, 'error');
+    if (res.ok) { showToast(data.message); loadActivity(); } else showToast(data.detail,'error');
   }
 
   async function loadGoals() {
     await loadGroupOptions();
     const sel = document.getElementById('goalGroupId');
-    sel.innerHTML = '<option value="">전체 기본</option>' + groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+    sel.innerHTML = '<option value="">전체 기본</option>' + groups.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
     const res = await fetch('/admin/goals', { headers: authH() });
     const data = await res.json();
     const list = document.getElementById('goalList');
-    if (!data.length) { list.innerHTML = '<div class="empty-state">설정된 목표가 없습니다 (기본값: 480분/일)</div>'; return; }
-    list.innerHTML = `<table><thead><tr><th>그룹</th><th>하루 목표</th><th>주간</th><th>관리</th></tr></thead><tbody>${data.map(g => `<tr><td><strong>${g.group_name}</strong></td><td>${g.daily_target_minutes}분 (${Math.round(g.daily_target_minutes/60*10)/10}시간)</td><td style="font-family:'JetBrains Mono',monospace;color:var(--muted-light)">${g.daily_target_minutes * 7}분</td><td>${isSuperAdmin ? `<button class="btn-sm btn-danger" onclick="deleteGoal(${g.id})">삭제</button>` : ''}</td></tr>`).join('')}</tbody></table>`;
+    if (!data.length) { list.innerHTML='<div class="empty-state">🎯 설정된 목표가 없습니다 (기본값: 480분/일)</div>'; return; }
+    list.innerHTML = `<table><thead><tr><th>그룹</th><th>하루 목표</th><th>주간</th><th>관리</th></tr></thead><tbody>${data.map(g=>`<tr><td><strong>${g.group_name}</strong></td><td>${g.daily_target_minutes}분 (${Math.round(g.daily_target_minutes/60*10)/10}시간)</td><td style="color:var(--muted)">${g.daily_target_minutes*7}분</td><td>${isSuperAdmin?`<button class="btn-sm btn-danger" onclick="deleteGoal(${g.id})">🗑️ 삭제</button>`:''}</td></tr>`).join('')}</tbody></table>`;
   }
 
   async function saveGoal() {
     const group_id = document.getElementById('goalGroupId').value;
     const minutes = parseInt(document.getElementById('goalMinutes').value);
-    if (!minutes || minutes < 1) { showToast('목표 시간을 입력하세요', 'error'); return; }
-    const res = await fetch('/admin/goals', { method: 'POST', headers: authH(), body: JSON.stringify({ group_id: group_id ? parseInt(group_id) : null, daily_target_minutes: minutes }) });
+    if (!minutes||minutes<1) { showToast('목표 시간을 입력하세요','error'); return; }
+    const res = await fetch('/admin/goals', { method:'POST', headers:authH(), body:JSON.stringify({group_id:group_id?parseInt(group_id):null,daily_target_minutes:minutes}) });
     const data = await res.json();
-    if (res.ok) { showToast(data.message); document.getElementById('goalMinutes').value = ''; loadGoals(); }
-    else showToast(data.detail, 'error');
+    if (res.ok) { showToast(data.message); document.getElementById('goalMinutes').value=''; loadGoals(); } else showToast(data.detail,'error');
   }
 
   async function deleteGoal(id) {
-    if (!confirm('목표를 삭제하시겠습니까?')) return;
-    const res = await fetch('/admin/goals/'+id, { method: 'DELETE', headers: authH() });
+    if (!confirm('목표를 삭제할까요?')) return;
+    const res = await fetch('/admin/goals/'+id, { method:'DELETE', headers:authH() });
     const data = await res.json();
-    if (res.ok) { showToast(data.message); loadGoals(); }
-    else showToast(data.detail, 'error');
+    if (res.ok) { showToast(data.message); loadGoals(); } else showToast(data.detail,'error');
   }
 
   async function loadAbsenceStats() {
-    const start = document.getElementById('absStart').value;
-    const end = document.getElementById('absEnd').value;
-    let url = '/admin/absence-stats';
-    const params = [];
+    const start = document.getElementById('absStart').value, end = document.getElementById('absEnd').value;
+    let url = '/admin/absence-stats', params = [];
     if (start) params.push('start_date='+start);
     if (end) params.push('end_date='+end);
     if (params.length) url += '?' + params.join('&');
     const res = await fetch(url, { headers: authH() });
     const data = await res.json();
     const list = document.getElementById('absStatsList');
-    if (data.total_count === 0) { list.innerHTML = '<div class="empty-state">외출 기록이 없습니다</div>'; return; }
-    const byReasonRows = data.by_reason.map(r => `<tr><td><strong>${r.reason}</strong></td><td>${r.count}회</td><td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;background:rgba(0,0,0,0.4);height:5px;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,#0057ff,#00b4ff);width:${r.percentage}%"></div></div><span style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--muted-light);min-width:40px">${r.percentage}%</span></div></td></tr>`).join('');
-    const byUserRows = data.by_user.map(u => `<tr><td><strong>${u.username}</strong></td><td>${u.count}회</td><td style="font-family:'JetBrains Mono',monospace;color:var(--muted-light)">${u.total_minutes}분</td></tr>`).join('');
-    list.innerHTML = `<div style="font-family:'JetBrains Mono',monospace;color:var(--muted-light);font-size:0.75rem;margin-bottom:12px">${data.period.start} ~ ${data.period.end} · 총 ${data.total_count}건</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div><div style="font-family:'Orbitron',monospace;font-size:0.6rem;letter-spacing:2px;color:var(--muted-light);margin-bottom:8px">사유별</div><table><thead><tr><th>사유</th><th>횟수</th><th>비율</th></tr></thead><tbody>${byReasonRows}</tbody></table></div><div><div style="font-family:'Orbitron',monospace;font-size:0.6rem;letter-spacing:2px;color:var(--muted-light);margin-bottom:8px">유저별</div><table><thead><tr><th>유저</th><th>횟수</th><th>총 시간</th></tr></thead><tbody>${byUserRows}</tbody></table></div></div>`;
+    if (data.total_count===0) { list.innerHTML='<div class="empty-state">🚶 외출 기록이 없습니다</div>'; return; }
+    const byReasonRows = data.by_reason.map(r=>`<tr><td><strong>${r.reason}</strong></td><td>${r.count}회</td><td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;background:rgba(200,180,220,0.15);border-radius:99px;height:6px;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,var(--primary),#c77dff);border-radius:99px;width:${r.percentage}%"></div></div><span style="font-size:0.78rem;color:var(--muted);min-width:40px;font-weight:700">${r.percentage}%</span></div></td></tr>`).join('');
+    const byUserRows = data.by_user.map(u=>`<tr><td><strong>${u.username}</strong></td><td>${u.count}회</td><td style="color:var(--muted)">${u.total_minutes}분</td></tr>`).join('');
+    list.innerHTML = `<div style="font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:12px">${data.period.start} ~ ${data.period.end} · 총 ${data.total_count}건</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div><div style="font-size:0.78rem;font-weight:800;color:var(--text-light);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">사유별</div><table><thead><tr><th>사유</th><th>횟수</th><th>비율</th></tr></thead><tbody>${byReasonRows}</tbody></table></div><div><div style="font-size:0.78rem;font-weight:800;color:var(--text-light);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">유저별</div><table><thead><tr><th>유저</th><th>횟수</th><th>총 시간</th></tr></thead><tbody>${byUserRows}</tbody></table></div></div>`;
   }
 
   async function loadBackups() {
     const res = await fetch('/admin/backups', { headers: authH() });
     const data = await res.json();
     const list = document.getElementById('backupList');
-    if (!data.length) { list.innerHTML = '<div style="font-family:\'Orbitron\',monospace;font-size:0.6rem;letter-spacing:2px;color:var(--muted-light)">백업 파일이 없습니다</div>'; return; }
-    list.innerHTML = `<table><thead><tr><th>파일명</th><th>크기</th><th>생성일시</th></tr></thead><tbody>${data.map(b => `<tr><td style="font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:var(--muted-light)">${b.filename}</td><td>${b.size_kb} KB</td><td style="font-family:'JetBrains Mono',monospace;color:var(--muted-light);font-size:0.78rem">${b.created_at}</td></tr>`).join('')}</tbody></table>`;
+    if (!data.length) { list.innerHTML='<div style="font-size:0.85rem;font-weight:700;color:var(--muted)">백업 파일이 없습니다</div>'; return; }
+    list.innerHTML = `<table><thead><tr><th>파일명</th><th>크기</th><th>생성일시</th></tr></thead><tbody>${data.map(b=>`<tr><td style="color:var(--muted);font-size:0.82rem">${b.filename}</td><td>${b.size_kb} KB</td><td style="color:var(--muted);font-size:0.82rem">${b.created_at}</td></tr>`).join('')}</tbody></table>`;
   }
 
   async function runBackup() {
-    const btn = document.getElementById('backupBtn');
-    btn.textContent = '백업 중...'; btn.disabled = true;
-    const res = await fetch('/admin/backup', { method: 'POST', headers: authH() });
+    const btn = document.getElementById('backupBtn'); btn.textContent='백업 중...'; btn.disabled=true;
+    const res = await fetch('/admin/backup', { method:'POST', headers:authH() });
     const data = await res.json();
-    btn.textContent = '지금 백업'; btn.disabled = false;
-    if (res.ok) { showToast(data.message); loadBackups(); }
-    else showToast(data.detail, 'error');
+    btn.textContent='💾 지금 백업'; btn.disabled=false;
+    if (res.ok) { showToast(data.message); loadBackups(); } else showToast(data.detail,'error');
   }
 
   async function syncGithub() {
-    const btn = document.getElementById('syncBtn');
-    btn.textContent = '동기화 중...'; btn.disabled = true;
-    const res = await fetch('/admin/client/sync-github', { method: 'POST', headers: authH() });
+    const btn = document.getElementById('syncBtn'); btn.textContent='동기화 중...'; btn.disabled=true;
+    const res = await fetch('/admin/client/sync-github', { method:'POST', headers:authH() });
     const data = await res.json();
-    btn.textContent = 'GitHub에서 동기화'; btn.disabled = false;
-    if (res.ok) { showToast(data.message); loadClientVersion(); }
-    else showToast(data.detail, 'error');
+    btn.textContent='🔄 GitHub에서 동기화'; btn.disabled=false;
+    if (res.ok) { showToast(data.message); loadClientVersion(); } else showToast(data.detail,'error');
   }
 
   async function loadClientVersion() {
@@ -692,19 +561,18 @@ tr:hover td { background:rgba(0,180,255,0.02); }
     const version = document.getElementById('uploadVersion').value.trim();
     const file = document.getElementById('uploadFile').files[0];
     const status = document.getElementById('uploadStatus');
-    if (!version) { showToast('버전 번호를 입력하세요', 'error'); return; }
-    if (!file) { showToast('EXE 파일을 선택하세요', 'error'); return; }
+    if (!version) { showToast('버전 번호를 입력하세요','error'); return; }
+    if (!file) { showToast('파일을 선택하세요','error'); return; }
     status.textContent = '업로드 중...';
-    const form = new FormData();
-    form.append('file', file);
-    const res = await fetch(`/admin/client/upload?version=${encodeURIComponent(version)}`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token }, body: form });
+    const form = new FormData(); form.append('file', file);
+    const res = await fetch(`/admin/client/upload?version=${encodeURIComponent(version)}`, { method:'POST', headers:{'Authorization':'Bearer '+token}, body:form });
     const data = await res.json();
-    if (res.ok) { showToast(data.message); status.textContent = `마지막 업로드: v${version} (${new Date().toLocaleString()})`; status.style.color = '#00ff88'; loadClientVersion(); }
-    else { showToast(data.detail, 'error'); status.textContent = ''; }
+    if (res.ok) { showToast(data.message); status.textContent=`마지막 업로드: v${version} (${new Date().toLocaleString()})`; status.style.color='#3a9b44'; loadClientVersion(); }
+    else { showToast(data.detail,'error'); status.textContent=''; }
   }
 
   const today = new Date().toISOString().split('T')[0];
-  const weekAgo = new Date(Date.now() - 6*86400000).toISOString().split('T')[0];
+  const weekAgo = new Date(Date.now()-6*86400000).toISOString().split('T')[0];
   document.getElementById('actDate').value = today;
   document.getElementById('statsDate').value = today;
   document.getElementById('attDate').value = today;
