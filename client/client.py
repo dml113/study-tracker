@@ -18,7 +18,7 @@ import requests
 from datetime import datetime
 from pynput import keyboard, mouse
 
-VERSION = "1.0.0"
+VERSION = "1.0.3"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".study_tracker.json")
 SEND_INTERVAL = 30
@@ -59,7 +59,13 @@ def is_meal_time() -> bool:
 def load_config() -> dict:
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE) as f:
-            return json.load(f)
+            cfg = json.load(f)
+        # 구 서버 주소 자동 마이그레이션
+        if cfg.get("server") in ("http://172.16.145.81:8000", "http://172.16.145.16:8000"):
+            cfg["server"] = "http://traker.itnsa.cloud"
+            with open(CONFIG_FILE, "w") as f:
+                json.dump(cfg, f)
+        return cfg
     return {}
 
 
