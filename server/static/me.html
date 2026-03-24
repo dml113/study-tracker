@@ -158,7 +158,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
   const STAGE_LABELS = ['알 🥚','금 가는 중 ✨','부화 중 🐣','부화 완료! 🎉'];
 
   const ANIMAL_SVGS = [
-    `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
 <polygon points="21,47 13,13 40,34" fill="#FFCBA4"/><polygon points="79,47 87,13 60,34" fill="#FFCBA4"/>
 <polygon points="24,43 18,18 38,33" fill="#FFB0C8"/><polygon points="76,43 82,18 62,33" fill="#FFB0C8"/>
 <circle cx="50" cy="60" r="34" fill="#FFCBA4"/>
@@ -174,7 +174,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
 <line x1="57" y1="68" x2="90" y2="68" stroke="rgba(80,60,80,0.3)" stroke-width="1.2"/>
 <circle cx="29" cy="65" r="6" fill="rgba(255,160,180,0.35)"/><circle cx="71" cy="65" r="6" fill="rgba(255,160,180,0.35)"/>
 </svg>`,
-    `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
 <ellipse cx="21" cy="62" rx="13" ry="21" fill="#C8922A" transform="rotate(-8 21 62)"/>
 <ellipse cx="79" cy="62" rx="13" ry="21" fill="#C8922A" transform="rotate(8 79 62)"/>
 <circle cx="50" cy="53" r="33" fill="#E8B870"/>
@@ -188,7 +188,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
 <ellipse cx="50" cy="71" rx="4.5" ry="3.5" fill="#FF9999"/>
 <circle cx="27" cy="58" r="7" fill="rgba(255,160,100,0.28)"/><circle cx="73" cy="58" r="7" fill="rgba(255,160,100,0.28)"/>
 </svg>`,
-    `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
 <ellipse cx="15" cy="63" rx="15" ry="13" fill="#F5C896"/>
 <ellipse cx="85" cy="63" rx="15" ry="13" fill="#F5C896"/>
 <circle cx="27" cy="28" r="10" fill="#F0C070"/><circle cx="73" cy="28" r="10" fill="#F0C070"/>
@@ -202,7 +202,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
 <path d="M46,65 Q50,70 54,65" stroke="#E8906A" stroke-width="1.5" fill="none" stroke-linecap="round"/>
 <circle cx="18" cy="62" r="6" fill="rgba(255,150,130,0.4)"/><circle cx="82" cy="62" r="6" fill="rgba(255,150,130,0.4)"/>
 </svg>`,
-    `<svg viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
+    `<svg width="100%" height="100%" viewBox="0 0 100 115" xmlns="http://www.w3.org/2000/svg">
 <ellipse cx="35" cy="26" rx="9" ry="24" fill="#EEE8F8" transform="rotate(-8 35 26)"/>
 <ellipse cx="65" cy="26" rx="9" ry="24" fill="#EEE8F8" transform="rotate(8 65 26)"/>
 <ellipse cx="35" cy="26" rx="5.5" ry="19" fill="#F8C0D8" transform="rotate(-8 35 26)"/>
@@ -215,7 +215,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
 <path d="M46,83 Q50,88 54,83" stroke="#FF99BB" stroke-width="1.5" fill="none" stroke-linecap="round"/>
 <circle cx="29" cy="79" r="6" fill="rgba(255,160,200,0.3)"/><circle cx="71" cy="79" r="6" fill="rgba(255,160,200,0.3)"/>
 </svg>`,
-    `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
 <circle cx="33" cy="34" r="14" fill="#5CBF6A"/><circle cx="67" cy="34" r="14" fill="#5CBF6A"/>
 <ellipse cx="50" cy="65" rx="36" ry="27" fill="#7ED68A"/>
 <circle cx="33" cy="34" r="10" fill="white"/><circle cx="67" cy="34" r="10" fill="white"/>
@@ -226,7 +226,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
 <path d="M30,71 Q50,85 70,71" stroke="#3A8040" stroke-width="2.5" fill="none" stroke-linecap="round"/>
 <circle cx="26" cy="71" r="6" fill="rgba(150,230,150,0.35)"/><circle cx="74" cy="71" r="6" fill="rgba(150,230,150,0.35)"/>
 </svg>`,
-    `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
 <polygon points="24,47 14,11 42,32" fill="#E8742A"/><polygon points="76,47 86,11 58,32" fill="#E8742A"/>
 <polygon points="27,43 19,16 40,31" fill="#FFB0C8"/><polygon points="73,43 81,16 60,31" fill="#FFB0C8"/>
 <circle cx="50" cy="57" r="33" fill="#E8742A"/>
@@ -239,7 +239,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
 <path d="M46,67 Q50,72 54,67" stroke="#C05020" stroke-width="1.5" fill="none" stroke-linecap="round"/>
 <circle cx="27" cy="61" r="7" fill="rgba(255,130,80,0.22)"/><circle cx="73" cy="61" r="7" fill="rgba(255,130,80,0.22)"/>
 </svg>`,
-    `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
 <circle cx="27" cy="28" r="13" fill="#2A2A2A"/><circle cx="73" cy="28" r="13" fill="#2A2A2A"/>
 <circle cx="50" cy="60" r="33" fill="#F5F5F0"/>
 <ellipse cx="35" cy="52" rx="13" ry="12" fill="#2A2A2A" transform="rotate(-12 35 52)"/>
@@ -251,7 +251,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
 <path d="M45,70 Q50,76 55,70" stroke="#444" stroke-width="1.5" fill="none" stroke-linecap="round"/>
 <circle cx="29" cy="67" r="6" fill="rgba(255,160,180,0.28)"/><circle cx="71" cy="67" r="6" fill="rgba(255,160,180,0.28)"/>
 </svg>`,
-    `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
 <circle cx="19" cy="37" r="20" fill="#B0A8C0"/><circle cx="81" cy="37" r="20" fill="#B0A8C0"/>
 <circle cx="19" cy="37" r="13" fill="#D8D0E8"/><circle cx="81" cy="37" r="13" fill="#D8D0E8"/>
 <circle cx="50" cy="61" r="31" fill="#C8BCD8"/>
@@ -268,7 +268,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
   function getEggStageSVG(stage, c) {
     const fc = 'rgba(0,0,0,0.38)';
     const bl = 'rgba(255,182,193,0.45)';
-    if (stage === 0) return `<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+    if (stage === 0) return `<svg width="100%" height="100%" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
 <ellipse cx="50" cy="70" rx="36" ry="44" fill="${c.from}"/>
 <ellipse cx="37" cy="51" rx="8" ry="12" fill="rgba(255,255,255,0.28)" transform="rotate(-20 37 51)"/>
 <path d="M34,67 Q40,62 46,67" stroke="${fc}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
@@ -279,7 +279,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
 <text x="73" y="40" font-family="Arial" font-size="12" fill="${fc}" font-weight="bold" opacity="0.7">z</text>
 <text x="81" y="29" font-family="Arial" font-size="14" fill="${fc}" font-weight="bold" opacity="0.45">z</text>
 </svg>`;
-    if (stage === 1) return `<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+    if (stage === 1) return `<svg width="100%" height="100%" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
 <ellipse cx="50" cy="70" rx="36" ry="44" fill="${c.from}"/>
 <ellipse cx="37" cy="51" rx="8" ry="12" fill="rgba(255,255,255,0.28)" transform="rotate(-20 37 51)"/>
 <path d="M50,26 L47,36 L53,43 L50,50" stroke="${fc}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
@@ -290,7 +290,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
 <path d="M43,77 Q50,82 57,77" stroke="${fc}" stroke-width="1.8" fill="none" stroke-linecap="round"/>
 <circle cx="32" cy="74" r="5" fill="${bl}"/><circle cx="68" cy="74" r="5" fill="${bl}"/>
 </svg>`;
-    return `<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+    return `<svg width="100%" height="100%" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
 <ellipse cx="50" cy="70" rx="36" ry="44" fill="${c.from}"/>
 <path d="M18,56 Q28,35 50,29 Q72,35 82,56 Q70,51 64,58 Q58,45 52,52 Q46,41 40,49 Q34,45 30,55 Z" fill="${c.bg}" stroke="${fc}" stroke-width="1.5"/>
 <path d="M40,49 L44,61" stroke="${fc}" stroke-width="1.8" fill="none"/>
@@ -373,9 +373,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
     if (statsRes.ok) {
       const statsData = await statsRes.json();
       const myEntry = statsData.find(function(u){return u.username===myUsername;});
-      if (myEntry && myEntry.lifetime_minutes !== undefined) {
-        updateEggHero(myEntry.lifetime_minutes);
-      }
+      updateEggHero(myEntry ? (myEntry.lifetime_minutes || 0) : 0);
     }
 
     const chart = document.getElementById('dailyChart');

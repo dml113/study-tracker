@@ -21,7 +21,7 @@ import requests
 from datetime import datetime
 from pynput import keyboard, mouse
 
-VERSION = "1.0.7"
+VERSION = "1.0.9"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".study_tracker.json")
 SEND_INTERVAL = 30
@@ -208,20 +208,22 @@ def start_tracking():
 
 # ── 메인 창 ──────────────────────────────────────
 class MainWindow:
-    BG = "#0f172a"
-    CARD = "#1e293b"
-    BORDER = "#334155"
-    BLUE = "#3b82f6"
-    GREEN = "#22c55e"
-    YELLOW = "#f59e0b"
-    GRAY = "#475569"
-    TEXT = "#e2e8f0"
-    MUTED = "#94a3b8"
+    BG = "#fdf6f0"
+    CARD = "#ffffff"
+    BORDER = "#ead8f0"
+    PRIMARY = "#ff8fab"
+    GREEN = "#6bcb77"
+    YELLOW = "#ffc857"
+    RED = "#ff6b6b"
+    PURPLE = "#c77dff"
+    GRAY = "#c4b5d5"
+    TEXT = "#3d2b56"
+    MUTED = "#7b6b8d"
 
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("공부 트래커")
-        self.root.geometry("320x320")
+        self.root.title("공부 트래커 🌸")
+        self.root.geometry("320x340")
         self.root.resizable(False, False)
         self.root.configure(bg=self.BG)
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
@@ -232,10 +234,13 @@ class MainWindow:
         # 헤더
         hdr = tk.Frame(self.root, bg=self.CARD, pady=14)
         hdr.pack(fill="x")
-        tk.Label(hdr, text="공부 트래커", bg=self.CARD, fg=self.BLUE,
+        tk.Label(hdr, text="🌸 공부 트래커", bg=self.CARD, fg=self.TEXT,
                  font=("Segoe UI", 13, "bold")).pack()
         tk.Label(hdr, text=f"{state['username']}님", bg=self.CARD, fg=self.MUTED,
                  font=("Segoe UI", 9)).pack()
+
+        # 구분선
+        tk.Frame(self.root, bg=self.BORDER, height=1).pack(fill="x")
 
         # 상태 영역
         body = tk.Frame(self.root, bg=self.BG, pady=18)
@@ -249,31 +254,30 @@ class MainWindow:
                                  font=("Segoe UI", 9))
         self.lbl_time.pack(pady=(4, 0))
 
-        self.lbl_active = tk.Label(body, text="", bg=self.BG, fg=self.BLUE,
-                                   font=("Segoe UI", 9))
+        self.lbl_active = tk.Label(body, text="", bg=self.BG, fg=self.PRIMARY,
+                                   font=("Segoe UI", 9, "bold"))
         self.lbl_active.pack(pady=(2, 0))
 
-        self.lbl_cheat = tk.Label(body, text="", bg=self.BG, fg="#ef4444",
+        self.lbl_cheat = tk.Label(body, text="", bg=self.BG, fg=self.RED,
                                   font=("Segoe UI", 8, "bold"))
         self.lbl_cheat.pack(pady=(2, 0))
-
 
         # 버튼 영역
         self.btn_frame = tk.Frame(self.root, bg=self.BG)
         self.btn_frame.pack(pady=10)
 
-        self.btn_checkin = self._make_btn("출근", self.BLUE, self.checkin)
-        self.btn_checkout = self._make_btn("퇴근", "#dc2626", self.checkout)
-        self.btn_absence = self._make_btn("외출", self.YELLOW, self.start_absence, fg="#0f172a")
-        self.btn_return = self._make_btn("복귀", self.GREEN, self.end_absence)
+        self.btn_checkin = self._make_btn("출근 🚀", self.PRIMARY, self.checkin)
+        self.btn_checkout = self._make_btn("퇴근", self.RED, self.checkout)
+        self.btn_absence = self._make_btn("외출", self.YELLOW, self.start_absence, fg=self.TEXT)
+        self.btn_return = self._make_btn("복귀 ✨", self.GREEN, self.end_absence)
 
         foot = tk.Frame(self.root, bg=self.BG)
-        foot.pack(pady=(0, 8))
-        tk.Button(foot, text="웹 대시보드 열기", bg=self.BG, fg=self.MUTED,
+        foot.pack(pady=(0, 10))
+        tk.Button(foot, text="🏆 웹 대시보드", bg=self.BG, fg=self.MUTED,
                   relief="flat", font=("Segoe UI", 8), cursor="hand2",
                   command=lambda: webbrowser.open("https://traker.itnsa.cloud/dashboard")
                   ).pack(side="left", padx=8)
-        tk.Button(foot, text="비밀번호 변경", bg=self.BG, fg=self.MUTED,
+        tk.Button(foot, text="🔑 비밀번호 변경", bg=self.BG, fg=self.MUTED,
                   relief="flat", font=("Segoe UI", 8), cursor="hand2",
                   command=self.change_password
                   ).pack(side="left", padx=8)
@@ -308,13 +312,13 @@ class MainWindow:
             w.pack_forget()
 
         if not state["checked_in"]:
-            self.lbl_status.config(text="○  출근 전", fg=self.GRAY)
+            self.lbl_status.config(text="🥚  출근 전", fg=self.GRAY)
             self.btn_checkin.pack(pady=4)
         elif state["is_absent"]:
-            self.lbl_status.config(text="◐  외출 중", fg=self.YELLOW)
+            self.lbl_status.config(text="🚶  외출 중", fg=self.YELLOW)
             self.btn_return.pack(pady=4)
         else:
-            self.lbl_status.config(text="●  출근 중", fg=self.GREEN)
+            self.lbl_status.config(text="📚  공부 중", fg=self.GREEN)
             self.btn_absence.pack(side="left", padx=6)
             self.btn_checkout.pack(side="left", padx=6)
 
@@ -366,7 +370,7 @@ class MainWindow:
         dialog.configure(bg=self.BG)
         dialog.grab_set()
 
-        tk.Label(dialog, text="외출 사유", bg=self.BG, fg=self.BLUE,
+        tk.Label(dialog, text="🚶 외출 사유", bg=self.BG, fg=self.TEXT,
                  font=("Segoe UI", 11, "bold")).pack(pady=(16, 10))
 
         selected = tk.StringVar(value=PRESET_REASONS[0])
@@ -376,7 +380,7 @@ class MainWindow:
                            activebackground=self.BG, activeforeground=self.TEXT,
                            font=("Segoe UI", 9)).pack(anchor="w", padx=24)
 
-        e_other = tk.Entry(dialog, bg=self.CARD, fg=self.TEXT, insertbackground="white",
+        e_other = tk.Entry(dialog, bg=self.CARD, fg=self.TEXT, insertbackground="#3d2b56",
                            relief="flat", font=("Segoe UI", 9))
         e_other.pack(fill="x", padx=24, pady=(4, 0), ipady=5)
 
@@ -409,7 +413,7 @@ class MainWindow:
             except Exception:
                 lbl_err.config(text="서버에 연결할 수 없습니다")
 
-        tk.Button(dialog, text="외출", bg=self.YELLOW, fg="#0f172a", relief="flat",
+        tk.Button(dialog, text="외출 시작", bg=self.YELLOW, fg=self.TEXT, relief="flat",
                   font=("Segoe UI", 10, "bold"), cursor="hand2",
                   command=submit).pack(fill="x", padx=24, pady=(4, 0), ipady=6)
         dialog.bind("<Return>", lambda _: submit())
@@ -434,7 +438,7 @@ class MainWindow:
         dialog.configure(bg=self.BG)
         dialog.grab_set()
 
-        tk.Label(dialog, text="비밀번호 변경", bg=self.BG, fg=self.BLUE,
+        tk.Label(dialog, text="🔑 비밀번호 변경", bg=self.BG, fg=self.TEXT,
                  font=("Segoe UI", 11, "bold")).pack(pady=(18, 12))
 
         def field(label, show=""):
@@ -442,7 +446,7 @@ class MainWindow:
             f.pack(fill="x", padx=20, pady=(0, 8))
             tk.Label(f, text=label, bg=self.BG, fg=self.MUTED,
                      font=("Segoe UI", 8)).pack(anchor="w")
-            e = tk.Entry(f, bg=self.CARD, fg=self.TEXT, insertbackground="white",
+            e = tk.Entry(f, bg=self.CARD, fg=self.TEXT, insertbackground="#3d2b56",
                          relief="flat", font=("Segoe UI", 10), show=show)
             e.pack(fill="x", ipady=5)
             return e
@@ -501,35 +505,37 @@ class MainWindow:
 
 # ── 로그인 창 ─────────────────────────────────────
 class LoginWindow:
-    BG = "#0f172a"
-    CARD = "#1e293b"
-    BORDER = "#334155"
-    BLUE = "#3b82f6"
+    BG = "#fdf6f0"
+    CARD = "#ffffff"
+    BORDER = "#ead8f0"
+    PRIMARY = "#ff8fab"
+    TEXT = "#3d2b56"
+    MUTED = "#7b6b8d"
 
     def __init__(self):
         self.cfg = load_config()
         self.root = tk.Tk()
-        self.root.title("공부 트래커 로그인")
-        self.root.geometry("320x290")
+        self.root.title("공부 트래커 🌸")
+        self.root.geometry("320x300")
         self.root.resizable(False, False)
         self.root.configure(bg=self.BG)
         self._build()
 
     def _build(self):
-        tk.Label(self.root, text="공부 트래커", bg=self.BG, fg=self.BLUE,
+        tk.Label(self.root, text="🌸 공부 트래커", bg=self.BG, fg=self.TEXT,
                  font=("Segoe UI", 14, "bold")).pack(pady=(24, 2))
-        tk.Label(self.root, text="동아리 공부 시간 모니터링", bg=self.BG, fg="#475569",
+        tk.Label(self.root, text="동아리 공부 시간 모니터링", bg=self.BG, fg=self.MUTED,
                  font=("Segoe UI", 9)).pack(pady=(0, 20))
 
         self.e_server = self._field("서버 주소", self.cfg.get("server", "http://172.16.145.16:8000"))
         self.e_user = self._field("아이디", self.cfg.get("username", ""))
         self.e_pw = self._field("비밀번호", "", show="●")
 
-        self.lbl_err = tk.Label(self.root, text="", bg=self.BG, fg="#f87171",
+        self.lbl_err = tk.Label(self.root, text="", bg=self.BG, fg="#e05050",
                                 font=("Segoe UI", 8))
         self.lbl_err.pack()
 
-        tk.Button(self.root, text="로그인", bg=self.BLUE, fg="white", relief="flat",
+        tk.Button(self.root, text="입장하기 🚀", bg=self.PRIMARY, fg="white", relief="flat",
                   font=("Segoe UI", 10, "bold"), cursor="hand2",
                   command=self.do_login).pack(fill="x", padx=24, pady=(10, 0), ipady=8)
 
@@ -538,9 +544,9 @@ class LoginWindow:
     def _field(self, label, default="", show=""):
         frame = tk.Frame(self.root, bg=self.BG)
         frame.pack(fill="x", padx=24, pady=(0, 8))
-        tk.Label(frame, text=label, bg=self.BG, fg="#94a3b8",
+        tk.Label(frame, text=label, bg=self.BG, fg=self.MUTED,
                  font=("Segoe UI", 8)).pack(anchor="w")
-        e = tk.Entry(frame, bg=self.CARD, fg="#e2e8f0", insertbackground="white",
+        e = tk.Entry(frame, bg=self.CARD, fg=self.TEXT, insertbackground="#3d2b56",
                      relief="flat", font=("Segoe UI", 10), show=show)
         e.pack(fill="x", ipady=6)
         e.insert(0, default)
