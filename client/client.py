@@ -64,8 +64,8 @@ def load_config() -> dict:
         with open(CONFIG_FILE) as f:
             cfg = json.load(f)
         # 구 서버 주소 자동 마이그레이션
-        if cfg.get("server") in ("http://172.16.145.81:8000", "http://traker.itnsa.cloud"):
-            cfg["server"] = "http://172.16.145.16:8000"
+        if cfg.get("server") in ("http://172.16.145.81:8000", "http://traker.itnsa.cloud", "http://172.16.145.16:8000"):
+            cfg["server"] = "https://tracker.itnsa.cloud"
             with open(CONFIG_FILE, "w") as f:
                 json.dump(cfg, f)
         return cfg
@@ -110,6 +110,13 @@ def detect_cheat() -> tuple[bool, str]:
     top_count = max(counts.values())
     if top_count / len(keys) >= 0.75:
         top_key = max(counts, key=lambda k: counts[k])
+        # 자리 비움 감지: 다른 키 입력 후 5초 이상 공백이 있으면 물건 올려둔 것으로 판단
+        same_key_times = [t for t, k in recent if k == top_key]
+        other_key_times = [t for t, k in recent if k != top_key]
+        if other_key_times and same_key_times:
+            gap = min(same_key_times) - max(other_key_times)
+            if gap > 5:
+                return False, ""
         return True, f"동일 키 반복 ({top_key})"
 
     # Rule 2: 입력 간격 표준편차 < 30ms (매크로)
@@ -275,7 +282,7 @@ class MainWindow:
         foot.pack(pady=(0, 10))
         tk.Button(foot, text="🏆 웹 대시보드", bg=self.BG, fg=self.MUTED,
                   relief="flat", font=("Segoe UI", 8), cursor="hand2",
-                  command=lambda: webbrowser.open("https://traker.itnsa.cloud/dashboard")
+                  command=lambda: webbrowser.open("https://tracker.itnsa.cloud/dashboard")
                   ).pack(side="left", padx=8)
         tk.Button(foot, text="🔑 비밀번호 변경", bg=self.BG, fg=self.MUTED,
                   relief="flat", font=("Segoe UI", 8), cursor="hand2",
@@ -527,7 +534,7 @@ class LoginWindow:
         tk.Label(self.root, text="동아리 공부 시간 모니터링", bg=self.BG, fg=self.MUTED,
                  font=("Segoe UI", 9)).pack(pady=(0, 20))
 
-        self.e_server = self._field("서버 주소", self.cfg.get("server", "http://172.16.145.16:8000"))
+        self.e_server = self._field("서버 주소", self.cfg.get("server", "https://tracker.itnsa.cloud"))
         self.e_user = self._field("아이디", self.cfg.get("username", ""))
         self.e_pw = self._field("비밀번호", "", show="●")
 
