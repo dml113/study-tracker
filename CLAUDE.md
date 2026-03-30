@@ -12,14 +12,14 @@ IT 동아리 부원들의 공부 시간을 추적하는 서비스.
 ```
 server/
 ├── main.py              # FastAPI 앱 진입점, superadmin 자동 생성, 클라이언트 배포, 백업 엔드포인트, traker→tracker 리다이렉트 미들웨어
-├── models.py            # SQLAlchemy 모델 (User, Group, ActivityLog, Attendance, Absence, CheatLog, StudyGoal, Feedback)
+├── models.py            # SQLAlchemy 모델 (User, Group, ActivityLog, Attendance, Absence, CheatLog, StudyGoal, Feedback, Notice)
 ├── auth.py              # JWT 토큰 생성·검증, 비밀번호 해싱, get_current_admin/get_current_superadmin
 ├── database.py          # DB 엔진, 세션, init_db, 자동 마이그레이션 (컬럼/테이블 추가)
-├── backup.py            # DB 자동 백업 (매일 자정 asyncio 스케줄러, 최근 7일 보관)
+├── backup.py            # DB 자동 백업 (매일 자정 asyncio 스케줄러, 최근 7일 보관) + 매일 00:50 자동 퇴근 스케줄러
 ├── routers/
 │   ├── auth_router.py   # POST /auth/login (role, group_id JWT에 포함)
-│   ├── api_router.py    # /api/* (heartbeat, checkin, checkout, absence, stats, cheat-report, change-password, attendance/live, feedback)
-│   └── admin_router.py  # /admin/* (유저 CRUD, 그룹 CRUD, 출퇴근·외출 조회, 치트 조회, goals CRUD, absence-stats, feedbacks, activity 수정)
+│   ├── api_router.py    # /api/* (heartbeat, checkin, checkout, absence, stats, cheat-report, change-password, attendance/live, feedback, notices)
+│   └── admin_router.py  # /admin/* (유저 CRUD, 그룹 CRUD, 출퇴근·외출 조회, 치트 조회, goals CRUD, absence-stats, feedbacks, activity 수정, notices CRUD)
 ├── static/
 │   ├── login.html       # 로그인 페이지 (/) + 클라이언트 다운로드 버튼
 │   ├── admin.html       # 관리자 페이지 (/admin)
@@ -28,7 +28,7 @@ server/
 └── client_dist/         # 배포용 EXE + version.txt (서버 시작 시 자동 생성)
 
 client/
-├── client.py            # Windows 클라이언트 (tkinter UI + pynput 감지 + 자동 업데이트 + 치트 감지 + 비밀번호 변경)
+├── client.py            # Windows 클라이언트 (tkinter UI + pynput 감지 + 자동 업데이트 + 치트 감지 + 비밀번호 변경 + 공지 팝업)
 ├── build.bat            # PyInstaller EXE 빌드 스크립트 (로컬 빌드용)
 └── VERSION              # 클라이언트 버전 파일 (변경 시 GitHub Actions 빌드 트리거)
 
@@ -100,12 +100,21 @@ MEAL_TIMES = {
 - 그룹 목표 없으면 전체 기본 목표 사용
 - `achievement_rate = active_minutes / (daily_goal * period_days) * 100`
 
-### DB 자동 백업 (backup.py)
+### DB 자동 백업 및 자동 퇴근 (backup.py)
 - asyncio 스케줄러: 매일 자정 `shutil.copy2`로 DB 파일 복사
 - 저장 경로: `backups/study_tracker_YYYYMMDD_HHMMSS.db`
 - 최근 7개만 유지, 오래된 파일 자동 삭제
 - 수동 백업: `POST /admin/backup` (superadmin 전용)
 - 목록 조회: `GET /admin/backups` (superadmin 전용)
+- **자동 퇴근**: 매일 00:50에 미퇴근 인원 전원 자동 퇴근 처리 (`auto_checkout_scheduler`)
+
+### 공지사항 시스템 (Notice 모델)
+- `GET /api/notices`: 활성 공지 목록 (인증 필요, 클라이언트 로그인 후 조회)
+- `GET /admin/notices`: 전체 공지 목록 (admin+)
+- `POST /admin/notices`: 공지 등록 (superadmin 전용, title + body)
+- `PATCH /admin/notices/{id}/toggle`: 활성/비활성 토글 (superadmin 전용)
+- `DELETE /admin/notices/{id}`: 공지 삭제 (superadmin 전용)
+- 클라이언트: 로그인 성공 후 `show_notices()` 호출 → 활성 공지 있으면 tkinter 팝업
 
 ### DB 모델 관계
 - `Group`: 그룹 (C.C, IT, C.S 등)
@@ -116,11 +125,12 @@ MEAL_TIMES = {
 - `CheatLog`: 치트 감지 로그 (username, date, detected_at, reason)
 - `StudyGoal`: 그룹별/전체 하루 목표 시간 (group_id=None이면 전체 기본)
 - `Feedback`: 피드백/버그 신고 (username, category, title, body, created_at)
+- `Notice`: 공지사항 (title, body, is_active, created_at)
 
 ### 인증 흐름
 - 모든 `/api/*`, `/admin/*` 엔드포인트는 Bearer JWT 필요
 - `/admin/*`: role이 superadmin 또는 group_admin이어야 함
-- `/admin/groups`, `/admin/client/upload`, `/admin/backup`: superadmin 전용
+- `/admin/groups`, `/admin/client/upload`, `/admin/backup`, `/admin/notices`: superadmin 전용
 - JWT payload: `{sub, role, group_id}`
 - 토큰 만료: 30일
 
@@ -232,6 +242,7 @@ sshpass -p 'PASSWORD' ssh user@172.16.145.16 \
 | GET | `/api/my-stats` | member+ | 내 통계 조회 (?days=30) — daily[], weekly[], streak |
 | GET | `/api/stats` | member+ | 랭킹 조회 (?target_date&period=daily\|weekly\|monthly) — lifetime_minutes, animal_type 포함 |
 | POST | `/api/feedback` | member+ | 피드백 제출 (body: category, title, body) |
+| GET | `/api/notices` | member+ | 활성 공지 목록 조회 (클라이언트 로그인 후 팝업용) |
 | GET | `/admin/groups` | admin+ | 그룹 목록 |
 | POST | `/admin/groups` | superadmin | 그룹 생성 |
 | DELETE | `/admin/groups/{id}` | superadmin | 그룹 삭제 |
@@ -250,3 +261,7 @@ sshpass -p 'PASSWORD' ssh user@172.16.145.16 \
 | POST | `/admin/activity` | superadmin | 활동 기록 직접 추가 |
 | GET | `/admin/feedbacks` | admin+ | 피드백 목록 (?category 필터) |
 | DELETE | `/admin/feedbacks/{id}` | admin+ | 피드백 삭제 |
+| GET | `/admin/notices` | admin+ | 공지 목록 (전체, 비활성 포함) |
+| POST | `/admin/notices` | superadmin | 공지 등록 (body: title, body) |
+| PATCH | `/admin/notices/{id}/toggle` | superadmin | 공지 활성/비활성 토글 |
+| DELETE | `/admin/notices/{id}` | superadmin | 공지 삭제 |
