@@ -116,10 +116,15 @@ GITHUB_REPO = "dml113/study-tracker"
 @app.post("/admin/client/sync-github")
 async def sync_from_github(_: dict = Depends(get_current_superadmin)):
     import json
+    github_token = os.environ.get("GITHUB_TOKEN", "")
+    headers = {"User-Agent": "study-tracker-server", "Accept": "application/vnd.github+json"}
+    if github_token:
+        headers["Authorization"] = f"Bearer {github_token}"
+
     try:
         req = urllib.request.Request(
             f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest",
-            headers={"User-Agent": "study-tracker-server"},
+            headers=headers,
         )
         with urllib.request.urlopen(req, timeout=10) as res:
             release = json.loads(res.read())
@@ -134,7 +139,11 @@ async def sync_from_github(_: dict = Depends(get_current_superadmin)):
         raise HTTPException(status_code=404, detail="Release에 ZIP 파일이 없습니다")
 
     try:
-        urllib.request.urlretrieve(zip_asset["browser_download_url"], ZIP_FILE)
+        dl_headers = {**headers, "Accept": "application/octet-stream"}
+        dl_req = urllib.request.Request(zip_asset["url"], headers=dl_headers)
+        with urllib.request.urlopen(dl_req, timeout=60) as res:
+            with open(ZIP_FILE, "wb") as f:
+                f.write(res.read())
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"다운로드 오류: {e}")
 
