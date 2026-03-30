@@ -21,7 +21,7 @@ import requests
 from datetime import datetime
 from pynput import keyboard, mouse
 
-VERSION = "1.0.12"
+VERSION = "1.0.13"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".study_tracker.json")
 SEND_INTERVAL = 30
@@ -604,11 +604,13 @@ class LoginWindow:
 
             state.update(token=data["access_token"], username=data["username"], server=server)
             save_config()
-            self.root.destroy()
             self._load_attendance_state()
-            show_notices()
+            notices = fetch_notices()
+            self.root.destroy()
             start_tracking()
-            MainWindow().run()
+            main_win = MainWindow()
+            show_notices(main_win.root, notices)
+            main_win.run()
 
         except requests.exceptions.ConnectionError:
             self.lbl_err.config(text="서버에 연결할 수 없습니다")
@@ -630,23 +632,30 @@ class LoginWindow:
 
 
 # ── 공지 팝업 ─────────────────────────────────────
-def show_notices():
+def fetch_notices():
+    """서버에서 활성 공지 목록을 가져옴. 없거나 오류 시 빈 리스트 반환."""
     try:
         res = api("get", "/api/notices")
-        if not res.ok:
-            return
-        notices = res.json()
-        if not notices:
-            return
+        if res.ok:
+            return res.json()
     except Exception:
+        pass
+    return []
+
+
+def show_notices(parent: tk.Tk, notices: list):
+    """공지사항을 parent 창 위 Toplevel 모달로 표시."""
+    if not notices:
         return
 
-    win = tk.Tk()
     BG = "#fdf6f0"
     PRIMARY = "#e84393"
+
+    win = tk.Toplevel(parent)
     win.title("📢 공지사항")
     win.configure(bg=BG)
     win.resizable(False, False)
+    win.grab_set()  # 모달
 
     frame = tk.Frame(win, bg=BG, padx=20, pady=16)
     frame.pack(fill="both", expand=True)
@@ -678,7 +687,7 @@ def show_notices():
     win.geometry(f"{w}x{h}+{(sw-w)//2}+{(sh-h)//2}")
     win.lift()
     win.focus_force()
-    win.mainloop()
+    parent.wait_window(win)
 
 
 # ── 자동 업데이트 ─────────────────────────────────

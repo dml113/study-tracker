@@ -18,8 +18,10 @@ async def init_db():
         ]:
             try:
                 await conn.execute(text(stmt))
-            except Exception:
-                pass
+            except Exception as e:
+                msg = str(e).lower()
+                if "duplicate column" not in msg and "already exists" not in msg:
+                    print(f"[마이그레이션 경고] {stmt[:60]}... : {e}")
 
 
 async def get_session() -> AsyncSession:

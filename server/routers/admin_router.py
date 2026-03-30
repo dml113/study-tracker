@@ -510,6 +510,8 @@ async def get_feedbacks(
     session: AsyncSession = Depends(get_session),
     _: dict = Depends(get_current_admin),
 ):
+    if category and category not in ("bug", "suggestion", "general"):
+        raise HTTPException(status_code=400, detail="category는 bug/suggestion/general 중 하나여야 합니다")
     query = select(Feedback).order_by(Feedback.created_at.desc())
     if category:
         query = query.where(Feedback.category == category)
