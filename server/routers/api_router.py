@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from models import ActivityLog, Attendance, Absence, CheatLog, User, StudyGoal, Feedback, Notice
 from auth import get_current_user, verify_password, hash_password
@@ -61,8 +61,8 @@ class ChangePasswordRequest(BaseModel):
 
 class FeedbackRequest(BaseModel):
     category: str
-    title: str
-    body: str
+    title: str = Field(..., max_length=100)
+    body: str = Field(..., max_length=2000)
 
 
 @router.get("/attendance/today")

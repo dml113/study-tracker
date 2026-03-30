@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from models import User, ActivityLog, Attendance, Absence, Group, CheatLog, StudyGoal, Feedback, Notice
 from auth import hash_password, get_current_admin, get_current_superadmin
@@ -181,6 +181,8 @@ async def update_user(
     if req.group_id is not None:
         user.group_id = req.group_id
     if req.animal_type is not None:
+        if req.animal_type != -1 and not (0 <= req.animal_type <= 7):
+            raise HTTPException(status_code=400, detail="animal_type은 -1(자동) 또는 0~7이어야 합니다")
         user.animal_type = None if req.animal_type == -1 else req.animal_type
 
     await session.commit()
@@ -544,8 +546,8 @@ async def delete_feedback(
 # ── 공지 관리 ────────────────────────────────────────────
 
 class NoticeRequest(BaseModel):
-    title: str
-    body: str
+    title: str = Field(..., max_length=100)
+    body: str = Field(..., max_length=2000)
 
 
 @router.get("/notices")

@@ -306,6 +306,8 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     document.getElementById('myGroupInfo').style.display='';
   }
 
+  function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
   let editingUserId = null, groups = [];
   function authH() { return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }; }
   function logout() { localStorage.clear(); location.href = '/'; }
@@ -347,7 +349,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     ['newGroupId','moveGroupId'].forEach(id => {
       const sel = document.getElementById(id); if (!sel) return;
       const cur = sel.value;
-      sel.innerHTML = '<option value="">그룹 없음</option>' + groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+      sel.innerHTML = '<option value="">그룹 없음</option>' + groups.map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join('');
       if (cur) sel.value = cur;
     });
     if (isGroupAdmin) {
@@ -365,9 +367,9 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     const maxSec = Math.max(...users.map(u => u.today_seconds), 1);
     document.getElementById('userTableBody').innerHTML = users.map(u => `
       <tr>
-        <td><strong>${u.username}</strong></td>
+        <td><strong>${esc(u.username)}</strong></td>
         <td><span class="role-badge role-${u.role}">${roleName(u.role)}</span></td>
-        <td>${u.group_name ? `<span class="group-badge">${u.group_name}</span>` : '<span style="color:var(--muted)">–</span>'}</td>
+        <td>${u.group_name ? `<span class="group-badge">${esc(u.group_name)}</span>` : '<span style="color:var(--muted)">–</span>'}</td>
         <td><span class="status-dot ${u.is_active ? 'dot-active' : 'dot-inactive'}"></span>${u.is_active ? '활성' : '비활성'}</td>
         <td>${u.today_minutes}분 <span class="time-bar-wrap"><span class="time-bar" style="width:${u.today_seconds/maxSec*100}%"></span></span></td>
         <td style="color:var(--muted);font-size:0.82rem">${u.created_at.slice(0,10)}</td>
@@ -376,7 +378,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
           ${u.role !== 'superadmin' ? `<button class="btn-sm" style="background:rgba(116,185,255,0.12);border:1.5px solid rgba(116,185,255,0.3);color:#0984e3" onclick="toggleActive(${u.id},${u.is_active})">${u.is_active ? '비활성화' : '활성화'}</button>` : ''}
           ${isSuperAdmin && u.role !== 'superadmin' ? `<button class="btn-sm" style="background:rgba(255,143,171,0.1);border:1.5px solid rgba(255,143,171,0.25);color:var(--primary)" onclick="openGroupModal(${u.id}, ${u.group_id||'null'})">🏠 그룹</button>` : ''}
           ${isSuperAdmin && u.role !== 'superadmin' ? `<button class="btn-sm" style="background:rgba(200,180,220,0.12);border:1.5px solid var(--border);color:var(--text-light)" onclick="toggleRole(${u.id},'${u.role}')">${u.role === 'group_admin' ? '일반으로' : '관리자로'}</button>` : ''}
-          ${u.role !== 'superadmin' ? `<button class="btn-sm btn-danger" onclick="deleteUser(${u.id},'${u.username}')">🗑️ 삭제</button>` : ''}
+          ${u.role !== 'superadmin' ? `<button class="btn-sm btn-danger" onclick="deleteUser(${u.id},${JSON.stringify(u.username).replace(/</g,'\\u003c')})">🗑️ 삭제</button>` : ''}
         </div></td>
       </tr>
     `).join('');
@@ -438,7 +440,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     const data = await res.json();
     const list = document.getElementById('groupList');
     if (!data.length) { list.innerHTML = '<div class="empty-state">🏠 그룹이 없습니다</div>'; return; }
-    list.innerHTML = data.map(g => `<div class="group-card"><div><div class="group-name">${g.name}</div><div class="group-meta">생성일: ${g.created_at.slice(0,10)}</div></div><button class="btn-sm btn-danger" onclick="deleteGroup(${g.id},'${g.name}')">🗑️ 삭제</button></div>`).join('');
+    list.innerHTML = data.map(g => `<div class="group-card"><div><div class="group-name">${esc(g.name)}</div><div class="group-meta">생성일: ${g.created_at.slice(0,10)}</div></div><button class="btn-sm btn-danger" onclick="deleteGroup(${g.id},${JSON.stringify(g.name).replace(/</g,'\\u003c')})">🗑️ 삭제</button></div>`).join('');
   }
 
   async function createGroup() {
@@ -468,7 +470,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     list.innerHTML = data.map((u,i) => `
       <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:14px 20px;margin-bottom:10px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow)">
         <div style="font-size:1.4rem;min-width:32px;text-align:center">${medals[i]||'#'+(i+1)}</div>
-        <div style="flex:1"><div style="font-weight:800">${u.username}</div><div style="color:var(--primary);font-size:0.82rem;font-weight:700;margin-top:2px">${u.active_minutes}분 활동</div></div>
+        <div style="flex:1"><div style="font-weight:800">${esc(u.username)}</div><div style="color:var(--primary);font-size:0.82rem;font-weight:700;margin-top:2px">${u.active_minutes}분 활동</div></div>
         <div style="flex:2;background:rgba(200,180,220,0.15);border-radius:99px;height:8px;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,var(--primary),#c77dff);border-radius:99px;width:${max>0?u.active_minutes/max*100:0}%"></div></div>
       </div>
     `).join('');
@@ -482,11 +484,11 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     list.innerHTML = data.map(u => `
       <div class="att-card">
         <div class="att-header">
-          <div class="att-name">${u.username}</div>
+          <div class="att-name">${esc(u.username)}</div>
           <div class="att-active">📚 ${u.active_minutes}분</div>
         </div>
         ${u.checkin_at ? `<div class="att-times"><div class="att-time-item"><span>출근 </span><strong>${u.checkin_at}</strong></div><div class="att-time-item"><span>퇴근 </span><strong>${u.checkout_at || '–'}</strong></div></div>` : '<div class="no-checkin">출근 기록 없음</div>'}
-        ${u.absences.length ? `<div class="absence-list">${u.absences.map(a=>`<div class="absence-chip"><span class="reason">${a.reason}</span> ${a.start}~${a.end||'진행중'}</div>`).join('')}</div>` : ''}
+        ${u.absences.length ? `<div class="absence-list">${u.absences.map(a=>`<div class="absence-chip"><span class="reason">${esc(a.reason)}</span> ${a.start}~${a.end||'진행중'}</div>`).join('')}</div>` : ''}
       </div>
     `).join('');
   }
@@ -497,7 +499,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     const data = await res.json();
     const list = document.getElementById('cheatList');
     if (!data.length) { list.innerHTML = '<div class="empty-state">✅ 감지된 치트가 없습니다</div>'; return; }
-    list.innerHTML = `<table><thead><tr><th>시각</th><th>유저</th><th>감지 내용</th></tr></thead><tbody>${data.map(c=>`<tr><td style="color:var(--muted);font-size:0.82rem">${c.detected_at}</td><td><strong>${c.username}</strong></td><td style="color:var(--red)">${c.reason}</td></tr>`).join('')}</tbody></table>`;
+    list.innerHTML = `<table><thead><tr><th>시각</th><th>유저</th><th>감지 내용</th></tr></thead><tbody>${data.map(c=>`<tr><td style="color:var(--muted);font-size:0.82rem">${c.detected_at}</td><td><strong>${esc(c.username)}</strong></td><td style="color:var(--red)">${esc(c.reason)}</td></tr>`).join('')}</tbody></table>`;
   }
 
   let editingLogId = null;
@@ -506,9 +508,9 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     const res = await fetch('/admin/activity?target_date='+d, { headers: authH() });
     const data = await res.json();
     const list = document.getElementById('actList');
-    const addRow = `<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)"><div style="font-size:0.78rem;font-weight:800;color:var(--text-light);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">📝 기록 직접 추가</div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end"><div class="form-group"><label>유저</label><select id="newActUser" style="min-width:120px">${(window._allUsers||[]).map(u=>`<option value="${u.username}">${u.username}</option>`).join('')}</select></div><div class="form-group"><label>날짜</label><input type="date" id="newActDate" value="${d}"></div><div class="form-group"><label>활동 시간 (분)</label><input type="number" id="newActMinutes" min="0" placeholder="예: 120" style="min-width:100px"></div><button class="btn btn-primary" onclick="createActivity()">추가</button></div></div>`;
+    const addRow = `<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)"><div style="font-size:0.78rem;font-weight:800;color:var(--text-light);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">📝 기록 직접 추가</div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end"><div class="form-group"><label>유저</label><select id="newActUser" style="min-width:120px">${(window._allUsers||[]).map(u=>`<option value="${esc(u.username)}">${esc(u.username)}</option>`).join('')}</select></div><div class="form-group"><label>날짜</label><input type="date" id="newActDate" value="${d}"></div><div class="form-group"><label>활동 시간 (분)</label><input type="number" id="newActMinutes" min="0" placeholder="예: 120" style="min-width:100px"></div><button class="btn btn-primary" onclick="createActivity()">추가</button></div></div>`;
     if (!data.length) { list.innerHTML = addRow + '<div class="empty-state">기록이 없습니다</div>'; return; }
-    list.innerHTML = addRow + `<table><thead><tr><th>유저</th><th>날짜</th><th>활동 시간</th><th>마지막 업데이트</th><th>수정</th></tr></thead><tbody>${data.map(r=>`<tr id="row-${r.id}"><td><strong>${r.username}</strong></td><td style="color:var(--muted);font-size:0.82rem">${r.date}</td><td><span id="disp-${r.id}">${r.active_minutes}분</span><input type="number" id="inp-${r.id}" value="${r.active_minutes}" min="0" style="display:none;width:80px;background:#faf7fd;border:1.5px solid var(--border);border-radius:8px;color:var(--text);padding:4px 8px;font-family:'Nunito',sans-serif;font-size:0.9rem;font-weight:600"></td><td style="color:var(--muted);font-size:0.78rem">${r.last_updated.slice(0,16).replace('T',' ')}</td><td><div class="td-actions"><button class="btn-sm" style="background:rgba(116,185,255,0.12);border:1.5px solid rgba(116,185,255,0.3);color:#0984e3" id="editBtn-${r.id}" onclick="startEdit(${r.id})">✏️ 수정</button><button class="btn-sm btn-primary" id="saveBtn-${r.id}" style="display:none" onclick="saveActivity(${r.id})">저장</button><button class="btn-sm" style="background:rgba(200,180,220,0.12);border:1.5px solid var(--border);color:var(--text-light);display:none" id="cancelBtn-${r.id}" onclick="cancelEdit(${r.id},${r.active_minutes})">취소</button></div></td></tr>`).join('')}</tbody></table>`;
+    list.innerHTML = addRow + `<table><thead><tr><th>유저</th><th>날짜</th><th>활동 시간</th><th>마지막 업데이트</th><th>수정</th></tr></thead><tbody>${data.map(r=>`<tr id="row-${r.id}"><td><strong>${esc(r.username)}</strong></td><td style="color:var(--muted);font-size:0.82rem">${r.date}</td><td><span id="disp-${r.id}">${r.active_minutes}분</span><input type="number" id="inp-${r.id}" value="${r.active_minutes}" min="0" style="display:none;width:80px;background:#faf7fd;border:1.5px solid var(--border);border-radius:8px;color:var(--text);padding:4px 8px;font-family:'Nunito',sans-serif;font-size:0.9rem;font-weight:600"></td><td style="color:var(--muted);font-size:0.78rem">${r.last_updated.slice(0,16).replace('T',' ')}</td><td><div class="td-actions"><button class="btn-sm" style="background:rgba(116,185,255,0.12);border:1.5px solid rgba(116,185,255,0.3);color:#0984e3" id="editBtn-${r.id}" onclick="startEdit(${r.id})">✏️ 수정</button><button class="btn-sm btn-primary" id="saveBtn-${r.id}" style="display:none" onclick="saveActivity(${r.id})">저장</button><button class="btn-sm" style="background:rgba(200,180,220,0.12);border:1.5px solid var(--border);color:var(--text-light);display:none" id="cancelBtn-${r.id}" onclick="cancelEdit(${r.id},${r.active_minutes})">취소</button></div></td></tr>`).join('')}</tbody></table>`;
   }
 
   function startEdit(id) { document.getElementById('disp-'+id).style.display='none'; document.getElementById('inp-'+id).style.display=''; document.getElementById('editBtn-'+id).style.display='none'; document.getElementById('saveBtn-'+id).style.display=''; document.getElementById('cancelBtn-'+id).style.display=''; }
@@ -537,12 +539,12 @@ tr:hover td { background:rgba(255,143,171,0.03); }
   async function loadGoals() {
     await loadGroupOptions();
     const sel = document.getElementById('goalGroupId');
-    sel.innerHTML = '<option value="">전체 기본</option>' + groups.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+    sel.innerHTML = '<option value="">전체 기본</option>' + groups.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join('');
     const res = await fetch('/admin/goals', { headers: authH() });
     const data = await res.json();
     const list = document.getElementById('goalList');
     if (!data.length) { list.innerHTML='<div class="empty-state">🎯 설정된 목표가 없습니다 (기본값: 480분/일)</div>'; return; }
-    list.innerHTML = `<table><thead><tr><th>그룹</th><th>하루 목표</th><th>주간</th><th>관리</th></tr></thead><tbody>${data.map(g=>`<tr><td><strong>${g.group_name}</strong></td><td>${g.daily_target_minutes}분 (${Math.round(g.daily_target_minutes/60*10)/10}시간)</td><td style="color:var(--muted)">${g.daily_target_minutes*7}분</td><td>${isSuperAdmin?`<button class="btn-sm btn-danger" onclick="deleteGoal(${g.id})">🗑️ 삭제</button>`:''}</td></tr>`).join('')}</tbody></table>`;
+    list.innerHTML = `<table><thead><tr><th>그룹</th><th>하루 목표</th><th>주간</th><th>관리</th></tr></thead><tbody>${data.map(g=>`<tr><td><strong>${esc(g.group_name)}</strong></td><td>${g.daily_target_minutes}분 (${Math.round(g.daily_target_minutes/60*10)/10}시간)</td><td style="color:var(--muted)">${g.daily_target_minutes*7}분</td><td>${isSuperAdmin?`<button class="btn-sm btn-danger" onclick="deleteGoal(${g.id})">🗑️ 삭제</button>`:''}</td></tr>`).join('')}</tbody></table>`;
   }
 
   async function saveGoal() {
@@ -571,8 +573,8 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     const data = await res.json();
     const list = document.getElementById('absStatsList');
     if (data.total_count===0) { list.innerHTML='<div class="empty-state">🚶 외출 기록이 없습니다</div>'; return; }
-    const byReasonRows = data.by_reason.map(r=>`<tr><td><strong>${r.reason}</strong></td><td>${r.count}회</td><td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;background:rgba(200,180,220,0.15);border-radius:99px;height:6px;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,var(--primary),#c77dff);border-radius:99px;width:${r.percentage}%"></div></div><span style="font-size:0.78rem;color:var(--muted);min-width:40px;font-weight:700">${r.percentage}%</span></div></td></tr>`).join('');
-    const byUserRows = data.by_user.map(u=>`<tr><td><strong>${u.username}</strong></td><td>${u.count}회</td><td style="color:var(--muted)">${u.total_minutes}분</td></tr>`).join('');
+    const byReasonRows = data.by_reason.map(r=>`<tr><td><strong>${esc(r.reason)}</strong></td><td>${r.count}회</td><td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;background:rgba(200,180,220,0.15);border-radius:99px;height:6px;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,var(--primary),#c77dff);border-radius:99px;width:${r.percentage}%"></div></div><span style="font-size:0.78rem;color:var(--muted);min-width:40px;font-weight:700">${r.percentage}%</span></div></td></tr>`).join('');
+    const byUserRows = data.by_user.map(u=>`<tr><td><strong>${esc(u.username)}</strong></td><td>${u.count}회</td><td style="color:var(--muted)">${u.total_minutes}분</td></tr>`).join('');
     list.innerHTML = `<div style="font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:12px">${data.period.start} ~ ${data.period.end} · 총 ${data.total_count}건</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div><div style="font-size:0.78rem;font-weight:800;color:var(--text-light);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">사유별</div><table><thead><tr><th>사유</th><th>횟수</th><th>비율</th></tr></thead><tbody>${byReasonRows}</tbody></table></div><div><div style="font-size:0.78rem;font-weight:800;color:var(--text-light);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">유저별</div><table><thead><tr><th>유저</th><th>횟수</th><th>총 시간</th></tr></thead><tbody>${byUserRows}</tbody></table></div></div>`;
   }
 
@@ -591,12 +593,12 @@ tr:hover td { background:rgba(255,143,171,0.03); }
       const catStyle = CAT_COLORS[fb.category] || '';
       return `<div class="att-card">
         <div class="att-header">
-          <span class="att-name">${fb.title}</span>
+          <span class="att-name">${esc(fb.title)}</span>
           <span class="role-badge" style="background:${catStyle.split(';')[0]};${catStyle.split(';').slice(1).join(';')}">${CAT_LABELS[fb.category]||fb.category}</span>
           <span style="font-size:0.78rem;color:var(--muted);font-weight:700">${fb.created_at}</span>
         </div>
-        <div style="font-size:0.85rem;font-weight:700;color:var(--text-light);margin-bottom:8px">by <strong>${fb.username}</strong></div>
-        <div style="font-size:0.88rem;font-weight:600;color:var(--text);line-height:1.7;white-space:pre-wrap">${fb.body}</div>
+        <div style="font-size:0.85rem;font-weight:700;color:var(--text-light);margin-bottom:8px">by <strong>${esc(fb.username)}</strong></div>
+        <div style="font-size:0.88rem;font-weight:600;color:var(--text);line-height:1.7;white-space:pre-wrap">${esc(fb.body)}</div>
         <div style="margin-top:10px;text-align:right">
           <button class="btn-sm btn-danger" onclick="deleteFeedback(${fb.id})">삭제</button>
         </div>
@@ -620,11 +622,11 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     list.innerHTML = data.map(n => `
       <div class="att-card" style="opacity:${n.is_active ? 1 : 0.5}">
         <div class="att-header">
-          <span class="att-name">${n.title}</span>
+          <span class="att-name">${esc(n.title)}</span>
           <span class="role-badge" style="background:${n.is_active ? 'rgba(85,239,196,0.1);border-color:rgba(85,239,196,0.4);color:#00b894' : 'rgba(200,180,220,0.12);border-color:var(--border);color:var(--muted)'}">${n.is_active ? '활성' : '비활성'}</span>
           <span style="font-size:0.78rem;color:var(--muted);font-weight:700">${n.created_at}</span>
         </div>
-        <div style="font-size:0.88rem;font-weight:600;color:var(--text);line-height:1.7;white-space:pre-wrap;margin-top:6px">${n.body}</div>
+        <div style="font-size:0.88rem;font-weight:600;color:var(--text);line-height:1.7;white-space:pre-wrap;margin-top:6px">${esc(n.body)}</div>
         <div style="margin-top:10px;text-align:right;display:flex;gap:8px;justify-content:flex-end">
           <button class="btn-sm" style="background:rgba(116,185,255,0.12);border:1.5px solid rgba(116,185,255,0.3);color:#0984e3" onclick="toggleNotice(${n.id})">${n.is_active ? '비활성화' : '활성화'}</button>
           <button class="btn-sm btn-danger" onclick="deleteNotice(${n.id})">삭제</button>
@@ -677,7 +679,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
             const curAnimal = u.animal_type != null ? u.animal_type : autoAnimal;
             const isAuto = u.animal_type == null;
             return `<tr>
-              <td><strong>${u.username}</strong></td>
+              <td><strong>${esc(u.username)}</strong></td>
               <td>${ANIMAL_EMOJIS[autoAnimal]} ${ANIMAL_NAMES[autoAnimal]}</td>
               <td>
                 <span class="group-badge" style="${isAuto?'opacity:0.6':''}">${ANIMAL_EMOJIS[curAnimal]} ${ANIMAL_NAMES[curAnimal]}${isAuto?' (자동)':''}</span>
