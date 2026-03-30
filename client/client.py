@@ -47,6 +47,7 @@ state = {
     "key_events": deque(maxlen=120),  # (timestamp, key_str)
     "is_cheating": False,
     "cheat_reason": "",
+    "listeners": [],  # keyboard/mouse 리스너 레퍼런스 (워치독용)
 }
 
 
@@ -133,24 +134,55 @@ def detect_cheat() -> tuple[bool, str]:
 
 # ── 백그라운드 트래킹 스레드 ──────────────────────
 def on_key(key):
-    now = time.time()
-    state["last_activity"] = now
-    with state["lock"]:
-        state["key_events"].append((now, str(key)))
+    try:
+        now = time.time()
+        state["last_activity"] = now
+        with state["lock"]:
+            state["key_events"].append((now, str(key)))
+    except Exception:
+        pass
 
 
 def on_mouse(*_):
-    state["last_activity"] = time.time()
+    try:
+        state["last_activity"] = time.time()
+    except Exception:
+        pass
+
+
+def start_listeners():
+    """keyboard/mouse 리스너 시작 및 state["listeners"]에 저장."""
+    try:
+        kb = keyboard.Listener(on_press=on_key)
+        ms = mouse.Listener(on_move=on_mouse, on_click=on_mouse, on_scroll=on_mouse)
+        kb.daemon = True
+        ms.daemon = True
+        kb.start()
+        ms.start()
+        with state["lock"]:
+            state["listeners"] = [kb, ms]
+    except Exception:
+        pass
 
 
 def activity_counter():
     last = time.time()
     cheat_tick = 0
+    watchdog_tick = 0
     while state["running"]:
         time.sleep(1)
         now = time.time()
         elapsed = now - last
         last = now
+
+        # 30초마다 리스너 생존 확인 (죽어있으면 재시작)
+        watchdog_tick += 1
+        if watchdog_tick >= 30:
+            watchdog_tick = 0
+            with state["lock"]:
+                listeners = list(state["listeners"])
+            if listeners and not all(l.is_alive() for l in listeners):
+                start_listeners()
 
         # 10초마다 치트 감지
         cheat_tick += 1
@@ -203,12 +235,7 @@ def sender():
 
 
 def start_tracking():
-    kb = keyboard.Listener(on_press=on_key)
-    ms = mouse.Listener(on_move=on_mouse, on_click=on_mouse, on_scroll=on_mouse)
-    kb.daemon = True
-    ms.daemon = True
-    kb.start()
-    ms.start()
+    start_listeners()
     threading.Thread(target=activity_counter, daemon=True).start()
     threading.Thread(target=sender, daemon=True).start()
 
