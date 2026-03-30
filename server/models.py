@@ -23,6 +23,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(String, default="member")  # superadmin | group_admin | member
     group_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("groups.id"), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    animal_type: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # 0~7, None=자동(username 해시)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
 
@@ -69,3 +70,22 @@ class StudyGoal(Base):
     group_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("groups.id"), nullable=True)
     daily_target_minutes: Mapped[int] = mapped_column(Integer, default=480)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class Feedback(Base):
+    __tablename__ = "feedbacks"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    username: Mapped[str] = mapped_column(String, index=True)
+    category: Mapped[str] = mapped_column(String, default="general")  # bug | suggestion | general
+    title: Mapped[str] = mapped_column(String)
+    body: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class Notice(Base):
+    __tablename__ = "notices"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(String)
+    body: Mapped[str] = mapped_column(String)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

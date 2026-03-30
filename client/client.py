@@ -21,7 +21,7 @@ import requests
 from datetime import datetime
 from pynput import keyboard, mouse
 
-VERSION = "1.0.9"
+VERSION = "1.0.12"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".study_tracker.json")
 SEND_INTERVAL = 30
@@ -606,6 +606,7 @@ class LoginWindow:
             save_config()
             self.root.destroy()
             self._load_attendance_state()
+            show_notices()
             start_tracking()
             MainWindow().run()
 
@@ -626,6 +627,58 @@ class LoginWindow:
 
     def run(self):
         self.root.mainloop()
+
+
+# ── 공지 팝업 ─────────────────────────────────────
+def show_notices():
+    try:
+        res = api("get", "/api/notices")
+        if not res.ok:
+            return
+        notices = res.json()
+        if not notices:
+            return
+    except Exception:
+        return
+
+    win = tk.Tk()
+    BG = "#fdf6f0"
+    PRIMARY = "#e84393"
+    win.title("📢 공지사항")
+    win.configure(bg=BG)
+    win.resizable(False, False)
+
+    frame = tk.Frame(win, bg=BG, padx=20, pady=16)
+    frame.pack(fill="both", expand=True)
+
+    tk.Label(frame, text="📢 공지사항", font=("Malgun Gothic", 13, "bold"),
+             bg=BG, fg=PRIMARY).pack(anchor="w", pady=(0, 10))
+
+    for n in notices:
+        card = tk.Frame(frame, bg="#fff0f6", relief="flat", bd=0,
+                        highlightthickness=1, highlightbackground="#f8c8df")
+        card.pack(fill="x", pady=4)
+        inner = tk.Frame(card, bg="#fff0f6", padx=12, pady=10)
+        inner.pack(fill="x")
+        tk.Label(inner, text=n["title"], font=("Malgun Gothic", 10, "bold"),
+                 bg="#fff0f6", fg="#2d1b4e").pack(anchor="w")
+        tk.Label(inner, text=n["body"], font=("Malgun Gothic", 9),
+                 bg="#fff0f6", fg="#5a4a6a", wraplength=340, justify="left").pack(anchor="w", pady=(4, 0))
+        tk.Label(inner, text=n["created_at"], font=("Malgun Gothic", 8),
+                 bg="#fff0f6", fg="#b39bcc").pack(anchor="e")
+
+    tk.Button(frame, text="확인", font=("Malgun Gothic", 10, "bold"),
+              bg=PRIMARY, fg="white", relief="flat", bd=0,
+              padx=20, pady=6, cursor="hand2",
+              command=win.destroy).pack(pady=(12, 0))
+
+    win.update_idletasks()
+    w, h = win.winfo_reqwidth(), win.winfo_reqheight()
+    sw, sh = win.winfo_screenwidth(), win.winfo_screenheight()
+    win.geometry(f"{w}x{h}+{(sw-w)//2}+{(sh-h)//2}")
+    win.lift()
+    win.focus_force()
+    win.mainloop()
 
 
 # ── 자동 업데이트 ─────────────────────────────────

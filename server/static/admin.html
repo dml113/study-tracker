@@ -124,9 +124,12 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     <button class="tab" onclick="switchTab('stats', this)">📊 공부 통계</button>
     <button class="tab" onclick="switchTab('attendance', this)">🕐 출퇴근 기록</button>
     <button class="tab" onclick="switchTab('cheats', this)">🚨 치트 감지</button>
-    <button class="tab" onclick="switchTab('activity', this)">✏️ 기록 수정</button>
+    <button class="tab" id="activityTab" style="display:none" onclick="switchTab('activity', this)">✏️ 기록 수정</button>
     <button class="tab" onclick="switchTab('goals', this)">🎯 목표 설정</button>
     <button class="tab" onclick="switchTab('absence-stats', this)">🚶 외출 통계</button>
+    <button class="tab" onclick="switchTab('feedbacks', this)">💬 피드백</button>
+    <button class="tab" id="noticeTab" style="display:none" onclick="switchTab('notices', this)">📢 공지 관리</button>
+    <button class="tab" id="animalTab" style="display:none" onclick="switchTab('animals', this)">🐾 동물 관리</button>
     <button class="tab" id="groupTab" style="display:none" onclick="switchTab('groups', this)">🏠 그룹 관리</button>
     <button class="tab" id="clientTab" style="display:none" onclick="switchTab('client', this)">💻 클라이언트 배포</button>
     <button class="tab" id="backupTab" style="display:none" onclick="switchTab('backup', this)">💾 DB 백업</button>
@@ -138,6 +141,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
       <div class="form-group"><label>비밀번호</label><input type="password" id="newPassword" placeholder="비밀번호"></div>
       <div class="form-group" id="roleFormGroup"><label>권한</label><select id="newRole"><option value="member">일반 유저</option><option value="group_admin">그룹 관리자</option></select></div>
       <div class="form-group" id="groupFormGroup"><label>그룹</label><select id="newGroupId"><option value="">그룹 없음</option></select></div>
+      <div class="form-group" id="myGroupInfo" style="display:none"><label>그룹</label><div style="background:#faf7fd;border:1.5px solid var(--border);border-radius:12px;padding:9px 13px;font-size:0.9rem;font-weight:700;color:var(--primary)" id="myGroupName">내 그룹</div></div>
       <button class="btn btn-primary" onclick="createUser()" style="align-self:flex-end">+ 유저 생성</button>
     </div>
     <table>
@@ -218,6 +222,33 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     </div>
   </div>
 
+  <div id="tab-feedbacks" style="display:none">
+    <div class="date-bar" style="margin-bottom:18px">
+      <select id="feedbackCat" style="background:#faf7fd;border:1.5px solid var(--border);border-radius:12px;color:var(--text);padding:8px 13px;font-size:0.88rem;font-family:'Nunito',sans-serif;font-weight:600;outline:none">
+        <option value="">전체</option>
+        <option value="bug">🐛 버그 신고</option>
+        <option value="suggestion">✨ 기능 제안</option>
+        <option value="general">💬 기타 의견</option>
+      </select>
+      <button class="btn btn-primary" onclick="loadFeedbacks()">조회</button>
+      <a href="/feedback" class="btn btn-primary" style="text-decoration:none">✏️ 피드백 작성</a>
+    </div>
+    <div id="feedbackList"></div>
+  </div>
+
+  <div id="tab-notices" style="display:none">
+    <div class="create-form">
+      <div class="form-group"><label>제목</label><input type="text" id="noticeTitle" placeholder="공지 제목"></div>
+      <div class="form-group" style="flex:2"><label>내용</label><textarea id="noticeBody" placeholder="공지 내용" style="background:#faf7fd;border:1.5px solid var(--border);border-radius:12px;color:var(--text);padding:9px 13px;font-size:0.9rem;font-family:'Nunito',sans-serif;font-weight:600;outline:none;resize:vertical;min-height:80px;width:100%"></textarea></div>
+      <button class="btn btn-primary" onclick="createNotice()" style="align-self:flex-end">+ 공지 등록</button>
+    </div>
+    <div id="noticeList"></div>
+  </div>
+
+  <div id="tab-animals" style="display:none">
+    <div id="animalList"></div>
+  </div>
+
   <div id="tab-groups" style="display:none">
     <div class="create-form">
       <div class="form-group"><label>그룹명</label><input type="text" id="newGroupName" placeholder="예: C.C, IT, C.S"></div>
@@ -261,8 +292,19 @@ tr:hover td { background:rgba(255,143,171,0.03); }
   const badge = document.getElementById('roleBadge');
   badge.textContent = isSuperAdmin ? 'SUPER ADMIN' : 'GROUP ADMIN';
   badge.className = 'badge badge-' + role;
-  if (isSuperAdmin) { document.getElementById('groupTab').style.display=''; document.getElementById('clientTab').style.display=''; document.getElementById('backupTab').style.display=''; }
-  if (isGroupAdmin) { document.getElementById('roleFormGroup').style.display='none'; document.getElementById('groupFormGroup').style.display='none'; }
+  if (isSuperAdmin) {
+    document.getElementById('groupTab').style.display='';
+    document.getElementById('clientTab').style.display='';
+    document.getElementById('backupTab').style.display='';
+    document.getElementById('activityTab').style.display='';
+    document.getElementById('animalTab').style.display='';
+    document.getElementById('noticeTab').style.display='';
+  }
+  if (isGroupAdmin) {
+    document.getElementById('roleFormGroup').style.display='none';
+    document.getElementById('groupFormGroup').style.display='none';
+    document.getElementById('myGroupInfo').style.display='';
+  }
 
   let editingUserId = null, groups = [];
   function authH() { return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }; }
@@ -273,7 +315,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     _currentTab = tab;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
-    ['users','stats','attendance','cheats','activity','goals','absence-stats','groups','client','backup'].forEach(t => {
+    ['users','stats','attendance','cheats','activity','goals','absence-stats','feedbacks','notices','animals','groups','client','backup'].forEach(t => {
       const div = document.getElementById('tab-' + t);
       if (div) div.style.display = t === tab ? 'block' : 'none';
     });
@@ -286,6 +328,9 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     if (tab === 'goals') loadGoals();
     if (tab === 'absence-stats') loadAbsenceStats();
     if (tab === 'backup') loadBackups();
+    if (tab === 'feedbacks') loadFeedbacks();
+    if (tab === 'notices') loadNotices();
+    if (tab === 'animals') loadAnimals();
   }
 
   function showToast(msg, type = 'success') {
@@ -305,6 +350,10 @@ tr:hover td { background:rgba(255,143,171,0.03); }
       sel.innerHTML = '<option value="">그룹 없음</option>' + groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
       if (cur) sel.value = cur;
     });
+    if (isGroupAdmin) {
+      const myGroup = groups.find(g => g.id === parseInt(localStorage.getItem('group_id') || '0'));
+      if (myGroup) document.getElementById('myGroupName').textContent = myGroup.name;
+    }
   }
 
   async function loadUsers() {
@@ -525,6 +574,135 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     const byReasonRows = data.by_reason.map(r=>`<tr><td><strong>${r.reason}</strong></td><td>${r.count}회</td><td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;background:rgba(200,180,220,0.15);border-radius:99px;height:6px;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,var(--primary),#c77dff);border-radius:99px;width:${r.percentage}%"></div></div><span style="font-size:0.78rem;color:var(--muted);min-width:40px;font-weight:700">${r.percentage}%</span></div></td></tr>`).join('');
     const byUserRows = data.by_user.map(u=>`<tr><td><strong>${u.username}</strong></td><td>${u.count}회</td><td style="color:var(--muted)">${u.total_minutes}분</td></tr>`).join('');
     list.innerHTML = `<div style="font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:12px">${data.period.start} ~ ${data.period.end} · 총 ${data.total_count}건</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div><div style="font-size:0.78rem;font-weight:800;color:var(--text-light);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">사유별</div><table><thead><tr><th>사유</th><th>횟수</th><th>비율</th></tr></thead><tbody>${byReasonRows}</tbody></table></div><div><div style="font-size:0.78rem;font-weight:800;color:var(--text-light);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">유저별</div><table><thead><tr><th>유저</th><th>횟수</th><th>총 시간</th></tr></thead><tbody>${byUserRows}</tbody></table></div></div>`;
+  }
+
+  const CAT_LABELS = { bug: '🐛 버그', suggestion: '✨ 제안', general: '💬 기타' };
+  const CAT_COLORS = { bug: 'rgba(255,107,107,0.1);border-color:rgba(255,107,107,0.3);color:var(--red)', suggestion: 'rgba(116,185,255,0.1);border-color:rgba(116,185,255,0.3);color:#0984e3', general: 'rgba(255,143,171,0.1);border-color:rgba(255,143,171,0.3);color:var(--primary)' };
+  async function loadFeedbacks() {
+    const cat = document.getElementById('feedbackCat').value;
+    const url = '/admin/feedbacks' + (cat ? '?category=' + cat : '');
+    const list = document.getElementById('feedbackList');
+    list.innerHTML = '<div class="empty-state">불러오는 중...</div>';
+    const res = await fetch(url, { headers: authH() });
+    if (!res.ok) { list.innerHTML = '<div class="empty-state">불러오기 실패 😢</div>'; return; }
+    const data = await res.json();
+    if (!data.length) { list.innerHTML = '<div class="empty-state">피드백이 없습니다 🌸</div>'; return; }
+    list.innerHTML = data.map(fb => {
+      const catStyle = CAT_COLORS[fb.category] || '';
+      return `<div class="att-card">
+        <div class="att-header">
+          <span class="att-name">${fb.title}</span>
+          <span class="role-badge" style="background:${catStyle.split(';')[0]};${catStyle.split(';').slice(1).join(';')}">${CAT_LABELS[fb.category]||fb.category}</span>
+          <span style="font-size:0.78rem;color:var(--muted);font-weight:700">${fb.created_at}</span>
+        </div>
+        <div style="font-size:0.85rem;font-weight:700;color:var(--text-light);margin-bottom:8px">by <strong>${fb.username}</strong></div>
+        <div style="font-size:0.88rem;font-weight:600;color:var(--text);line-height:1.7;white-space:pre-wrap">${fb.body}</div>
+        <div style="margin-top:10px;text-align:right">
+          <button class="btn-sm btn-danger" onclick="deleteFeedback(${fb.id})">삭제</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  async function deleteFeedback(id) {
+    if (!confirm('이 피드백을 삭제하시겠습니까?')) return;
+    const res = await fetch('/admin/feedbacks/' + id, { method: 'DELETE', headers: authH() });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); loadFeedbacks(); } else showToast(data.detail, 'error');
+  }
+
+  async function loadNotices() {
+    const list = document.getElementById('noticeList');
+    list.innerHTML = '<div class="empty-state">불러오는 중...</div>';
+    const res = await fetch('/admin/notices', { headers: authH() });
+    if (!res.ok) { list.innerHTML = '<div class="empty-state">불러오기 실패 😢</div>'; return; }
+    const data = await res.json();
+    if (!data.length) { list.innerHTML = '<div class="empty-state">등록된 공지가 없습니다 📢</div>'; return; }
+    list.innerHTML = data.map(n => `
+      <div class="att-card" style="opacity:${n.is_active ? 1 : 0.5}">
+        <div class="att-header">
+          <span class="att-name">${n.title}</span>
+          <span class="role-badge" style="background:${n.is_active ? 'rgba(85,239,196,0.1);border-color:rgba(85,239,196,0.4);color:#00b894' : 'rgba(200,180,220,0.12);border-color:var(--border);color:var(--muted)'}">${n.is_active ? '활성' : '비활성'}</span>
+          <span style="font-size:0.78rem;color:var(--muted);font-weight:700">${n.created_at}</span>
+        </div>
+        <div style="font-size:0.88rem;font-weight:600;color:var(--text);line-height:1.7;white-space:pre-wrap;margin-top:6px">${n.body}</div>
+        <div style="margin-top:10px;text-align:right;display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn-sm" style="background:rgba(116,185,255,0.12);border:1.5px solid rgba(116,185,255,0.3);color:#0984e3" onclick="toggleNotice(${n.id})">${n.is_active ? '비활성화' : '활성화'}</button>
+          <button class="btn-sm btn-danger" onclick="deleteNotice(${n.id})">삭제</button>
+        </div>
+      </div>`).join('');
+  }
+  async function createNotice() {
+    const title = document.getElementById('noticeTitle').value.trim();
+    const body = document.getElementById('noticeBody').value.trim();
+    if (!title || !body) { showToast('제목과 내용을 입력해주세요', 'error'); return; }
+    const res = await fetch('/admin/notices', { method:'POST', headers:authH(), body:JSON.stringify({title, body}) });
+    const data = await res.json();
+    if (res.ok) {
+      showToast(data.message);
+      document.getElementById('noticeTitle').value = '';
+      document.getElementById('noticeBody').value = '';
+      loadNotices();
+    } else showToast(data.detail, 'error');
+  }
+  async function toggleNotice(id) {
+    const res = await fetch('/admin/notices/' + id + '/toggle', { method:'PATCH', headers:authH() });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); loadNotices(); } else showToast(data.detail, 'error');
+  }
+  async function deleteNotice(id) {
+    if (!confirm('이 공지를 삭제하시겠습니까?')) return;
+    const res = await fetch('/admin/notices/' + id, { method:'DELETE', headers:authH() });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); loadNotices(); } else showToast(data.detail, 'error');
+  }
+
+  const ANIMAL_NAMES = ['고양이','강아지','햄스터','토끼','개구리','여우','판다','코알라'];
+  const ANIMAL_EMOJIS = ['🐱','🐶','🐹','🐰','🐸','🦊','🐼','🐨'];
+  function getEggTypeLocal(username) { return Array.from(username).reduce((s,c)=>s+c.charCodeAt(0),0) % 8; }
+
+  async function loadAnimals() {
+    const res = await fetch('/admin/users', { headers: authH() });
+    if (!res.ok) return;
+    const users = await res.json();
+    const list = document.getElementById('animalList');
+    list.innerHTML = `
+      <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:14px 20px;margin-bottom:16px;box-shadow:var(--shadow);font-size:0.82rem;color:var(--text-light);font-weight:600">
+        🐾 각 유저의 동물을 직접 지정하거나, <strong>자동</strong>으로 설정하면 아이디 기반으로 자동 배정됩니다.
+      </div>
+      <table>
+        <thead><tr><th>유저</th><th>자동 배정</th><th>현재 설정</th><th>변경</th></tr></thead>
+        <tbody>
+          ${users.filter(u=>u.role!=='superadmin').map(u => {
+            const autoAnimal = getEggTypeLocal(u.username);
+            const curAnimal = u.animal_type != null ? u.animal_type : autoAnimal;
+            const isAuto = u.animal_type == null;
+            return `<tr>
+              <td><strong>${u.username}</strong></td>
+              <td>${ANIMAL_EMOJIS[autoAnimal]} ${ANIMAL_NAMES[autoAnimal]}</td>
+              <td>
+                <span class="group-badge" style="${isAuto?'opacity:0.6':''}">${ANIMAL_EMOJIS[curAnimal]} ${ANIMAL_NAMES[curAnimal]}${isAuto?' (자동)':''}</span>
+              </td>
+              <td>
+                <div style="display:flex;gap:6px;align-items:center">
+                  <select id="animalSel-${u.id}" style="background:#faf7fd;border:1.5px solid var(--border);border-radius:10px;color:var(--text);padding:5px 10px;font-size:0.85rem;font-family:'Nunito',sans-serif;font-weight:600;outline:none">
+                    <option value="-1"${isAuto?' selected':''}>자동</option>
+                    ${ANIMAL_NAMES.map((n,i)=>`<option value="${i}"${u.animal_type===i?' selected':''}>${ANIMAL_EMOJIS[i]} ${n}</option>`).join('')}
+                  </select>
+                  <button class="btn-sm btn-primary" onclick="setAnimal(${u.id})">저장</button>
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  async function setAnimal(userId) {
+    const sel = document.getElementById('animalSel-' + userId);
+    const animal_type = parseInt(sel.value);
+    const res = await fetch('/admin/users/' + userId, { method:'PATCH', headers:authH(), body:JSON.stringify({animal_type}) });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); loadAnimals(); } else showToast(data.detail, 'error');
   }
 
   async function loadBackups() {

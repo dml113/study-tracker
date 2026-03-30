@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel
 from typing import Optional
-from models import User, ActivityLog, Attendance, Absence, Group, CheatLog, StudyGoal
+from models import User, ActivityLog, Attendance, Absence, Group, CheatLog, StudyGoal, Feedback, Notice
 from auth import hash_password, get_current_admin, get_current_superadmin
 from database import get_session
 from datetime import date, datetime, timedelta
@@ -78,6 +78,7 @@ class UpdateUserRequest(BaseModel):
     is_active: Optional[bool] = None
     role: Optional[str] = None
     group_id: Optional[int] = None
+    animal_type: Optional[int] = None  # 0~7 설정, -1이면 자동(초기화)
 
 
 @router.get("/users")
@@ -109,6 +110,7 @@ async def list_users(
             "group_id": u.group_id,
             "group_name": group_names.get(u.group_id) if u.group_id else None,
             "is_active": u.is_active,
+            "animal_type": u.animal_type,
             "created_at": u.created_at.isoformat(),
             "today_seconds": today_stats.get(u.username, 0),
             "today_minutes": round(today_stats.get(u.username, 0) / 60, 1),
@@ -178,6 +180,8 @@ async def update_user(
         user.role = req.role
     if req.group_id is not None:
         user.group_id = req.group_id
+    if req.animal_type is not None:
+        user.animal_type = None if req.animal_type == -1 else req.animal_type
 
     await session.commit()
     return {"message": "수정되었습니다"}
@@ -225,18 +229,15 @@ async def get_activity(
     target_date: Optional[str] = None,
     username: Optional[str] = None,
     session: AsyncSession = Depends(get_session),
-    current: dict = Depends(get_current_admin),
+    _: dict = Depends(get_current_superadmin),
 ):
     d = target_date or date.today().isoformat()
+    existing_usernames = set(
+        (await session.execute(select(User.username))).scalars().all()
+    )
     query = select(ActivityLog).where(ActivityLog.date == d)
     if username:
         query = query.where(ActivityLog.username == username)
-    if current["role"] == "group_admin":
-        users_result = await session.execute(
-            select(User.username).where(User.group_id == current.get("group_id"))
-        )
-        group_usernames = {row[0] for row in users_result.all()}
-        query = query.where(ActivityLog.username.in_(group_usernames))
     result = await session.execute(query.order_by(ActivityLog.active_seconds.desc()))
     logs = result.scalars().all()
     return [
@@ -249,6 +250,7 @@ async def get_activity(
             "last_updated": log.last_updated.isoformat(),
         }
         for log in logs
+        if log.username in existing_usernames
     ]
 
 
@@ -257,19 +259,12 @@ async def update_activity(
     log_id: int,
     req: ActivityEditRequest,
     session: AsyncSession = Depends(get_session),
-    current: dict = Depends(get_current_admin),
+    _: dict = Depends(get_current_superadmin),
 ):
     result = await session.execute(select(ActivityLog).where(ActivityLog.id == log_id))
     log = result.scalar_one_or_none()
     if not log:
         raise HTTPException(status_code=404, detail="기록을 찾을 수 없습니다")
-    if current["role"] == "group_admin":
-        users_result = await session.execute(
-            select(User.username).where(User.group_id == current.get("group_id"))
-        )
-        group_usernames = {row[0] for row in users_result.all()}
-        if log.username not in group_usernames:
-            raise HTTPException(status_code=403, detail="다른 그룹의 기록은 수정할 수 없습니다")
     if req.active_seconds < 0:
         raise HTTPException(status_code=400, detail="활동 시간은 0 이상이어야 합니다")
     log.active_seconds = req.active_seconds
@@ -282,15 +277,8 @@ async def update_activity(
 async def create_activity(
     req: ActivityCreateRequest,
     session: AsyncSession = Depends(get_session),
-    current: dict = Depends(get_current_admin),
+    _: dict = Depends(get_current_superadmin),
 ):
-    if current["role"] == "group_admin":
-        users_result = await session.execute(
-            select(User.username).where(User.group_id == current.get("group_id"))
-        )
-        group_usernames = {row[0] for row in users_result.all()}
-        if req.username not in group_usernames:
-            raise HTTPException(status_code=403, detail="다른 그룹의 유저는 수정할 수 없습니다")
     if req.active_seconds < 0:
         raise HTTPException(status_code=400, detail="활동 시간은 0 이상이어야 합니다")
     existing = await session.execute(
@@ -510,3 +498,116 @@ async def get_cheats(
         }
         for log in logs
     ]
+
+
+# ── 피드백 조회 ────────────────────────────────────────
+
+@router.get("/feedbacks")
+async def get_feedbacks(
+    category: Optional[str] = None,
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_admin),
+):
+    query = select(Feedback).order_by(Feedback.created_at.desc())
+    if category:
+        query = query.where(Feedback.category == category)
+    result = await session.execute(query)
+    feedbacks = result.scalars().all()
+    return [
+        {
+            "id": fb.id,
+            "username": fb.username,
+            "category": fb.category,
+            "title": fb.title,
+            "body": fb.body,
+            "created_at": fb.created_at.strftime("%Y-%m-%d %H:%M"),
+        }
+        for fb in feedbacks
+    ]
+
+
+@router.delete("/feedbacks/{feedback_id}")
+async def delete_feedback(
+    feedback_id: int,
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_admin),
+):
+    result = await session.execute(select(Feedback).where(Feedback.id == feedback_id))
+    fb = result.scalar_one_or_none()
+    if not fb:
+        raise HTTPException(status_code=404, detail="피드백을 찾을 수 없습니다")
+    await session.delete(fb)
+    await session.commit()
+    return {"message": "삭제되었습니다"}
+
+
+# ── 공지 관리 ────────────────────────────────────────────
+
+class NoticeRequest(BaseModel):
+    title: str
+    body: str
+
+
+@router.get("/notices")
+async def list_notices(
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_admin),
+):
+    result = await session.execute(select(Notice).order_by(Notice.created_at.desc()))
+    notices = result.scalars().all()
+    return [
+        {
+            "id": n.id,
+            "title": n.title,
+            "body": n.body,
+            "is_active": n.is_active,
+            "created_at": n.created_at.strftime("%Y-%m-%d %H:%M"),
+        }
+        for n in notices
+    ]
+
+
+@router.post("/notices")
+async def create_notice(
+    req: NoticeRequest,
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_superadmin),
+):
+    if not req.title.strip():
+        raise HTTPException(status_code=400, detail="제목을 입력해주세요")
+    if not req.body.strip():
+        raise HTTPException(status_code=400, detail="내용을 입력해주세요")
+    notice = Notice(title=req.title.strip(), body=req.body.strip())
+    session.add(notice)
+    await session.commit()
+    return {"message": "공지가 등록되었습니다"}
+
+
+@router.patch("/notices/{notice_id}/toggle")
+async def toggle_notice(
+    notice_id: int,
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_superadmin),
+):
+    result = await session.execute(select(Notice).where(Notice.id == notice_id))
+    notice = result.scalar_one_or_none()
+    if not notice:
+        raise HTTPException(status_code=404, detail="공지를 찾을 수 없습니다")
+    notice.is_active = not notice.is_active
+    await session.commit()
+    return {"message": "변경되었습니다", "is_active": notice.is_active}
+
+
+@router.delete("/notices/{notice_id}")
+async def delete_notice(
+    notice_id: int,
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_superadmin),
+):
+    result = await session.execute(select(Notice).where(Notice.id == notice_id))
+    notice = result.scalar_one_or_none()
+    if not notice:
+        raise HTTPException(status_code=404, detail="공지를 찾을 수 없습니다")
+    await session.delete(notice)
+    await session.commit()
+    return {"message": "삭제되었습니다"}

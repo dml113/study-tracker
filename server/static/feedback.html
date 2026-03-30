@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>피드백 🌸</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg:#fdf6f0; --surface:#fff; --primary:#ff8fab; --primary-dark:#e8738f;
+  --text:#3d2b56; --text-light:#7b6b8d; --muted:#c4b5d5;
+  --border:rgba(200,180,220,0.3); --shadow:0 4px 20px rgba(180,120,200,0.1);
+  --mint:#6bcb77; --red:#ff6b6b; --amber:#ffb347; --blue:#74b9ff;
+}
+body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+body::before { content:''; position:fixed; inset:0; pointer-events:none; background-image:radial-gradient(circle,rgba(200,180,220,0.15) 1px,transparent 1px); background-size:22px 22px; z-index:0; }
+.blob { position:fixed; border-radius:50%; filter:blur(90px); pointer-events:none; z-index:0; animation:blobFloat 18s ease-in-out infinite; }
+.blob-1 { width:500px; height:500px; background:rgba(255,143,171,0.1); top:-200px; left:-150px; }
+.blob-2 { width:400px; height:400px; background:rgba(168,216,234,0.09); bottom:-150px; right:-120px; animation-delay:-9s; }
+@keyframes blobFloat { 0%,100%{transform:translate(0,0)} 50%{transform:translate(18px,-15px)} }
+.header { position:relative; z-index:10; background:rgba(255,255,255,0.88); backdrop-filter:blur(20px); border-bottom:1.5px solid var(--border); padding:0 28px; height:60px; display:flex; align-items:center; justify-content:space-between; }
+.logo { font-size:1.2rem; font-weight:900; background:linear-gradient(135deg,var(--primary),#c77dff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.header-right { display:flex; align-items:center; gap:10px; }
+.username-tag { font-size:0.82rem; font-weight:700; color:var(--text-light); }
+.nav-btn { background:var(--surface); border:1.5px solid var(--border); color:var(--text-light); padding:7px 16px; border-radius:99px; font-size:0.82rem; font-family:'Nunito',sans-serif; font-weight:700; text-decoration:none; cursor:pointer; transition:all 0.2s; }
+.nav-btn:hover { border-color:var(--primary); color:var(--primary); }
+
+.container { position:relative; z-index:1; max-width:680px; margin:32px auto; padding:0 20px; }
+
+.page-header { margin-bottom:28px; }
+.page-title { font-size:1.8rem; font-weight:900; margin-bottom:6px; }
+.page-sub { font-size:0.9rem; color:var(--text-light); font-weight:600; }
+
+.form-card { background:var(--surface); border:1.5px solid var(--border); border-radius:22px; padding:28px; box-shadow:var(--shadow); margin-bottom:28px; animation:fadeUp 0.4s ease; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+.category-row { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+.cat-btn { padding:8px 18px; border-radius:99px; border:1.5px solid var(--border); background:var(--surface); font-family:'Nunito',sans-serif; font-size:0.85rem; font-weight:700; color:var(--text-light); cursor:pointer; transition:all 0.2s; }
+.cat-btn:hover { border-color:var(--primary); color:var(--primary); }
+.cat-btn.active-bug { background:rgba(255,107,107,0.1); border-color:rgba(255,107,107,0.4); color:var(--red); }
+.cat-btn.active-suggestion { background:rgba(116,185,255,0.12); border-color:rgba(116,185,255,0.4); color:#0984e3; }
+.cat-btn.active-general { background:rgba(255,143,171,0.1); border-color:rgba(255,143,171,0.4); color:var(--primary); }
+
+.field-wrap { margin-bottom:16px; }
+.field-label { font-size:0.75rem; font-weight:800; color:var(--text-light); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:7px; display:block; }
+input[type=text], textarea { width:100%; background:#faf7fd; border:1.5px solid var(--border); border-radius:14px; color:var(--text); padding:12px 16px; font-family:'Nunito',sans-serif; font-size:0.93rem; font-weight:600; outline:none; transition:border-color 0.2s, box-shadow 0.2s; }
+input[type=text]:focus, textarea:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(255,143,171,0.12); }
+input[type=text]::placeholder, textarea::placeholder { color:var(--muted); font-weight:500; }
+textarea { resize:vertical; min-height:130px; line-height:1.6; }
+
+.submit-btn { width:100%; padding:14px; background:linear-gradient(135deg,var(--primary),#c77dff); border:none; color:white; font-family:'Nunito',sans-serif; font-size:0.95rem; font-weight:800; border-radius:14px; cursor:pointer; box-shadow:0 4px 18px rgba(255,143,171,0.4); transition:opacity 0.2s, transform 0.15s; margin-top:4px; }
+.submit-btn:hover { opacity:0.92; transform:translateY(-1px); }
+.submit-btn:active { transform:translateY(0); }
+.submit-btn:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
+
+.success-card { background:rgba(107,203,119,0.08); border:1.5px solid rgba(107,203,119,0.3); border-radius:18px; padding:24px 28px; text-align:center; display:none; animation:fadeUp 0.4s ease; }
+.success-icon { font-size:2.5rem; margin-bottom:8px; }
+.success-title { font-size:1.2rem; font-weight:900; color:#2e7d32; margin-bottom:6px; }
+.success-sub { font-size:0.88rem; color:#4a9b50; font-weight:600; }
+.back-link { display:inline-block; margin-top:16px; padding:9px 22px; background:var(--surface); border:1.5px solid rgba(107,203,119,0.3); border-radius:99px; font-size:0.85rem; font-weight:700; color:#3a9b44; text-decoration:none; transition:all 0.2s; }
+.back-link:hover { background:rgba(107,203,119,0.06); }
+
+.char-count { font-size:0.72rem; font-weight:600; color:var(--muted); text-align:right; margin-top:4px; }
+
+.info-row { display:flex; gap:10px; align-items:flex-start; background:rgba(116,185,255,0.08); border:1.5px solid rgba(116,185,255,0.2); border-radius:14px; padding:12px 16px; margin-bottom:20px; }
+.info-icon { font-size:1rem; flex-shrink:0; margin-top:1px; }
+.info-text { font-size:0.82rem; font-weight:600; color:#0984e3; line-height:1.5; }
+</style>
+</head>
+<body>
+<div class="blob blob-1"></div><div class="blob blob-2"></div>
+<div class="header">
+  <div class="logo">🌸 피드백</div>
+  <div class="header-right">
+    <span class="username-tag" id="myName"></span>
+    <a id="backBtn" href="/dashboard" class="nav-btn">← 대시보드</a>
+    <button class="nav-btn" onclick="logout()">로그아웃</button>
+  </div>
+</div>
+<div class="container">
+  <div class="page-header">
+    <div class="page-title">💬 피드백 보내기</div>
+    <div class="page-sub">버그 신고, 기능 제안, 기타 의견을 자유롭게 남겨주세요</div>
+  </div>
+
+  <div class="form-card" id="formCard">
+    <div class="info-row">
+      <span class="info-icon">💡</span>
+      <span class="info-text">피드백은 관리자에게만 공개됩니다. 솔직하게 작성해주세요!</span>
+    </div>
+
+    <div class="category-row">
+      <button class="cat-btn active-bug" onclick="setCategory('bug', this)" id="catBug">🐛 버그 신고</button>
+      <button class="cat-btn" onclick="setCategory('suggestion', this)" id="catSuggestion">✨ 기능 제안</button>
+      <button class="cat-btn" onclick="setCategory('general', this)" id="catGeneral">💬 기타 의견</button>
+    </div>
+
+    <div class="field-wrap">
+      <label class="field-label">제목</label>
+      <input type="text" id="feedbackTitle" placeholder="피드백 제목을 간단히 입력해주세요" maxlength="100">
+    </div>
+    <div class="field-wrap">
+      <label class="field-label">내용</label>
+      <textarea id="feedbackBody" placeholder="자세한 내용을 입력해주세요 (버그의 경우 재현 방법을 적어주시면 큰 도움이 됩니다)" maxlength="2000" oninput="updateCount(this, 'bodyCount', 2000)"></textarea>
+      <div class="char-count"><span id="bodyCount">0</span> / 2000</div>
+    </div>
+    <button class="submit-btn" id="submitBtn" onclick="submitFeedback()">피드백 제출하기 🚀</button>
+  </div>
+
+  <div class="success-card" id="successCard">
+    <div class="success-icon">🎉</div>
+    <div class="success-title">피드백이 전달되었어요!</div>
+    <div class="success-sub">소중한 의견 감사합니다. 더 좋은 트래커를 만들겠습니다 🌸</div>
+    <a id="backLink" href="/dashboard" class="back-link">대시보드로 돌아가기</a>
+  </div>
+</div>
+<script>
+  const token = localStorage.getItem('token');
+  if (!token) location.href = '/';
+  const myUsername = localStorage.getItem('username');
+  const myRole = localStorage.getItem('role');
+  document.getElementById('myName').textContent = myUsername;
+  if (['superadmin', 'group_admin'].includes(myRole)) {
+    document.getElementById('backBtn').href = '/admin';
+    document.getElementById('backBtn').textContent = '← 관리자 페이지';
+    document.getElementById('backLink').href = '/admin';
+    document.getElementById('backLink').textContent = '관리자 페이지로 돌아가기';
+  }
+  function logout() { localStorage.clear(); location.href = '/'; }
+
+  let currentCategory = 'bug';
+  function setCategory(cat, el) {
+    currentCategory = cat;
+    document.querySelectorAll('.cat-btn').forEach(b => b.className = 'cat-btn');
+    el.className = 'cat-btn active-' + cat;
+  }
+  function updateCount(el, countId, max) {
+    document.getElementById(countId).textContent = el.value.length;
+  }
+  async function submitFeedback() {
+    const title = document.getElementById('feedbackTitle').value.trim();
+    const body = document.getElementById('feedbackBody').value.trim();
+    if (!title) { alert('제목을 입력해주세요'); return; }
+    if (!body) { alert('내용을 입력해주세요'); return; }
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '전송 중...';
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: currentCategory, title, body }),
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.detail || '전송 실패'); btn.disabled = false; btn.textContent = '피드백 제출하기 🚀'; return; }
+      document.getElementById('formCard').style.display = 'none';
+      document.getElementById('successCard').style.display = 'block';
+    } catch {
+      alert('서버 연결에 실패했습니다');
+      btn.disabled = false;
+      btn.textContent = '피드백 제출하기 🚀';
+    }
+  }
+</script>
+</body>
+</html>

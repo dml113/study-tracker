@@ -11,19 +11,20 @@ IT 동아리 부원들의 공부 시간을 추적하는 서비스.
 
 ```
 server/
-├── main.py              # FastAPI 앱 진입점, superadmin 자동 생성, 클라이언트 배포, 백업 엔드포인트
-├── models.py            # SQLAlchemy 모델 (User, Group, ActivityLog, Attendance, Absence, CheatLog, StudyGoal)
+├── main.py              # FastAPI 앱 진입점, superadmin 자동 생성, 클라이언트 배포, 백업 엔드포인트, traker→tracker 리다이렉트 미들웨어
+├── models.py            # SQLAlchemy 모델 (User, Group, ActivityLog, Attendance, Absence, CheatLog, StudyGoal, Feedback)
 ├── auth.py              # JWT 토큰 생성·검증, 비밀번호 해싱, get_current_admin/get_current_superadmin
-├── database.py          # DB 엔진, 세션, init_db
+├── database.py          # DB 엔진, 세션, init_db, 자동 마이그레이션 (컬럼/테이블 추가)
 ├── backup.py            # DB 자동 백업 (매일 자정 asyncio 스케줄러, 최근 7일 보관)
 ├── routers/
 │   ├── auth_router.py   # POST /auth/login (role, group_id JWT에 포함)
-│   ├── api_router.py    # /api/* (heartbeat, checkin, checkout, absence, stats, cheat-report, change-password, attendance/live)
-│   └── admin_router.py  # /admin/* (유저 CRUD, 그룹 CRUD, 출퇴근·외출 조회, 치트 조회, goals CRUD, absence-stats)
+│   ├── api_router.py    # /api/* (heartbeat, checkin, checkout, absence, stats, cheat-report, change-password, attendance/live, feedback)
+│   └── admin_router.py  # /admin/* (유저 CRUD, 그룹 CRUD, 출퇴근·외출 조회, 치트 조회, goals CRUD, absence-stats, feedbacks, activity 수정)
 ├── static/
 │   ├── login.html       # 로그인 페이지 (/) + 클라이언트 다운로드 버튼
 │   ├── admin.html       # 관리자 페이지 (/admin)
-│   └── dashboard.html   # 랭킹 대시보드 (/dashboard) — 일간/주간/월간, 출석 현황, 달성률
+│   ├── dashboard.html   # 랭킹 대시보드 (/dashboard) — 일간/주간/월간, 출석 현황, 달성률
+│   └── feedback.html    # 피드백 제출 페이지 (/feedback)
 └── client_dist/         # 배포용 EXE + version.txt (서버 시작 시 자동 생성)
 
 client/
@@ -39,9 +40,9 @@ client/
 
 | Role | 권한 |
 |------|------|
-| `superadmin` | 모든 것 (그룹 생성/삭제, 모든 유저 관리, 클라이언트 배포, DB 백업) |
-| `group_admin` | 자기 그룹의 member만 생성/수정/삭제/조회, 자기 그룹 목표 설정 |
-| `member` | 일반 유저 (출근/퇴근/외출/heartbeat/비밀번호 변경) |
+| `superadmin` | 모든 것 (그룹 생성/삭제, 모든 유저 관리, 클라이언트 배포, DB 백업, 기록 수정, 동물 관리) |
+| `group_admin` | 자기 그룹의 member만 생성/수정/삭제/조회, 자기 그룹 목표 설정. 유저 생성 시 자기 그룹 자동 할당 (group_id 변경 불가) |
+| `member` | 일반 유저 (출근/퇴근/외출/heartbeat/비밀번호 변경/피드백 제출) |
 
 - superadmin 계정은 하나만 존재 (auto-created: admin / admin1234)
 - superadmin 계정은 삭제·role 변경 불가
@@ -67,6 +68,7 @@ MEAL_TIMES = {
 ### 치트 감지 (client.py)
 10초마다 최근 30초 키 이벤트 분석:
 1. **동일 키 75% 이상** → 키보드에 물건 올려두기로 판단
+   - 예외: 마지막 다른 키 입력 후 **5초 이상 공백** 뒤 동일 키 반복 → 자리 비움 중 물건 올려진 것으로 판단, 치트 제외
 2. **입력 간격 평균 <500ms + 표준편차 <30ms** → 매크로로 판단
 
 감지 시: 활동 시간 카운트 중단 + UI 경고 표시 + 서버에 신고(`POST /api/cheat-report`)
@@ -81,13 +83,16 @@ MEAL_TIMES = {
 - 응답에 `goal_minutes`, `achievement_rate`, **`lifetime_minutes`** 포함
 - `lifetime_minutes`: 날짜 필터 없는 ALL-TIME 누적 공부시간 (알 부화 계산용)
 
-### 알 부화 시스템 (프론트엔드 전용, DB 변경 없음)
-- `getEggType(username)`: `Array.from(username).reduce((s,c)=>s+c.charCodeAt(0),0) % 8` → 0~7
+### 알 부화 시스템
+- `User` 모델에 `animal_type: Optional[int]` 컬럼 (0~7, NULL이면 username 해시로 자동 결정)
+- `getEggType(username)`: `Array.from(username).reduce((s,c)=>s+c.charCodeAt(0),0) % 8` → 0~7 (fallback)
+- `/api/stats` 응답에 `animal_type` 포함 — 프론트엔드는 API 값 우선, 없으면 username 해시 fallback
 - 8종 동물: 고양이(0) 강아지(1) 햄스터(2) 토끼(3) 개구리(4) 여우(5) 판다(6) 코알라(7)
 - 부화 단계 thresholds (누적 분): `[0, 300, 900, 1800]` (5h / 15h / 30h)
 - 각 단계별 SVG 일러스트: 자는 알 → 금 가는 알 → 깨지는 알 → 동물
 - SVG는 `width="100%" height="100%"` 속성 필수 (없으면 크기 0으로 렌더링됨)
 - `lifetime_minutes`가 없는 유저(공부 기록 없음)도 `updateEggHero(0)` 호출해야 알 표시됨
+- **동물 관리** (superadmin 전용): `PATCH /admin/users/{id}`에서 `animal_type` 수정 가능 (-1 전달 시 NULL로 초기화 = 자동 해시)
 
 ### 목표 시간 (StudyGoal 모델)
 - `group_id=NULL`: 전체 기본 목표 (기본값 480분)
@@ -110,6 +115,7 @@ MEAL_TIMES = {
 - `ActivityLog`: 날짜별 총 활동 시간 (active_seconds 누적)
 - `CheatLog`: 치트 감지 로그 (username, date, detected_at, reason)
 - `StudyGoal`: 그룹별/전체 하루 목표 시간 (group_id=None이면 전체 기본)
+- `Feedback`: 피드백/버그 신고 (username, category, title, body, created_at)
 
 ### 인증 흐름
 - 모든 `/api/*`, `/admin/*` 엔드포인트는 Bearer JWT 필요
@@ -153,7 +159,7 @@ sshpass -p 'PASSWORD' ssh user@172.16.145.16 \
 ### 서버
 - `datetime.now()` 사용 (utcnow 아님) — TZ=Asia/Seoul로 서버 시간이 KST
 - bcrypt는 **4.0.1** 고정 (5.x는 passlib 호환 오류)
-- DB 스키마 변경 시 기존 DB 파일 삭제 후 재시작 필요 (migration 미적용)
+- DB 스키마 변경 시 `database.py`의 `init_db`에 `ALTER TABLE`/`CREATE TABLE IF NOT EXISTS` 구문 추가 → 기존 DB 유지하며 자동 마이그레이션 가능
 - **배포 후 반드시 `__pycache__` 삭제** — 남아있으면 이전 .pyc 실행됨
 - `WorkingDirectory`가 `~/study-tracker`임에 주의 (scp 경로 혼동 주의)
 
@@ -186,12 +192,22 @@ sshpass -p 'PASSWORD' ssh user@172.16.145.16 \
 - 인증 토큰은 `localStorage`에 저장
 - API 호출 시 `Authorization: Bearer <token>` 헤더 필수
 - 관리자 체크: `role === 'admin'` 아닌 `['superadmin','group_admin'].includes(role)` 사용
-- 4개 페이지: `login.html`, `dashboard.html`, `me.html`, `admin.html`
+- 5개 페이지: `login.html`, `dashboard.html`, `me.html`, `admin.html`, `feedback.html`
 - 디자인: Nunito 폰트, 파스텔 크림(`#fdf6f0`) 배경, 핑크/퍼플 그라디언트 테마
 
 ### GitHub Actions CI/CD 관련
 - `SERVER_URL`: `http://172.16.145.16:8000` (Secrets에 등록)
 - 서버 IP가 `172.16.145.16`으로 변경됨 (이전: `.81`, `.145.81`)
+- 클라이언트 기본 서버 주소: `https://tracker.itnsa.cloud` (이전 오타 `traker.itnsa.cloud`에서 변경)
+- 자동 마이그레이션: 구버전 클라이언트(`172.16.145.81`, `traker.itnsa.cloud`, `172.16.145.16:8000`) → `https://tracker.itnsa.cloud`로 자동 변경
+
+### 네트워크 인프라
+- `172.16.145.15`: nginx reverse proxy (Nginx Proxy Manager) + BIND9 내부 DNS 서버 (`proxy.itnsa.cloud`)
+- `172.16.145.16`: FastAPI 서버 (study-tracker 서비스, port 8000)
+- `172.16.145.58`: 게이트웨이 (`edge.itnsa.cloud` A레코드), 외부→내부 포트 포워딩
+- **내부 DNS 구조**: BIND9이 `itnsa.cloud` 존 직접 관리 → 내부 서브도메인 추가 시 Route53 AND `/var/cache/bind/itnsa.zone` 둘 다 등록 필요
+- `traker.itnsa.cloud` → `https://tracker.itnsa.cloud` 301 리다이렉트 (FastAPI 미들웨어)
+- **스플릿 DNS**: 내부 클라이언트는 `172.16.145.15` DNS 사용, 외부는 Route53(AWS, `kim` 프로파일)
 
 ## API 엔드포인트 요약
 
@@ -214,7 +230,8 @@ sshpass -p 'PASSWORD' ssh user@172.16.145.16 \
 | POST | `/api/cheat-report` | member+ | 치트 감지 신고 (body: reason) |
 | POST | `/api/change-password` | member+ | 비밀번호 변경 (body: current_password, new_password) |
 | GET | `/api/my-stats` | member+ | 내 통계 조회 (?days=30) — daily[], weekly[], streak |
-| GET | `/api/stats` | member+ | 랭킹 조회 (?target_date&period=daily\|weekly\|monthly) — lifetime_minutes 포함 |
+| GET | `/api/stats` | member+ | 랭킹 조회 (?target_date&period=daily\|weekly\|monthly) — lifetime_minutes, animal_type 포함 |
+| POST | `/api/feedback` | member+ | 피드백 제출 (body: category, title, body) |
 | GET | `/admin/groups` | admin+ | 그룹 목록 |
 | POST | `/admin/groups` | superadmin | 그룹 생성 |
 | DELETE | `/admin/groups/{id}` | superadmin | 그룹 삭제 |
@@ -228,3 +245,8 @@ sshpass -p 'PASSWORD' ssh user@172.16.145.16 \
 | POST | `/admin/goals` | admin+ | 목표 시간 설정 (upsert) |
 | DELETE | `/admin/goals/{id}` | superadmin | 목표 시간 삭제 |
 | GET | `/admin/absence-stats` | admin+ | 기간별 외출 사유 통계 |
+| GET | `/admin/activity` | superadmin | 날짜별 활동 기록 조회 (삭제된 유저 제외) |
+| PATCH | `/admin/activity/{id}` | superadmin | 활동 기록 수정 |
+| POST | `/admin/activity` | superadmin | 활동 기록 직접 추가 |
+| GET | `/admin/feedbacks` | admin+ | 피드백 목록 (?category 필터) |
+| DELETE | `/admin/feedbacks/{id}` | admin+ | 피드백 삭제 |

@@ -3,12 +3,43 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel
 from typing import Optional
-from models import ActivityLog, Attendance, Absence, CheatLog, User, StudyGoal
+from models import ActivityLog, Attendance, Absence, CheatLog, User, StudyGoal, Feedback, Notice
 from auth import get_current_user, verify_password, hash_password
 from database import get_session
 from datetime import date, datetime, timedelta
 
 router = APIRouter(prefix="/api", tags=["api"])
+
+
+async def get_active_attendance(session: AsyncSession, username: str):
+    """현재 출근 중인 Attendance 반환. 자정 넘은 경우 전날 기록도 fallback (04:00 이전까지)."""
+    now = datetime.now()
+    today = date.today().isoformat()
+    result = await session.execute(
+        select(Attendance).where(
+            Attendance.username == username,
+            Attendance.date == today,
+            Attendance.checkin_at != None,
+            Attendance.checkout_at == None,
+        )
+    )
+    att = result.scalar_one_or_none()
+    if att:
+        return att, today
+    if now.hour < 4:
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        result = await session.execute(
+            select(Attendance).where(
+                Attendance.username == username,
+                Attendance.date == yesterday,
+                Attendance.checkin_at != None,
+                Attendance.checkout_at == None,
+            )
+        )
+        att = result.scalar_one_or_none()
+        if att:
+            return att, yesterday
+    return None, today
 
 
 class HeartbeatRequest(BaseModel):
@@ -26,6 +57,12 @@ class AbsenceStartRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
+
+
+class FeedbackRequest(BaseModel):
+    category: str
+    title: str
+    body: str
 
 
 @router.get("/attendance/today")
@@ -125,23 +162,16 @@ async def checkout(
     current: dict = Depends(get_current_user),
 ):
     username = current["sub"]
-    today = date.today().isoformat()
     now = datetime.now()
 
-    att_result = await session.execute(
-        select(Attendance).where(Attendance.username == username, Attendance.date == today)
-    )
-    att = att_result.scalar_one_or_none()
-
-    if not att or not att.checkin_at:
+    att, att_date = await get_active_attendance(session, username)
+    if not att:
         raise HTTPException(status_code=400, detail="출근 기록이 없습니다")
-    if att.checkout_at:
-        raise HTTPException(status_code=400, detail="이미 퇴근했습니다")
 
     # 미종료 외출 자동 종료
     absence_result = await session.execute(
         select(Absence).where(
-            Absence.username == username, Absence.date == today, Absence.end_at == None
+            Absence.username == username, Absence.date == att_date, Absence.end_at == None
         )
     )
     active_absence = absence_result.scalar_one_or_none()
@@ -160,25 +190,21 @@ async def start_absence(
     current: dict = Depends(get_current_user),
 ):
     username = current["sub"]
-    today = date.today().isoformat()
     now = datetime.now()
 
-    att_result = await session.execute(
-        select(Attendance).where(Attendance.username == username, Attendance.date == today)
-    )
-    att = att_result.scalar_one_or_none()
-    if not att or not att.checkin_at or att.checkout_at:
+    att, att_date = await get_active_attendance(session, username)
+    if not att:
         raise HTTPException(status_code=400, detail="출근 중이 아닙니다")
 
     existing = await session.execute(
         select(Absence).where(
-            Absence.username == username, Absence.date == today, Absence.end_at == None
+            Absence.username == username, Absence.date == att_date, Absence.end_at == None
         )
     )
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="이미 외출 중입니다")
 
-    absence = Absence(username=username, date=today, start_at=now, reason=req.reason)
+    absence = Absence(username=username, date=att_date, start_at=now, reason=req.reason)
     session.add(absence)
     await session.commit()
     return {"status": "ok", "start_at": now.strftime("%H:%M")}
@@ -190,12 +216,12 @@ async def end_absence(
     current: dict = Depends(get_current_user),
 ):
     username = current["sub"]
-    today = date.today().isoformat()
     now = datetime.now()
 
+    att, att_date = await get_active_attendance(session, username)
     result = await session.execute(
         select(Absence).where(
-            Absence.username == username, Absence.date == today, Absence.end_at == None
+            Absence.username == username, Absence.date == att_date, Absence.end_at == None
         )
     )
     absence = result.scalar_one_or_none()
@@ -214,18 +240,14 @@ async def heartbeat(
     current: dict = Depends(get_current_user),
 ):
     username = current["sub"]
-    today = date.today().isoformat()
     now = datetime.now()
 
-    att_result = await session.execute(
-        select(Attendance).where(Attendance.username == username, Attendance.date == today)
-    )
-    att = att_result.scalar_one_or_none()
-    if not att or not att.checkin_at or att.checkout_at:
+    att, att_date = await get_active_attendance(session, username)
+    if not att:
         raise HTTPException(status_code=400, detail="출근 중이 아닙니다")
 
     result = await session.execute(
-        select(ActivityLog).where(ActivityLog.username == username, ActivityLog.date == today)
+        select(ActivityLog).where(ActivityLog.username == username, ActivityLog.date == att_date)
     )
     log = result.scalar_one_or_none()
 
@@ -233,7 +255,7 @@ async def heartbeat(
         log.active_seconds += req.active_seconds
         log.last_updated = now
     else:
-        log = ActivityLog(username=username, date=today, active_seconds=req.active_seconds)
+        log = ActivityLog(username=username, date=att_date, active_seconds=req.active_seconds)
         session.add(log)
 
     await session.commit()
@@ -381,10 +403,11 @@ async def get_stats(
         .order_by(func.sum(ActivityLog.active_seconds).desc())
     )).all()
 
-    user_groups = {
-        row.username: row.group_id
-        for row in (await session.execute(select(User.username, User.group_id))).all()
+    user_info = {
+        row.username: {"group_id": row.group_id, "animal_type": row.animal_type}
+        for row in (await session.execute(select(User.username, User.group_id, User.animal_type))).all()
     }
+    user_groups = {u: v["group_id"] for u, v in user_info.items()}
     goals = (await session.execute(select(StudyGoal))).scalars().all()
     goal_by_group = {g.group_id: g.daily_target_minutes for g in goals}
     default_goal = goal_by_group.get(None, 480)
@@ -415,5 +438,45 @@ async def get_stats(
             "start_date": start.isoformat(),
             "end_date": end.isoformat(),
             "lifetime_minutes": lifetime_minutes,
+            "animal_type": user_info.get(row.username, {}).get("animal_type"),
         })
     return result
+
+
+@router.get("/notices")
+async def get_notices(
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_user),
+):
+    result = await session.execute(
+        select(Notice).where(Notice.is_active == True).order_by(Notice.created_at.desc())
+    )
+    notices = result.scalars().all()
+    return [
+        {
+            "id": n.id,
+            "title": n.title,
+            "body": n.body,
+            "created_at": n.created_at.strftime("%Y-%m-%d %H:%M"),
+        }
+        for n in notices
+    ]
+
+
+@router.post("/feedback")
+async def submit_feedback(
+    req: FeedbackRequest,
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_user),
+):
+    username = current["sub"]
+    if req.category not in ("bug", "suggestion", "general"):
+        raise HTTPException(status_code=400, detail="카테고리는 bug/suggestion/general 중 하나여야 합니다")
+    if not req.title.strip():
+        raise HTTPException(status_code=400, detail="제목을 입력해주세요")
+    if not req.body.strip():
+        raise HTTPException(status_code=400, detail="내용을 입력해주세요")
+    feedback = Feedback(username=username, category=req.category, title=req.title.strip(), body=req.body.strip())
+    session.add(feedback)
+    await session.commit()
+    return {"message": "피드백이 등록되었습니다"}

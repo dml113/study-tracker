@@ -1,11 +1,11 @@
-from fastapi import FastAPI, UploadFile, File, Depends, HTTPException
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Request
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from database import init_db, SessionLocal
 from routers import auth_router, admin_router, api_router
 from models import User
 from auth import hash_password, get_current_superadmin
-from backup import backup_scheduler, run_backup, list_backups
+from backup import backup_scheduler, run_backup, list_backups, auto_checkout_scheduler
 from sqlalchemy import select
 import asyncio
 import os
@@ -17,6 +17,17 @@ VERSION_FILE = os.path.join(CLIENT_DIR, "version.txt")
 ZIP_FILE = os.path.join(CLIENT_DIR, "StudyTracker.zip")
 
 app = FastAPI(title="Study Tracker")
+
+
+@app.middleware("http")
+async def redirect_typo_domain(request: Request, call_next):
+    host = request.headers.get("host", "")
+    if host.startswith("traker."):
+        new_host = host.replace("traker.", "tracker.", 1)
+        url = request.url.replace(netloc=new_host)
+        return RedirectResponse(url=str(url), status_code=301)
+    return await call_next(request)
+
 
 app.include_router(auth_router.router)
 app.include_router(admin_router.router)
@@ -40,6 +51,7 @@ async def startup():
             await session.commit()
             print("기본 관리자 계정 생성: admin / admin1234")
     asyncio.create_task(backup_scheduler())
+    asyncio.create_task(auto_checkout_scheduler())
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -60,6 +72,11 @@ async def dashboard_page():
 @app.get("/me", response_class=HTMLResponse)
 async def me_page():
     return FileResponse("static/me.html")
+
+
+@app.get("/feedback", response_class=HTMLResponse)
+async def feedback_page():
+    return FileResponse("static/feedback.html")
 
 
 # ── 클라이언트 배포 ────────────────────────────────────

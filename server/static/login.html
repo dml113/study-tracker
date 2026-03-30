@@ -136,6 +136,8 @@ input::placeholder { color:var(--muted); font-weight:500; }
       localStorage.setItem('token', data.access_token);
       localStorage.setItem('role', data.role);
       localStorage.setItem('username', data.username);
+      if (data.group_id != null) localStorage.setItem('group_id', data.group_id);
+      else localStorage.removeItem('group_id');
       location.href = ['superadmin','group_admin'].includes(data.role) ? '/admin' : '/dashboard';
     } catch(e) { showError('서버 연결에 실패했습니다'); }
   }
