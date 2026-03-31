@@ -129,7 +129,8 @@ async def sync_from_github(_: dict = Depends(get_current_superadmin)):
         with urllib.request.urlopen(req, timeout=10) as res:
             release = json.loads(res.read())
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"GitHub API 오류: {e}")
+        import logging; logging.error(f"GitHub API 오류: {e}")
+        raise HTTPException(status_code=502, detail="GitHub API 오류. 서버 로그를 확인하세요.")
 
     version = release["tag_name"].lstrip("v")
     zip_asset = next(
@@ -145,7 +146,8 @@ async def sync_from_github(_: dict = Depends(get_current_superadmin)):
             with open(ZIP_FILE, "wb") as f:
                 f.write(res.read())
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"다운로드 오류: {e}")
+        import logging; logging.error(f"GitHub 다운로드 오류: {e}")
+        raise HTTPException(status_code=502, detail="다운로드 오류. 서버 로그를 확인하세요.")
 
     with open(VERSION_FILE, "w") as f:
         f.write(version)

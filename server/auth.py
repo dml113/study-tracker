@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
@@ -5,7 +6,11 @@ from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
-SECRET_KEY = "study-tracker-secret-change-in-prod-2024"
+_DEFAULT_SECRET = "study-tracker-secret-change-in-prod-2024"
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY", _DEFAULT_SECRET)
+if SECRET_KEY == _DEFAULT_SECRET:
+    import logging
+    logging.warning("[보안 경고] JWT_SECRET_KEY 환경변수가 설정되지 않았습니다. 기본값을 사용 중입니다.")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30
 

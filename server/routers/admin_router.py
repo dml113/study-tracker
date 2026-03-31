@@ -14,7 +14,7 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 # ── 그룹 관리 (슈퍼 어드민 전용) ───────────────────────
 
 class CreateGroupRequest(BaseModel):
-    name: str
+    name: str = Field(..., min_length=1, max_length=50)
 
 
 @router.get("/groups")
@@ -66,11 +66,17 @@ async def delete_group(
 
 # ── 유저 관리 ──────────────────────────────────────────
 
+_ALLOWED_ROLES = {"member", "group_admin"}
+
 class CreateUserRequest(BaseModel):
-    username: str
-    password: str
-    role: str = "member"
+    username: str = Field(..., min_length=2, max_length=30, pattern=r'^[a-zA-Z0-9_]+$')
+    password: str = Field(..., min_length=4, max_length=72)
+    role: str = Field(default="member")
     group_id: Optional[int] = None
+
+    def validate_role(self):
+        if self.role not in _ALLOWED_ROLES:
+            raise ValueError(f"role은 {_ALLOWED_ROLES} 중 하나여야 합니다")
 
 
 class UpdateUserRequest(BaseModel):
@@ -126,8 +132,8 @@ async def create_user(
     session: AsyncSession = Depends(get_session),
     current: dict = Depends(get_current_admin),
 ):
-    if req.role == "superadmin":
-        raise HTTPException(status_code=403, detail="슈퍼 어드민 계정은 생성할 수 없습니다")
+    if req.role not in _ALLOWED_ROLES:
+        raise HTTPException(status_code=400, detail=f"role은 {_ALLOWED_ROLES} 중 하나여야 합니다")
 
     if current["role"] == "group_admin":
         if req.role != "member":
@@ -219,12 +225,12 @@ async def delete_user(
 # ── 공부 기록 수정 ─────────────────────────────────────
 
 class ActivityEditRequest(BaseModel):
-    active_seconds: float
+    active_seconds: float = Field(..., ge=0)
 
 class ActivityCreateRequest(BaseModel):
-    username: str
-    date: str
-    active_seconds: float
+    username: str = Field(..., min_length=1, max_length=30)
+    date: str = Field(..., pattern=r'^\d{4}-\d{2}-\d{2}$')
+    active_seconds: float = Field(..., ge=0)
 
 
 @router.get("/activity")
@@ -354,7 +360,7 @@ async def get_attendance(
 
 class GoalRequest(BaseModel):
     group_id: Optional[int] = None
-    daily_target_minutes: int
+    daily_target_minutes: int = Field(..., ge=1, le=1440)
 
 
 @router.get("/goals")

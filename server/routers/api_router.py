@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel, Field
@@ -43,21 +43,21 @@ async def get_active_attendance(session: AsyncSession, username: str):
 
 
 class HeartbeatRequest(BaseModel):
-    active_seconds: float
-    client_version: Optional[str] = None
+    active_seconds: float = Field(..., gt=0, le=60)
+    client_version: Optional[str] = Field(None, max_length=20)
 
 
 class CheatReportRequest(BaseModel):
-    reason: str
+    reason: str = Field(..., max_length=500)
 
 
 class AbsenceStartRequest(BaseModel):
-    reason: str
+    reason: str = Field(..., max_length=200)
 
 
 class ChangePasswordRequest(BaseModel):
-    current_password: str
-    new_password: str
+    current_password: str = Field(..., min_length=1, max_length=72)
+    new_password: str = Field(..., min_length=4, max_length=72)
 
 
 class FeedbackRequest(BaseModel):
@@ -305,7 +305,7 @@ async def change_password_endpoint(
 
 @router.get("/my-stats")
 async def my_stats(
-    days: int = 30,
+    days: int = Query(default=30, ge=1, le=365),
     session: AsyncSession = Depends(get_session),
     current: dict = Depends(get_current_user),
 ):
