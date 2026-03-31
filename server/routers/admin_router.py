@@ -111,6 +111,7 @@ async def list_users(
             "group_name": group_names.get(u.group_id) if u.group_id else None,
             "is_active": u.is_active,
             "animal_type": u.animal_type,
+            "client_version": u.client_version,
             "created_at": u.created_at.isoformat(),
             "today_seconds": today_stats.get(u.username, 0),
             "today_minutes": round(today_stats.get(u.username, 0) / 60, 1),

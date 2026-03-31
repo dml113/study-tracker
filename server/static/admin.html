@@ -145,7 +145,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
       <button class="btn btn-primary" onclick="createUser()" style="align-self:flex-end">+ 유저 생성</button>
     </div>
     <table>
-      <thead><tr><th>아이디</th><th>권한</th><th>그룹</th><th>상태</th><th>오늘 활동</th><th>생성일</th><th>관리</th></tr></thead>
+      <thead><tr><th>아이디</th><th>권한</th><th>그룹</th><th>상태</th><th>오늘 활동</th><th>버전</th><th>생성일</th><th>관리</th></tr></thead>
       <tbody id="userTableBody"></tbody>
     </table>
   </div>
@@ -372,6 +372,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
         <td>${u.group_name ? `<span class="group-badge">${esc(u.group_name)}</span>` : '<span style="color:var(--muted)">–</span>'}</td>
         <td><span class="status-dot ${u.is_active ? 'dot-active' : 'dot-inactive'}"></span>${u.is_active ? '활성' : '비활성'}</td>
         <td>${u.today_minutes}분 <span class="time-bar-wrap"><span class="time-bar" style="width:${u.today_seconds/maxSec*100}%"></span></span></td>
+        <td style="font-size:0.82rem;font-weight:700;color:${u.client_version ? 'var(--primary)' : 'var(--muted)'}">${u.client_version || '-'}</td>
         <td style="color:var(--muted);font-size:0.82rem">${u.created_at.slice(0,10)}</td>
         <td><div class="td-actions">
           <button class="btn-sm btn-warning" onclick="openPwModal(${u.id})">🔑 비번</button>

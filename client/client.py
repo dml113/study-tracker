@@ -21,7 +21,7 @@ import requests
 from datetime import datetime
 from pynput import keyboard, mouse
 
-VERSION = "1.0.13"
+VERSION = "1.0.14"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".study_tracker.json")
 SEND_INTERVAL = 30
@@ -226,7 +226,7 @@ def sender():
 
         if seconds > 0:
             try:
-                api("post", "/api/heartbeat", json={"active_seconds": seconds})
+                api("post", "/api/heartbeat", json={"active_seconds": seconds, "client_version": VERSION})
                 with state["lock"]:
                     state["session_total"] += seconds
             except Exception:
@@ -381,7 +381,7 @@ class MainWindow:
                 seconds = state["active_buffer"]
                 state["active_buffer"] = 0.0
             if seconds > 0:
-                api("post", "/api/heartbeat", json={"active_seconds": seconds})
+                api("post", "/api/heartbeat", json={"active_seconds": seconds, "client_version": VERSION})
 
             res = api("post", "/api/checkout")
             data = res.json()
@@ -527,7 +527,7 @@ class MainWindow:
                 state["active_buffer"] = 0.0
             if seconds > 0:
                 try:
-                    api("post", "/api/heartbeat", json={"active_seconds": seconds})
+                    api("post", "/api/heartbeat", json={"active_seconds": seconds, "client_version": VERSION})
                 except Exception:
                     pass
         state["running"] = False

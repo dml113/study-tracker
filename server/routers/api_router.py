@@ -44,6 +44,7 @@ async def get_active_attendance(session: AsyncSession, username: str):
 
 class HeartbeatRequest(BaseModel):
     active_seconds: float
+    client_version: Optional[str] = None
 
 
 class CheatReportRequest(BaseModel):
@@ -257,6 +258,12 @@ async def heartbeat(
     else:
         log = ActivityLog(username=username, date=att_date, active_seconds=req.active_seconds)
         session.add(log)
+
+    if req.client_version:
+        user_result = await session.execute(select(User).where(User.username == username))
+        user = user_result.scalar_one_or_none()
+        if user:
+            user.client_version = req.client_version
 
     await session.commit()
     return {"status": "ok"}

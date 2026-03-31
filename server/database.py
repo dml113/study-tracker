@@ -13,6 +13,7 @@ async def init_db():
         # 스키마 마이그레이션: 새 컬럼 추가 (이미 있으면 무시)
         for stmt in [
             "ALTER TABLE users ADD COLUMN animal_type INTEGER",
+            "ALTER TABLE users ADD COLUMN client_version VARCHAR",
             "CREATE TABLE IF NOT EXISTS feedbacks (id INTEGER PRIMARY KEY, username VARCHAR NOT NULL, category VARCHAR NOT NULL DEFAULT 'general', title VARCHAR NOT NULL, body VARCHAR NOT NULL, created_at DATETIME)",
             "CREATE TABLE IF NOT EXISTS notices (id INTEGER PRIMARY KEY, title VARCHAR NOT NULL, body VARCHAR NOT NULL, is_active BOOLEAN NOT NULL DEFAULT 1, created_at DATETIME)",
         ]:
