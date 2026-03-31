@@ -225,6 +225,8 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
     </div>`;
   }
 
+  function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
   const token = localStorage.getItem('token');
   if (!token) location.href = '/';
   const myUsername = localStorage.getItem('username');
@@ -240,9 +242,12 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
     loadStats();
   }
   async function loadStats() {
+    try {
     const d = document.getElementById('dateInput').value;
-    const res = await fetch('/api/stats?target_date=' + d + '&period=' + currentPeriod, { headers: authHeaders() });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    const res = await fetch('/api/stats?target_date=' + encodeURIComponent(d) + '&period=' + encodeURIComponent(currentPeriod), { headers: authHeaders() });
     if (res.status === 401) { logout(); return; }
+    if (!res.ok) return;
     const data = await res.json();
     if (data.length > 0) {
       const { period, start_date, end_date } = data[0];
@@ -270,14 +275,15 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
       return '<div class="card ' + cardClass + '" style="animation-delay:' + (i * 0.06) + 's">'
         + '<div class="rank-badge ' + rankClass + '">' + (i === 0 ? '👑' : i+1) + '</div>'
         + renderEgg(u.username, lt, u.animal_type)
-        + '<div class="info"><div class="name">' + u.username + (isMe ? '<span class="me-tag">ME</span>' : '') + '</div>'
-        + '<div class="time">오늘 ' + u.active_minutes + '분</div>'
-        + '<div class="egg-label">' + eggLabel + '</div></div>'
+        + '<div class="info"><div class="name">' + esc(u.username) + (isMe ? '<span class="me-tag">ME</span>' : '') + '</div>'
+        + '<div class="time">오늘 ' + esc(String(u.active_minutes)) + '분</div>'
+        + '<div class="egg-label">' + esc(eggLabel) + '</div></div>'
         + '<div class="bar-col"><div class="bar-wrap"><div class="' + barClass + '" style="width:' + w + '%"></div></div>'
         + '<div class="goal-row"><div class="goal-bar-wrap"><div class="goal-bar" style="width:' + rate + '%;background:' + goalColor + '"></div></div>'
-        + '<span class="goal-text">목표 ' + u.achievement_rate + '%</span></div></div></div>';
+        + '<span class="goal-text">목표 ' + esc(String(u.achievement_rate)) + '%</span></div></div></div>';
     }).join('');
     document.getElementById('updatedAt').textContent = '업데이트 ' + new Date().toLocaleTimeString('ko-KR');
+    } catch { /* 네트워크 오류 시 무시, 30초 후 재시도 */ }
   }
   async function loadLive() {
     try {
@@ -289,7 +295,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
       list.innerHTML = data.map(u => {
         const cls = u.is_absent ? 'chip-absent' : 'chip-present';
         const icon = u.is_absent ? '🚶' : '📚';
-        const label = u.is_absent ? u.username + ' 외출중' : u.username + ' ' + u.checkin_at + '~';
+        const label = u.is_absent ? esc(u.username) + ' 외출중' : esc(u.username) + ' ' + esc(u.checkin_at) + '~';
         return '<span class="live-chip ' + cls + '">' + icon + ' ' + label + '</span>';
       }).join('');
     } catch {}
