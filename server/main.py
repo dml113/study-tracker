@@ -9,6 +9,7 @@ from backup import backup_scheduler, run_backup, list_backups, auto_checkout_sch
 from sqlalchemy import select
 import asyncio
 import os
+import re
 import shutil
 import urllib.request
 
@@ -27,6 +28,16 @@ async def redirect_typo_domain(request: Request, call_next):
         url = request.url.replace(netloc=new_host)
         return RedirectResponse(url=str(url), status_code=301)
     return await call_next(request)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
 
 
 app.include_router(auth_router.router)
@@ -97,16 +108,25 @@ async def client_download():
     return FileResponse(ZIP_FILE, filename="StudyTracker.zip", media_type="application/zip")
 
 
+_VERSION_RE = re.compile(r'^\d+\.\d+\.\d+$')
+_MAX_UPLOAD_BYTES = 200 * 1024 * 1024  # 200 MB
+
+
 @app.post("/admin/client/upload")
 async def upload_client(
     version: str,
     file: UploadFile = File(...),
     _: dict = Depends(get_current_superadmin),
 ):
+    if not _VERSION_RE.match(version):
+        raise HTTPException(status_code=400, detail="버전 형식이 올바르지 않습니다 (예: 1.2.3)")
     if not file.filename.endswith(".zip"):
         raise HTTPException(status_code=400, detail=".zip 파일만 업로드 가능합니다")
+    data = await file.read(_MAX_UPLOAD_BYTES + 1)
+    if len(data) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="파일 크기가 200MB를 초과합니다")
     with open(ZIP_FILE, "wb") as f:
-        shutil.copyfileobj(file.file, f)
+        f.write(data)
     with open(VERSION_FILE, "w") as f:
         f.write(version)
     return {"message": f"버전 {version} 업로드 완료"}

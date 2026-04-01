@@ -77,7 +77,7 @@ class CreateUserRequest(BaseModel):
 
 
 class UpdateUserRequest(BaseModel):
-    password: Optional[str] = None
+    password: Optional[str] = Field(None, min_length=4, max_length=72)
     is_active: Optional[bool] = None
     role: Optional[str] = None
     group_id: Optional[int] = None
