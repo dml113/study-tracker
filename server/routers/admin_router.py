@@ -69,7 +69,7 @@ async def delete_group(
 _ALLOWED_ROLES = {"member", "group_admin"}
 
 class CreateUserRequest(BaseModel):
-    username: str = Field(..., min_length=2, max_length=30, pattern=r'^[a-zA-Z0-9_]+$')
+    username: str = Field(..., min_length=2, max_length=30)
     password: str = Field(..., min_length=4, max_length=72)
     role: str = Field(default="member")
     group_id: Optional[int] = None
@@ -531,10 +531,34 @@ async def get_feedbacks(
             "category": fb.category,
             "title": fb.title,
             "body": fb.body,
+            "is_resolved": fb.is_resolved,
+            "admin_comment": fb.admin_comment,
             "created_at": fb.created_at.strftime("%Y-%m-%d %H:%M"),
         }
         for fb in feedbacks
     ]
+
+
+class FeedbackResolveRequest(BaseModel):
+    is_resolved: bool
+    admin_comment: Optional[str] = Field(None, max_length=500)
+
+
+@router.patch("/feedbacks/{feedback_id}/resolve")
+async def resolve_feedback(
+    feedback_id: int,
+    req: FeedbackResolveRequest,
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_admin),
+):
+    result = await session.execute(select(Feedback).where(Feedback.id == feedback_id))
+    fb = result.scalar_one_or_none()
+    if not fb:
+        raise HTTPException(status_code=404, detail="피드백을 찾을 수 없습니다")
+    fb.is_resolved = req.is_resolved
+    fb.admin_comment = req.admin_comment
+    await session.commit()
+    return {"message": "처리 상태가 업데이트되었습니다"}
 
 
 @router.delete("/feedbacks/{feedback_id}")
@@ -557,6 +581,7 @@ async def delete_feedback(
 class NoticeRequest(BaseModel):
     title: str = Field(..., max_length=100)
     body: str = Field(..., max_length=2000)
+    group_id: Optional[int] = None  # None=전체, group_id=특정 그룹
 
 
 @router.get("/notices")
@@ -566,12 +591,16 @@ async def list_notices(
 ):
     result = await session.execute(select(Notice).order_by(Notice.created_at.desc()))
     notices = result.scalars().all()
+    groups_result = await session.execute(select(Group))
+    group_names = {g.id: g.name for g in groups_result.scalars().all()}
     return [
         {
             "id": n.id,
             "title": n.title,
             "body": n.body,
             "is_active": n.is_active,
+            "group_id": n.group_id,
+            "group_name": group_names.get(n.group_id) if n.group_id else None,
             "created_at": n.created_at.strftime("%Y-%m-%d %H:%M"),
         }
         for n in notices
@@ -588,7 +617,7 @@ async def create_notice(
         raise HTTPException(status_code=400, detail="제목을 입력해주세요")
     if not req.body.strip():
         raise HTTPException(status_code=400, detail="내용을 입력해주세요")
-    notice = Notice(title=req.title.strip(), body=req.body.strip())
+    notice = Notice(title=req.title.strip(), body=req.body.strip(), group_id=req.group_id)
     session.add(notice)
     await session.commit()
     return {"message": "공지가 등록되었습니다"}

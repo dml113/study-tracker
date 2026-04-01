@@ -80,6 +80,8 @@ class Feedback(Base):
     category: Mapped[str] = mapped_column(String, default="general")  # bug | suggestion | general
     title: Mapped[str] = mapped_column(String)
     body: Mapped[str] = mapped_column(String)
+    is_resolved: Mapped[bool] = mapped_column(Boolean, default=False)
+    admin_comment: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
 
@@ -89,4 +91,5 @@ class Notice(Base):
     title: Mapped[str] = mapped_column(String)
     body: Mapped[str] = mapped_column(String)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    group_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("groups.id"), nullable=True)  # None=전체
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

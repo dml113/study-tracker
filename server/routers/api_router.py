@@ -453,10 +453,19 @@ async def get_stats(
 @router.get("/notices")
 async def get_notices(
     session: AsyncSession = Depends(get_session),
-    _: dict = Depends(get_current_user),
+    current: dict = Depends(get_current_user),
 ):
+    # 유저의 group_id 조회
+    user_result = await session.execute(select(User).where(User.username == current["sub"]))
+    user = user_result.scalar_one_or_none()
+    user_group_id = user.group_id if user else None
+
+    from sqlalchemy import or_
     result = await session.execute(
-        select(Notice).where(Notice.is_active == True).order_by(Notice.created_at.desc())
+        select(Notice).where(
+            Notice.is_active == True,
+            or_(Notice.group_id == None, Notice.group_id == user_group_id)
+        ).order_by(Notice.created_at.desc())
     )
     notices = result.scalars().all()
     return [

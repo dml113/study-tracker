@@ -16,6 +16,9 @@ async def init_db():
             "ALTER TABLE users ADD COLUMN client_version VARCHAR",
             "CREATE TABLE IF NOT EXISTS feedbacks (id INTEGER PRIMARY KEY, username VARCHAR NOT NULL, category VARCHAR NOT NULL DEFAULT 'general', title VARCHAR NOT NULL, body VARCHAR NOT NULL, created_at DATETIME)",
             "CREATE TABLE IF NOT EXISTS notices (id INTEGER PRIMARY KEY, title VARCHAR NOT NULL, body VARCHAR NOT NULL, is_active BOOLEAN NOT NULL DEFAULT 1, created_at DATETIME)",
+            "ALTER TABLE feedbacks ADD COLUMN is_resolved BOOLEAN NOT NULL DEFAULT 0",
+            "ALTER TABLE feedbacks ADD COLUMN admin_comment VARCHAR",
+            "ALTER TABLE notices ADD COLUMN group_id INTEGER REFERENCES groups(id)",
         ]:
             try:
                 await conn.execute(text(stmt))

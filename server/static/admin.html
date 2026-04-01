@@ -240,6 +240,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     <div class="create-form">
       <div class="form-group"><label>제목</label><input type="text" id="noticeTitle" placeholder="공지 제목"></div>
       <div class="form-group" style="flex:2"><label>내용</label><textarea id="noticeBody" placeholder="공지 내용" style="background:#faf7fd;border:1.5px solid var(--border);border-radius:12px;color:var(--text);padding:9px 13px;font-size:0.9rem;font-family:'Nunito',sans-serif;font-weight:600;outline:none;resize:vertical;min-height:80px;width:100%"></textarea></div>
+      <div class="form-group"><label>대상 그룹</label><select id="noticeGroupId"><option value="">전체</option></select></div>
       <button class="btn btn-primary" onclick="createNotice()" style="align-self:flex-end">+ 공지 등록</button>
     </div>
     <div id="noticeList"></div>
@@ -346,7 +347,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     const res = await fetch('/admin/groups', { headers: authH() });
     if (!res.ok) return;
     groups = await res.json();
-    ['newGroupId','moveGroupId'].forEach(id => {
+    ['newGroupId','moveGroupId','noticeGroupId'].forEach(id => {
       const sel = document.getElementById(id); if (!sel) return;
       const cur = sel.value;
       sel.innerHTML = '<option value="">그룹 없음</option>' + groups.map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join('');
@@ -592,19 +593,35 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     if (!data.length) { list.innerHTML = '<div class="empty-state">피드백이 없습니다 🌸</div>'; return; }
     list.innerHTML = data.map(fb => {
       const catStyle = CAT_COLORS[fb.category] || '';
-      return `<div class="att-card">
+      const resolvedBadge = fb.is_resolved
+        ? `<span class="role-badge" style="background:rgba(107,203,119,0.12);border-color:rgba(107,203,119,0.4);color:#27ae60">✅ 처리완료</span>`
+        : `<span class="role-badge" style="background:rgba(255,179,71,0.12);border-color:rgba(255,179,71,0.4);color:#e67e22">⏳ 미처리</span>`;
+      const commentHtml = fb.admin_comment
+        ? `<div style="margin-top:8px;padding:8px 12px;background:rgba(107,203,119,0.08);border:1.5px solid rgba(107,203,119,0.25);border-radius:10px;font-size:0.85rem;color:#27ae60;font-weight:600">💬 ${esc(fb.admin_comment)}</div>` : '';
+      return `<div class="att-card" style="opacity:${fb.is_resolved ? 0.7 : 1}">
         <div class="att-header">
           <span class="att-name">${esc(fb.title)}</span>
           <span class="role-badge" style="background:${catStyle.split(';')[0]};${catStyle.split(';').slice(1).join(';')}">${CAT_LABELS[fb.category]||fb.category}</span>
-          <span style="font-size:0.78rem;color:var(--muted);font-weight:700">${fb.created_at}</span>
+          ${resolvedBadge}
+          <span style="font-size:0.78rem;color:var(--muted);font-weight:700">${esc(fb.created_at)}</span>
         </div>
         <div style="font-size:0.85rem;font-weight:700;color:var(--text-light);margin-bottom:8px">by <strong>${esc(fb.username)}</strong></div>
         <div style="font-size:0.88rem;font-weight:600;color:var(--text);line-height:1.7;white-space:pre-wrap">${esc(fb.body)}</div>
-        <div style="margin-top:10px;text-align:right">
+        ${commentHtml}
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="comment-${fb.id}" placeholder="코멘트 (선택)" value="${esc(fb.admin_comment||'')}" style="flex:1;min-width:160px;background:#faf7fd;border:1.5px solid var(--border);border-radius:10px;padding:6px 11px;font-size:0.85rem;font-family:'Nunito',sans-serif;font-weight:600;outline:none;color:var(--text)">
+          <button class="btn-sm" style="background:rgba(107,203,119,0.12);border:1.5px solid rgba(107,203,119,0.35);color:#27ae60" onclick="resolveFeedback(${fb.id}, true)">${fb.is_resolved ? '✅ 완료' : '처리완료'}</button>
+          <button class="btn-sm" style="background:rgba(255,179,71,0.12);border:1.5px solid rgba(255,179,71,0.35);color:#e67e22" onclick="resolveFeedback(${fb.id}, false)">미처리</button>
           <button class="btn-sm btn-danger" onclick="deleteFeedback(${fb.id})">삭제</button>
         </div>
       </div>`;
     }).join('');
+  }
+  async function resolveFeedback(id, resolved) {
+    const comment = document.getElementById('comment-' + id)?.value.trim() || null;
+    const res = await fetch('/admin/feedbacks/' + id + '/resolve', { method: 'PATCH', headers: authH(), body: JSON.stringify({ is_resolved: resolved, admin_comment: comment || null }) });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); loadFeedbacks(); } else showToast(data.detail, 'error');
   }
   async function deleteFeedback(id) {
     if (!confirm('이 피드백을 삭제하시겠습니까?')) return;
@@ -625,7 +642,8 @@ tr:hover td { background:rgba(255,143,171,0.03); }
         <div class="att-header">
           <span class="att-name">${esc(n.title)}</span>
           <span class="role-badge" style="background:${n.is_active ? 'rgba(85,239,196,0.1);border-color:rgba(85,239,196,0.4);color:#00b894' : 'rgba(200,180,220,0.12);border-color:var(--border);color:var(--muted)'}">${n.is_active ? '활성' : '비활성'}</span>
-          <span style="font-size:0.78rem;color:var(--muted);font-weight:700">${n.created_at}</span>
+          <span class="role-badge" style="background:rgba(199,125,255,0.1);border-color:rgba(199,125,255,0.3);color:#a855f7">${n.group_name ? '🏠 ' + esc(n.group_name) : '🌐 전체'}</span>
+          <span style="font-size:0.78rem;color:var(--muted);font-weight:700">${esc(n.created_at)}</span>
         </div>
         <div style="font-size:0.88rem;font-weight:600;color:var(--text);line-height:1.7;white-space:pre-wrap;margin-top:6px">${esc(n.body)}</div>
         <div style="margin-top:10px;text-align:right;display:flex;gap:8px;justify-content:flex-end">
@@ -637,13 +655,16 @@ tr:hover td { background:rgba(255,143,171,0.03); }
   async function createNotice() {
     const title = document.getElementById('noticeTitle').value.trim();
     const body = document.getElementById('noticeBody').value.trim();
+    const groupIdVal = document.getElementById('noticeGroupId').value;
+    const group_id = groupIdVal ? parseInt(groupIdVal) : null;
     if (!title || !body) { showToast('제목과 내용을 입력해주세요', 'error'); return; }
-    const res = await fetch('/admin/notices', { method:'POST', headers:authH(), body:JSON.stringify({title, body}) });
+    const res = await fetch('/admin/notices', { method:'POST', headers:authH(), body:JSON.stringify({title, body, group_id}) });
     const data = await res.json();
     if (res.ok) {
       showToast(data.message);
       document.getElementById('noticeTitle').value = '';
       document.getElementById('noticeBody').value = '';
+      document.getElementById('noticeGroupId').value = '';
       loadNotices();
     } else showToast(data.detail, 'error');
   }
