@@ -530,6 +530,32 @@ async def get_notices(
     ]
 
 
+@router.get("/my-feedbacks")
+async def my_feedbacks(
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_user),
+):
+    username = current["sub"]
+    result = await session.execute(
+        select(Feedback).where(Feedback.username == username).order_by(Feedback.created_at.desc())
+    )
+    feedbacks = result.scalars().all()
+    cat_map = {"bug": "🐛 버그", "suggestion": "✨ 기능 제안", "general": "💬 기타"}
+    return [
+        {
+            "id": f.id,
+            "category": f.category,
+            "category_label": cat_map.get(f.category, f.category),
+            "title": f.title,
+            "body": f.body,
+            "is_resolved": f.is_resolved,
+            "admin_comment": f.admin_comment,
+            "created_at": f.created_at.strftime("%Y-%m-%d %H:%M"),
+        }
+        for f in feedbacks
+    ]
+
+
 @router.post("/feedback")
 async def submit_feedback(
     req: FeedbackRequest,

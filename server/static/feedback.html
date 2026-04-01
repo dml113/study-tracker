@@ -67,6 +67,25 @@ textarea { resize:vertical; min-height:130px; line-height:1.6; }
 .info-row { display:flex; gap:10px; align-items:flex-start; background:rgba(116,185,255,0.08); border:1.5px solid rgba(116,185,255,0.2); border-radius:14px; padding:12px 16px; margin-bottom:20px; }
 .info-icon { font-size:1rem; flex-shrink:0; margin-top:1px; }
 .info-text { font-size:0.82rem; font-weight:600; color:#0984e3; line-height:1.5; }
+
+.my-feedbacks-section { margin-top:8px; }
+.my-feedbacks-title { font-size:0.8rem; font-weight:800; color:var(--text-light); letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.my-feedbacks-title::after { content:''; flex:1; height:1.5px; background:linear-gradient(90deg,var(--border),transparent); border-radius:99px; }
+.feedback-item { background:var(--surface); border:1.5px solid var(--border); border-radius:18px; padding:18px 20px; margin-bottom:10px; animation:fadeUp 0.3s ease both; }
+.feedback-item-header { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.feedback-cat { font-size:0.72rem; font-weight:800; padding:3px 10px; border-radius:99px; }
+.cat-bug { background:rgba(255,107,107,0.1); color:var(--red); }
+.cat-suggestion { background:rgba(116,185,255,0.12); color:#0984e3; }
+.cat-general { background:rgba(255,143,171,0.1); color:var(--primary); }
+.feedback-title { font-size:0.95rem; font-weight:800; flex:1; }
+.feedback-status { font-size:0.72rem; font-weight:800; padding:3px 10px; border-radius:99px; flex-shrink:0; }
+.status-resolved { background:rgba(107,203,119,0.12); color:#2e7d32; }
+.status-pending { background:rgba(200,180,220,0.15); color:var(--muted); }
+.feedback-body { font-size:0.85rem; font-weight:600; color:var(--text-light); line-height:1.6; margin-bottom:8px; white-space:pre-wrap; }
+.feedback-comment { background:rgba(107,203,119,0.07); border:1.5px solid rgba(107,203,119,0.25); border-radius:10px; padding:10px 14px; font-size:0.82rem; font-weight:700; color:#2e7d32; line-height:1.5; margin-top:6px; }
+.feedback-comment-label { font-size:0.68rem; font-weight:800; color:#4a9b50; margin-bottom:3px; }
+.feedback-date { font-size:0.72rem; font-weight:600; color:var(--muted); margin-top:6px; }
+.no-feedback { text-align:center; color:var(--muted); font-size:0.88rem; font-weight:600; padding:28px 0; }
 </style>
 </head>
 <body>
@@ -115,6 +134,11 @@ textarea { resize:vertical; min-height:130px; line-height:1.6; }
     <div class="success-sub">소중한 의견 감사합니다. 더 좋은 트래커를 만들겠습니다 🌸</div>
     <a id="backLink" href="/dashboard" class="back-link">대시보드로 돌아가기</a>
   </div>
+
+  <div class="my-feedbacks-section" id="myFeedbacksSection" style="display:none">
+    <div class="my-feedbacks-title">📬 내가 보낸 피드백</div>
+    <div id="myFeedbacksList"></div>
+  </div>
 </div>
 <script>
   const token = localStorage.getItem('token');
@@ -129,6 +153,44 @@ textarea { resize:vertical; min-height:130px; line-height:1.6; }
     document.getElementById('backLink').textContent = '관리자 페이지로 돌아가기';
   }
   function logout() { localStorage.clear(); location.href = '/'; }
+  // esc(): textContent 트릭으로 HTML 엔티티 이스케이프 (XSS 방지)
+  function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  async function loadMyFeedbacks() {
+    try {
+      const res = await fetch('/api/my-feedbacks', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (!res.ok) return;
+      const data = await res.json();
+      const section = document.getElementById('myFeedbacksSection');
+      const list = document.getElementById('myFeedbacksList');
+      if (!data.length) {
+        list.innerHTML = '<div class="no-feedback">아직 제출한 피드백이 없어요</div>';
+      } else {
+        // 아래 모든 동적 값은 esc()로 이스케이프됨
+        list.innerHTML = data.map(f => {
+          const catClass = 'cat-' + esc(f.category);
+          const statusHtml = f.is_resolved
+            ? '<span class="feedback-status status-resolved">✅ 처리완료</span>'
+            : '<span class="feedback-status status-pending">⏳ 검토중</span>';
+          const commentHtml = f.is_resolved && f.admin_comment
+            ? `<div class="feedback-comment"><div class="feedback-comment-label">관리자 코멘트</div>${esc(f.admin_comment)}</div>` : '';
+          return `<div class="feedback-item">
+            <div class="feedback-item-header">
+              <span class="feedback-cat ${catClass}">${esc(f.category_label)}</span>
+              <span class="feedback-title">${esc(f.title)}</span>
+              ${statusHtml}
+            </div>
+            <div class="feedback-body">${esc(f.body)}</div>
+            ${commentHtml}
+            <div class="feedback-date">${esc(f.created_at)}</div>
+          </div>`;
+        }).join('');
+      }
+      section.style.display = 'block';
+    } catch {}
+  }
+
+  loadMyFeedbacks();
 
   let currentCategory = 'bug';
   function setCategory(cat, el) {

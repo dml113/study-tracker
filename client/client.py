@@ -26,7 +26,7 @@ try:
 except Exception:
     _PLYER_OK = False
 
-VERSION = "1.1.2"
+VERSION = "1.1.3"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".study_tracker.json")
 SEND_INTERVAL = 30
@@ -56,6 +56,7 @@ state = {
     "daily_goal_minutes": 480,  # 기본값, 로그인 후 서버에서 가져옴
     "goal_notified": False,     # 목표 달성 알림 중복 방지
     "warning_notified_date": None,  # 오후 6시 미달 경고 발송 날짜
+    "auth_expired": False,      # JWT 만료 감지 플래그
 }
 
 
@@ -262,9 +263,14 @@ def sender():
 
         if seconds > 0:
             try:
-                api("post", "/api/heartbeat", json={"active_seconds": seconds, "client_version": VERSION})
-                with state["lock"]:
-                    state["session_total"] += seconds
+                resp = api("post", "/api/heartbeat", json={"active_seconds": seconds, "client_version": VERSION})
+                if resp.status_code == 401:
+                    state["auth_expired"] = True
+                    with state["lock"]:
+                        state["active_buffer"] += seconds
+                else:
+                    with state["lock"]:
+                        state["session_total"] += seconds
             except Exception:
                 with state["lock"]:
                     state["active_buffer"] += seconds
@@ -377,6 +383,14 @@ class MainWindow:
         return btn
 
     def _refresh(self):
+        # JWT 만료 감지
+        if state.get("auth_expired"):
+            state["auth_expired"] = False
+            messagebox.showwarning(
+                "세션 만료",
+                "로그인 세션이 만료되었습니다.\n앱을 재시작하면 자동으로 다시 로그인됩니다."
+            )
+
         # 현재 시간
         now_str = datetime.now().strftime("%H:%M:%S")
         self.lbl_time.config(text=now_str)
@@ -592,6 +606,13 @@ class MainWindow:
         dialog.bind("<Return>", lambda _: submit())
 
     def on_close(self):
+        # 외출 중이면 먼저 복귀 처리
+        if state["is_absent"]:
+            try:
+                api("post", "/api/absence/end")
+                state["is_absent"] = False
+            except Exception:
+                pass
         if state["checked_in"]:
             if not messagebox.askyesno("종료", "아직 퇴근하지 않았습니다.\n그래도 종료하시겠습니까?"):
                 return
