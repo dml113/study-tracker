@@ -734,7 +734,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     const data = await res.json();
     const list = document.getElementById('backupList');
     if (!data.length) { list.innerHTML='<div style="font-size:0.85rem;font-weight:700;color:var(--muted)">백업 파일이 없습니다</div>'; return; }
-    list.innerHTML = `<table><thead><tr><th>파일명</th><th>크기</th><th>생성일시</th></tr></thead><tbody>${data.map(b=>`<tr><td style="color:var(--muted);font-size:0.82rem">${b.filename}</td><td>${b.size_kb} KB</td><td style="color:var(--muted);font-size:0.82rem">${b.created_at}</td></tr>`).join('')}</tbody></table>`;
+    list.innerHTML = `<table><thead><tr><th>파일명</th><th>크기</th><th>생성일시</th></tr></thead><tbody>${data.map(b=>`<tr><td style="color:var(--muted);font-size:0.82rem">${esc(b.filename)}</td><td>${esc(String(b.size_kb))} KB</td><td style="color:var(--muted);font-size:0.82rem">${esc(b.created_at)}</td></tr>`).join('')}</tbody></table>`;
   }
 
   async function runBackup() {

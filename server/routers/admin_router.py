@@ -74,9 +74,6 @@ class CreateUserRequest(BaseModel):
     role: str = Field(default="member")
     group_id: Optional[int] = None
 
-    def validate_role(self):
-        if self.role not in _ALLOWED_ROLES:
-            raise ValueError(f"role은 {_ALLOWED_ROLES} 중 하나여야 합니다")
 
 
 class UpdateUserRequest(BaseModel):
@@ -572,12 +569,18 @@ async def resolve_feedback(
 async def delete_feedback(
     feedback_id: int,
     session: AsyncSession = Depends(get_session),
-    _: dict = Depends(get_current_admin),
+    current: dict = Depends(get_current_admin),
 ):
     result = await session.execute(select(Feedback).where(Feedback.id == feedback_id))
     fb = result.scalar_one_or_none()
     if not fb:
         raise HTTPException(status_code=404, detail="피드백을 찾을 수 없습니다")
+    if current["role"] == "group_admin":
+        user_result = await session.execute(
+            select(User).where(User.username == fb.username, User.group_id == current.get("group_id"))
+        )
+        if not user_result.scalar_one_or_none():
+            raise HTTPException(status_code=403, detail="다른 그룹의 피드백은 삭제할 수 없습니다")
     await session.delete(fb)
     await session.commit()
     return {"message": "삭제되었습니다"}
