@@ -98,6 +98,20 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
 .heatmap-legend { display:flex; align-items:center; gap:5px; margin-top:10px; font-size:0.7rem; color:var(--muted); font-weight:600; }
 
 @media (max-width:640px) { .summary-grid{grid-template-columns:repeat(2,1fr)} .weekly-grid{grid-template-columns:repeat(2,1fr)} }
+
+/* Weekday pattern */
+.weekday-chart { display:flex; align-items:flex-end; gap:8px; height:100px; padding-top:16px; }
+.weekday-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; }
+.weekday-bar { width:100%; border-radius:6px 6px 0 0; min-height:2px; }
+.weekday-label { font-size:0.72rem; font-weight:800; color:var(--muted); }
+.weekday-value { font-size:0.62rem; font-weight:700; color:var(--text-light); }
+.weekday-insight { font-size:0.8rem; font-weight:700; color:var(--text-light); margin-top:10px; text-align:center; padding-top:8px; border-top:1.5px solid var(--border); }
+
+/* Absence stats */
+.absence-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.absence-stat { text-align:center; padding:12px 8px; }
+.absence-stat-val { font-size:1.8rem; font-weight:900; background:linear-gradient(135deg,#74b9ff,#a29bfe); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1; margin-bottom:4px; }
+.absence-stat-label { font-size:0.72rem; font-weight:700; color:var(--muted); }
 </style>
 </head>
 <body>
@@ -156,6 +170,19 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
     <div class="section-title">🗓 활동 히트맵 — 최근 1년</div>
     <div class="heatmap-container" id="heatmapContainer">
       <div style="color:var(--muted);font-size:0.85rem;font-weight:600;text-align:center;padding:20px 0">로딩 중...</div>
+    </div>
+  </div>
+  <div class="section" id="weekdaySection" style="display:none">
+    <div class="section-title">📅 요일별 평균 패턴</div>
+    <div class="chart-container">
+      <div class="weekday-chart" id="weekdayChart"></div>
+      <div class="weekday-insight" id="weekdayInsight"></div>
+    </div>
+  </div>
+  <div class="section" id="absenceSection" style="display:none">
+    <div class="section-title">🚶 외출 통계 — 최근 30일</div>
+    <div class="chart-container">
+      <div class="absence-grid" id="absenceGrid"></div>
     </div>
   </div>
 </div>
@@ -280,9 +307,9 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
       const pct = Math.max(item.active_seconds/maxSecs*100, item.active_seconds>0?4:0);
       const gp = Math.min(item.active_seconds/goal*100,100);
       const color = gp>=100?'linear-gradient(180deg,#6bcb77,#3a9b44)':gp>=50?'linear-gradient(180deg,#ff8fab,#c77dff)':item.active_seconds>0?'linear-gradient(180deg,#ddd0ee,#c4b5d5)':'#f0eaf8';
-      return '<div class="day-col"><div class="tip">' + item.date + '\n' + item.active_minutes + '분 · 목표 ' + Math.round(gp) + '%</div>'
+      return '<div class="day-col"><div class="tip">' + esc(item.date) + '\n' + esc(String(item.active_minutes)) + '분 · 목표 ' + Math.round(gp) + '%</div>'
         + '<div class="day-bar" style="height:' + pct + '%;background:' + color + '"></div>'
-        + '<div class="day-label">' + item.date.slice(8) + '</div></div>';
+        + '<div class="day-label">' + esc(item.date.slice(8)) + '</div></div>';
     }).join('');
 
     const weekGrid = document.getElementById('weeklyGrid');
@@ -377,11 +404,59 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
           return '<div class="heatmap-cell" style="background:' + c + '"></div>';
         }).join('') +
         '<span>많음</span></div>';
+
+      // 요일별 평균 패턴 (365일 데이터 재활용)
+      const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]; // 월~일
+      const DAY_NAMES = ['월', '화', '수', '목', '금', '토', '일'];
+      const dayTotals = new Array(7).fill(0);
+      const dayCounts = new Array(7).fill(0);
+      daily.forEach(function(item) {
+        const dow = new Date(item.date).getUTCDay(); // 0=Sun...6=Sat
+        dayTotals[dow] += item.active_seconds;
+        dayCounts[dow]++;
+      });
+      const dayAvgs = DAY_ORDER.map(function(dow) {
+        return dayCounts[dow] > 0 ? Math.round(dayTotals[dow] / dayCounts[dow] / 60) : 0;
+      });
+      const maxAvg = Math.max.apply(null, dayAvgs.concat([1]));
+      const bestIdx = dayAvgs.reduce(function(best, val, i) { return val > dayAvgs[best] ? i : best; }, 0);
+      const wdSection = document.getElementById('weekdaySection');
+      if (wdSection) {
+        wdSection.style.display = '';
+        document.getElementById('weekdayChart').innerHTML = dayAvgs.map(function(avg, i) {
+          const pct = Math.max(avg / maxAvg * 100, avg > 0 ? 5 : 0);
+          const color = avg >= d.daily_goal_minutes ? 'linear-gradient(180deg,#6bcb77,#3a9b44)' : avg > 0 ? 'linear-gradient(180deg,#ff8fab,#c77dff)' : '#f0eaf8';
+          return '<div class="weekday-col"><div class="weekday-value">' + (avg > 0 ? avg + '분' : '-') + '</div>'
+            + '<div class="weekday-bar" style="height:' + pct + '%;background:' + color + '"></div>'
+            + '<div class="weekday-label">' + DAY_NAMES[i] + '</div></div>';
+        }).join('');
+        document.getElementById('weekdayInsight').textContent = dayAvgs[bestIdx] > 0
+          ? DAY_NAMES[bestIdx] + '요일에 평균 ' + dayAvgs[bestIdx] + '분으로 가장 많이 공부해요!'
+          : '아직 데이터가 부족해요';
+      }
     } catch { /* 히트맵 로드 실패 시 무시 */ }
+  }
+
+  async function loadAbsenceStats() {
+    try {
+      const res = await fetch('/api/my-absence-stats?days=30', { headers: authH() });
+      if (!res.ok) return;
+      const d = await res.json();
+      const section = document.getElementById('absenceSection');
+      if (!section) return;
+      section.style.display = '';
+      const h = Math.floor(d.total_absence_minutes / 60);
+      const m = Math.round(d.total_absence_minutes % 60);
+      document.getElementById('absenceGrid').innerHTML =
+        '<div class="absence-stat"><div class="absence-stat-val">' + d.total_absence_count + '회</div><div class="absence-stat-label">총 외출 횟수</div></div>' +
+        '<div class="absence-stat"><div class="absence-stat-val">' + (h > 0 ? h + 'h ' : '') + m + 'm</div><div class="absence-stat-label">총 외출 시간</div></div>' +
+        '<div class="absence-stat"><div class="absence-stat-val">' + d.avg_per_outing + '분</div><div class="absence-stat-label">외출당 평균</div></div>';
+    } catch {}
   }
 
   loadStats(30);
   loadHeatmap();
+  loadAbsenceStats();
 </script>
 
 </body>

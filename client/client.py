@@ -26,7 +26,7 @@ try:
 except Exception:
     _PLYER_OK = False
 
-VERSION = "1.1.1"
+VERSION = "1.1.2"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".study_tracker.json")
 SEND_INTERVAL = 30
@@ -55,6 +55,7 @@ state = {
     "listeners": [],  # keyboard/mouse 리스너 레퍼런스 (워치독용)
     "daily_goal_minutes": 480,  # 기본값, 로그인 후 서버에서 가져옴
     "goal_notified": False,     # 목표 달성 알림 중복 방지
+    "warning_notified_date": None,  # 오후 6시 미달 경고 발송 날짜
 }
 
 
@@ -176,6 +177,7 @@ def activity_counter():
     last = time.time()
     cheat_tick = 0
     watchdog_tick = 0
+    warning_tick = 0
     while state["running"]:
         time.sleep(1)
         now = time.time()
@@ -208,6 +210,33 @@ def activity_counter():
                     api("post", "/api/cheat-report", json={"reason": reason})
                 except Exception:
                     pass
+
+        # 60초마다 오후 6시 목표 미달 경고
+        warning_tick += 1
+        if warning_tick >= 60:
+            warning_tick = 0
+            now_dt = datetime.now()
+            if now_dt.hour >= 18 and state["checked_in"] and _PLYER_OK:
+                today_str = now_dt.strftime("%Y-%m-%d")
+                with state["lock"]:
+                    already = state.get("warning_notified_date") == today_str
+                    total_secs = state["session_total"] + state["active_buffer"]
+                total_mins = total_secs / 60
+                goal_mins = state["daily_goal_minutes"]
+                if not already and total_mins < goal_mins * 0.5:
+                    with state["lock"]:
+                        state["warning_notified_date"] = today_str
+                        remaining = round(goal_mins - total_mins, 1)
+                        t_str = round(total_mins, 1)
+                        threading.Thread(
+                            target=lambda r=remaining, g=goal_mins, t=t_str: plyer_notification.notify(
+                                title="⚠ 목표 미달 경고",
+                                message=f"오늘 목표까지 {r}분 남았어요! (현재 {t}분/{g}분)",
+                                app_name="공부 트래커",
+                                timeout=8,
+                            ),
+                            daemon=True,
+                        ).start()
 
         with state["lock"]:
             cheating = state["is_cheating"]

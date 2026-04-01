@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Literal, Optional
 from models import ActivityLog, Attendance, Absence, CheatLog, User, StudyGoal, Feedback, Notice, Group
 from auth import get_current_user, verify_password, hash_password
 from database import get_session
@@ -61,7 +61,7 @@ class ChangePasswordRequest(BaseModel):
 
 
 class FeedbackRequest(BaseModel):
-    category: str
+    category: Literal["bug", "suggestion", "general"]
     title: str = Field(..., max_length=100)
     body: str = Field(..., max_length=2000)
 
@@ -375,6 +375,38 @@ async def my_stats(
         "daily_goal_minutes": daily_goal,
         "daily": daily,
         "weekly": weeks,
+    }
+
+
+@router.get("/my-absence-stats")
+async def my_absence_stats(
+    days: int = Query(default=30, ge=1, le=365),
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_user),
+):
+    username = current["sub"]
+    end_d = date.today()
+    start_d = end_d - timedelta(days=days - 1)
+
+    result = await session.execute(
+        select(Absence).where(
+            Absence.username == username,
+            Absence.date.between(start_d.isoformat(), end_d.isoformat()),
+            Absence.end_at.isnot(None),
+        )
+    )
+    absences = result.scalars().all()
+
+    total_minutes = sum((a.end_at - a.start_at).total_seconds() / 60 for a in absences)
+    days_with_absence = len(set(a.date for a in absences))
+    count = len(absences)
+
+    return {
+        "days": days,
+        "total_absence_minutes": round(total_minutes),
+        "total_absence_count": count,
+        "days_with_absence": days_with_absence,
+        "avg_per_outing": round(total_minutes / count) if count > 0 else 0,
     }
 
 

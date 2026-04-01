@@ -109,9 +109,9 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
 .bar { height:100%; border-radius:99px; background:linear-gradient(90deg,var(--primary),#c77dff); transition:width 0.7s cubic-bezier(0.34,1.56,0.64,1); }
 .bar-gold { background:linear-gradient(90deg,#ffb347,#ffd700); }
 .goal-row { display:flex; align-items:center; gap:8px; }
-.goal-bar-wrap { flex:1; background:rgba(200,180,220,0.15); border-radius:99px; height:3.5px; overflow:hidden; }
+.goal-bar-wrap { flex:1; background:rgba(200,180,220,0.15); border-radius:99px; height:6px; overflow:hidden; }
 .goal-bar { height:100%; border-radius:99px; transition:width 0.6s ease; }
-.goal-text { font-size:0.7rem; font-weight:700; color:var(--muted); white-space:nowrap; }
+.goal-text { font-size:0.72rem; font-weight:800; white-space:nowrap; }
 
 .empty { text-align:center; color:var(--muted); padding:60px 0; font-size:0.9rem; font-weight:600; }
 .updated { text-align:right; color:var(--muted); font-size:0.72rem; font-weight:600; margin-top:10px; }
@@ -309,7 +309,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
         + '<div class="egg-label">' + esc(eggLabel) + '</div></div>'
         + '<div class="bar-col"><div class="bar-wrap"><div class="' + barClass + '" style="width:' + w + '%"></div></div>'
         + '<div class="goal-row"><div class="goal-bar-wrap"><div class="goal-bar" style="width:' + rate + '%;background:' + goalColor + '"></div></div>'
-        + '<span class="goal-text">목표 ' + esc(String(u.achievement_rate)) + '%</span></div></div></div>';
+        + '<span class="goal-text" style="color:' + goalColor + '">' + (u.achievement_rate >= 100 ? '🎉 달성!' : '목표 ' + esc(String(u.achievement_rate)) + '%') + '</span></div></div></div>';
     }).join('');
     document.getElementById('updatedAt').textContent = '업데이트 ' + new Date().toLocaleTimeString('ko-KR');
     } catch { /* 네트워크 오류 시 무시, 30초 후 재시도 */ }

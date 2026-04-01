@@ -18,17 +18,18 @@ server/
 ├── backup.py            # DB 자동 백업 (매일 자정 asyncio 스케줄러, 최근 7일 보관) + 매일 00:50 자동 퇴근 스케줄러
 ├── routers/
 │   ├── auth_router.py   # POST /auth/login (role, group_id JWT에 포함)
-│   ├── api_router.py    # /api/* (heartbeat, checkin, checkout, absence, stats, cheat-report, change-password, attendance/live, feedback, notices)
+│   ├── api_router.py    # /api/* (heartbeat, checkin, checkout, absence, stats, cheat-report, change-password, attendance/live, feedback, notices, my-absence-stats)
 │   └── admin_router.py  # /admin/* (유저 CRUD, 그룹 CRUD, 출퇴근·외출 조회, 치트 조회, goals CRUD, absence-stats, feedbacks, activity 수정, notices CRUD)
 ├── static/
 │   ├── login.html       # 로그인 페이지 (/) + 클라이언트 다운로드 버튼
 │   ├── admin.html       # 관리자 페이지 (/admin)
 │   ├── dashboard.html   # 랭킹 대시보드 (/dashboard) — 일간/주간/월간, 출석 현황, 달성률
+│   ├── me.html          # 내 통계 (/me) — 일별 차트, 주간 요약, 히트맵, 요일별 패턴, 외출 통계
 │   └── feedback.html    # 피드백 제출 페이지 (/feedback)
 └── client_dist/         # 배포용 EXE + version.txt (서버 시작 시 자동 생성)
 
 client/
-├── client.py            # Windows 클라이언트 (tkinter UI + pynput 감지 + 자동 업데이트 + 치트 감지 + 비밀번호 변경 + 공지 팝업)
+├── client.py            # Windows 클라이언트 (tkinter UI + pynput 감지 + 자동 업데이트 + 치트 감지 + 비밀번호 변경 + 공지 팝업 + 목표 달성/미달 알림)
 ├── build.bat            # PyInstaller EXE 빌드 스크립트 (로컬 빌드용)
 └── VERSION              # 클라이언트 버전 파일 (변경 시 GitHub Actions 빌드 트리거)
 
@@ -240,6 +241,7 @@ sshpass -p 'PASSWORD' ssh user@172.16.145.16 \
 | POST | `/api/cheat-report` | member+ | 치트 감지 신고 (body: reason) |
 | POST | `/api/change-password` | member+ | 비밀번호 변경 (body: current_password, new_password) |
 | GET | `/api/my-stats` | member+ | 내 통계 조회 (?days=30) — daily[], weekly[], streak |
+| GET | `/api/my-absence-stats` | member+ | 내 외출 통계 (?days=30) — 횟수, 총 시간, 외출당 평균 |
 | GET | `/api/stats` | member+ | 랭킹 조회 (?target_date&period=daily\|weekly\|monthly) — lifetime_minutes, animal_type 포함 |
 | POST | `/api/feedback` | member+ | 피드백 제출 (body: category, title, body) |
 | GET | `/api/notices` | member+ | 활성 공지 목록 조회 (클라이언트 로그인 후 팝업용) |
