@@ -106,6 +106,12 @@ tr:hover td { background:rgba(255,143,171,0.03); }
 .modal select option { background:#fff; }
 .modal-actions { display:flex; gap:10px; justify-content:flex-end; }
 .empty-state { text-align:center; color:var(--muted); padding:60px 0; font-size:0.9rem; font-weight:700; }
+.inactive-row td { opacity:0.6; }
+.inactive-badge { font-size:0.68rem; font-weight:800; padding:2px 8px; border-radius:99px; background:rgba(255,107,107,0.1); border:1.5px solid rgba(255,107,107,0.25); color:var(--red); }
+.group-stat-card { background:var(--surface); border:1.5px solid var(--border); border-radius:18px; padding:18px 22px; margin-bottom:12px; display:flex; align-items:center; gap:16px; box-shadow:var(--shadow); }
+.group-stat-name { font-size:1rem; font-weight:900; min-width:80px; }
+.group-stat-bar-wrap { flex:1; background:rgba(200,180,220,0.15); border-radius:99px; height:8px; overflow:hidden; }
+.group-stat-bar { height:100%; border-radius:99px; background:linear-gradient(90deg,var(--primary),#c77dff); transition:width 0.7s ease; }
 </style>
 </head>
 <body>
@@ -126,6 +132,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     <button class="tab" onclick="switchTab('cheats', this)">🚨 치트 감지</button>
     <button class="tab" id="activityTab" style="display:none" onclick="switchTab('activity', this)">✏️ 기록 수정</button>
     <button class="tab" onclick="switchTab('goals', this)">🎯 목표 설정</button>
+    <button class="tab" onclick="switchTab('group-stats', this)">📊 그룹 통계</button>
     <button class="tab" onclick="switchTab('absence-stats', this)">🚶 외출 통계</button>
     <button class="tab" onclick="switchTab('feedbacks', this)">💬 피드백</button>
     <button class="tab" id="noticeTab" style="display:none" onclick="switchTab('notices', this)">📢 공지 관리</button>
@@ -195,11 +202,26 @@ tr:hover td { background:rgba(255,143,171,0.03); }
 
   <div id="tab-goals" style="display:none">
     <div class="create-form">
-      <div class="form-group"><label>그룹</label><select id="goalGroupId"><option value="">전체 기본</option></select></div>
+      <div class="form-group"><label>유형</label><select id="goalType" onchange="onGoalTypeChange()"><option value="default">전체 기본</option><option value="group">그룹별</option><option value="personal">개인별 (superadmin)</option></select></div>
+      <div class="form-group" id="goalGroupWrap" style="display:none"><label>그룹</label><select id="goalGroupId"><option value="">선택</option></select></div>
+      <div class="form-group" id="goalUserWrap" style="display:none"><label>유저</label><select id="goalUsername"><option value="">선택</option></select></div>
       <div class="form-group"><label>하루 목표 (분)</label><input type="number" id="goalMinutes" placeholder="예: 480" min="1" style="min-width:120px"></div>
       <button class="btn btn-primary" onclick="saveGoal()" style="align-self:flex-end">저장</button>
     </div>
     <div id="goalList"></div>
+  </div>
+
+  <div id="tab-group-stats" style="display:none">
+    <div class="date-bar">
+      <select id="groupStatsPeriod" style="background:#faf7fd;border:1.5px solid var(--border);border-radius:12px;color:var(--text);padding:8px 13px;font-size:0.88rem;font-family:'Nunito',sans-serif;font-weight:600;outline:none">
+        <option value="daily">일간</option>
+        <option value="weekly">주간</option>
+        <option value="monthly">월간</option>
+      </select>
+      <input type="date" id="groupStatsDate">
+      <button class="btn btn-primary" onclick="loadGroupStats()">조회</button>
+    </div>
+    <div id="groupStatsList"></div>
   </div>
 
   <div id="tab-absence-stats" style="display:none">
@@ -318,7 +340,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     _currentTab = tab;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
-    ['users','stats','attendance','cheats','activity','goals','absence-stats','feedbacks','notices','animals','groups','client','backup'].forEach(t => {
+    ['users','stats','attendance','cheats','activity','goals','group-stats','absence-stats','feedbacks','notices','animals','groups','client','backup'].forEach(t => {
       const div = document.getElementById('tab-' + t);
       if (div) div.style.display = t === tab ? 'block' : 'none';
     });
@@ -329,6 +351,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     if (tab === 'client') loadClientVersion();
     if (tab === 'activity') loadActivity();
     if (tab === 'goals') loadGoals();
+    if (tab === 'group-stats') loadGroupStats();
     if (tab === 'absence-stats') loadAbsenceStats();
     if (tab === 'backup') loadBackups();
     if (tab === 'feedbacks') loadFeedbacks();
@@ -366,15 +389,20 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     const users = await res.json();
     window._allUsers = users;
     const maxSec = Math.max(...users.map(u => u.today_seconds), 1);
-    document.getElementById('userTableBody').innerHTML = users.map(u => `
-      <tr>
-        <td><strong>${esc(u.username)}</strong></td>
+    const today7ago = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
+    document.getElementById('userTableBody').innerHTML = users.map(u => {
+      const lastAct = u.last_activity_date;
+      const isInactive = u.role === 'member' && (!lastAct || lastAct < today7ago);
+      const inactiveDays = lastAct ? Math.floor((Date.now() - new Date(lastAct).getTime()) / 86400000) : null;
+      const inactiveBadge = isInactive && u.is_active ? `<span class="inactive-badge">${inactiveDays ? inactiveDays + '일 미활동' : '기록없음'}</span> ` : '';
+      return `<tr class="${isInactive && u.is_active ? 'inactive-row' : ''}">
+        <td><strong>${esc(u.username)}</strong> ${inactiveBadge}</td>
         <td><span class="role-badge role-${u.role}">${roleName(u.role)}</span></td>
         <td>${u.group_name ? `<span class="group-badge">${esc(u.group_name)}</span>` : '<span style="color:var(--muted)">–</span>'}</td>
         <td><span class="status-dot ${u.is_active ? 'dot-active' : 'dot-inactive'}"></span>${u.is_active ? '활성' : '비활성'}</td>
-        <td>${u.today_minutes}분 <span class="time-bar-wrap"><span class="time-bar" style="width:${u.today_seconds/maxSec*100}%"></span></span></td>
-        <td style="font-size:0.82rem;font-weight:700;color:${u.client_version ? 'var(--primary)' : 'var(--muted)'}">${u.client_version || '-'}</td>
-        <td style="color:var(--muted);font-size:0.82rem">${u.created_at.slice(0,10)}</td>
+        <td>${esc(String(u.today_minutes))}분 <span class="time-bar-wrap"><span class="time-bar" style="width:${u.today_seconds/maxSec*100}%"></span></span></td>
+        <td style="font-size:0.82rem;font-weight:700;color:${u.client_version ? 'var(--primary)' : 'var(--muted)'}">${esc(u.client_version || '-')}</td>
+        <td style="color:var(--muted);font-size:0.82rem">${esc(u.created_at.slice(0,10))}</td>
         <td><div class="td-actions">
           <button class="btn-sm btn-warning" onclick="openPwModal(${u.id})">🔑 비번</button>
           ${u.role !== 'superadmin' ? `<button class="btn-sm" style="background:rgba(116,185,255,0.12);border:1.5px solid rgba(116,185,255,0.3);color:#0984e3" onclick="toggleActive(${u.id},${u.is_active})">${u.is_active ? '비활성화' : '활성화'}</button>` : ''}
@@ -382,8 +410,8 @@ tr:hover td { background:rgba(255,143,171,0.03); }
           ${isSuperAdmin && u.role !== 'superadmin' ? `<button class="btn-sm" style="background:rgba(200,180,220,0.12);border:1.5px solid var(--border);color:var(--text-light)" onclick="toggleRole(${u.id},'${u.role}')">${u.role === 'group_admin' ? '일반으로' : '관리자로'}</button>` : ''}
           ${u.role !== 'superadmin' ? `<button class="btn-sm btn-danger" onclick="deleteUser(${u.id},${JSON.stringify(u.username).replace(/</g,'\\u003c')})">🗑️ 삭제</button>` : ''}
         </div></td>
-      </tr>
-    `).join('');
+      </tr>`;
+    }).join('');
   }
 
   async function createUser() {
@@ -538,24 +566,84 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     if (res.ok) { showToast(data.message); loadActivity(); } else showToast(data.detail,'error');
   }
 
+  function onGoalTypeChange() {
+    const type = document.getElementById('goalType').value;
+    document.getElementById('goalGroupWrap').style.display = type === 'group' ? '' : 'none';
+    document.getElementById('goalUserWrap').style.display = type === 'personal' ? '' : 'none';
+  }
+
   async function loadGoals() {
     await loadGroupOptions();
-    const sel = document.getElementById('goalGroupId');
-    sel.innerHTML = '<option value="">전체 기본</option>' + groups.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join('');
+    // goalGroupId 드롭다운 옵션 설정
+    const groupSel = document.getElementById('goalGroupId');
+    groupSel.innerHTML = '<option value="">선택</option>' + groups.map(g=>`<option value="${g.id}">${esc(g.name)}</option>`).join('');
+    // 개인 목표용 유저 드롭다운
+    if (isSuperAdmin) {
+      const userSel = document.getElementById('goalUsername');
+      const allUsers = window._allUsers || [];
+      userSel.innerHTML = '<option value="">선택</option>' + allUsers.filter(u=>u.role!=='superadmin').map(u=>`<option value="${esc(u.username)}">${esc(u.username)}</option>`).join('');
+    } else {
+      document.getElementById('goalType').querySelector('option[value="personal"]').disabled = true;
+    }
     const res = await fetch('/admin/goals', { headers: authH() });
     const data = await res.json();
     const list = document.getElementById('goalList');
     if (!data.length) { list.innerHTML='<div class="empty-state">🎯 설정된 목표가 없습니다 (기본값: 480분/일)</div>'; return; }
-    list.innerHTML = `<table><thead><tr><th>그룹</th><th>하루 목표</th><th>주간</th><th>관리</th></tr></thead><tbody>${data.map(g=>`<tr><td><strong>${esc(g.group_name)}</strong></td><td>${g.daily_target_minutes}분 (${Math.round(g.daily_target_minutes/60*10)/10}시간)</td><td style="color:var(--muted)">${g.daily_target_minutes*7}분</td><td>${isSuperAdmin?`<button class="btn-sm btn-danger" onclick="deleteGoal(${g.id})">🗑️ 삭제</button>`:''}</td></tr>`).join('')}</tbody></table>`;
+    list.innerHTML = `<table><thead><tr><th>대상</th><th>하루 목표</th><th>주간</th><th>관리</th></tr></thead><tbody>${data.map(g=>{
+      const label = g.username ? '👤 ' + esc(g.username) : (g.group_name ? '🏠 ' + esc(g.group_name) : '🌐 전체 기본');
+      return `<tr><td><strong>${label}</strong></td><td>${g.daily_target_minutes}분 (${Math.round(g.daily_target_minutes/60*10)/10}시간)</td><td style="color:var(--muted)">${g.daily_target_minutes*7}분</td><td>${isSuperAdmin?`<button class="btn-sm btn-danger" onclick="deleteGoal(${g.id})">🗑️ 삭제</button>`:''}</td></tr>`;
+    }).join('')}</tbody></table>`;
   }
 
   async function saveGoal() {
-    const group_id = document.getElementById('goalGroupId').value;
+    const type = document.getElementById('goalType').value;
     const minutes = parseInt(document.getElementById('goalMinutes').value);
     if (!minutes||minutes<1) { showToast('목표 시간을 입력하세요','error'); return; }
-    const res = await fetch('/admin/goals', { method:'POST', headers:authH(), body:JSON.stringify({group_id:group_id?parseInt(group_id):null,daily_target_minutes:minutes}) });
+    let body = { daily_target_minutes: minutes };
+    if (type === 'group') {
+      const gid = document.getElementById('goalGroupId').value;
+      if (!gid) { showToast('그룹을 선택하세요','error'); return; }
+      body.group_id = parseInt(gid);
+    } else if (type === 'personal') {
+      const uname = document.getElementById('goalUsername').value;
+      if (!uname) { showToast('유저를 선택하세요','error'); return; }
+      body.username = uname;
+    }
+    const res = await fetch('/admin/goals', { method:'POST', headers:authH(), body:JSON.stringify(body) });
     const data = await res.json();
     if (res.ok) { showToast(data.message); document.getElementById('goalMinutes').value=''; loadGoals(); } else showToast(data.detail,'error');
+  }
+
+  async function loadGroupStats() {
+    const d = document.getElementById('groupStatsDate').value || new Date().toISOString().split('T')[0];
+    const period = document.getElementById('groupStatsPeriod').value;
+    const res = await fetch('/admin/group-stats?target_date='+encodeURIComponent(d)+'&period='+period, { headers: authH() });
+    const data = await res.json();
+    const list = document.getElementById('groupStatsList');
+    if (!data.length) { list.innerHTML='<div class="empty-state">📊 데이터가 없습니다</div>'; return; }
+    const maxMins = data[0].total_minutes || 1;
+    const medals = ['🥇','🥈','🥉'];
+    list.innerHTML = data.map((g, i) => `
+      <div class="group-stat-card">
+        <div style="font-size:1.5rem;min-width:32px;text-align:center">${medals[i]||'#'+(i+1)}</div>
+        <div style="min-width:80px">
+          <div class="group-stat-name">${esc(g.group_name)}</div>
+          <div style="font-size:0.72rem;color:var(--muted);font-weight:600">${esc(String(g.member_count))}명 중 ${esc(String(g.active_count))}명 활동</div>
+        </div>
+        <div style="flex:1">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:0.85rem;font-weight:800;color:var(--primary)">${esc(String(g.avg_minutes))}분/인 평균</span>
+            <span style="font-size:0.78rem;color:var(--muted);font-weight:600">목표 ${esc(String(g.achievement_rate))}%</span>
+          </div>
+          <div class="group-stat-bar-wrap"><div class="group-stat-bar" style="width:${Math.min(g.total_minutes/maxMins*100,100)}%"></div></div>
+          ${g.top_user ? `<div style="font-size:0.72rem;color:var(--text-light);margin-top:4px;font-weight:700">🏆 ${esc(g.top_user)} ${esc(String(g.top_user_minutes))}분</div>` : ''}
+        </div>
+        <div style="text-align:right;min-width:80px">
+          <div style="font-size:1.4rem;font-weight:900;color:var(--text)">${esc(String(Math.floor(g.total_minutes/60)))}h</div>
+          <div style="font-size:0.72rem;color:var(--muted);font-weight:600">${esc(String(g.total_minutes))}분</div>
+        </div>
+      </div>
+    `).join('');
   }
 
   async function deleteGoal(id) {
@@ -781,8 +869,9 @@ tr:hover td { background:rgba(255,143,171,0.03); }
   document.getElementById('cheatDate').value = today;
   document.getElementById('absStart').value = weekAgo;
   document.getElementById('absEnd').value = today;
+  document.getElementById('groupStatsDate').value = today;
   loadUsers();
-  setInterval(() => { if (_currentTab === 'stats') loadStats(); }, 30000);
+  setInterval(() => { if (_currentTab === 'stats') loadStats(); if (_currentTab === 'group-stats') loadGroupStats(); }, 30000);
 </script>
 </body>
 </html>

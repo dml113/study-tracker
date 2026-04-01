@@ -102,6 +102,13 @@ async def list_users(
     )
     today_stats = {row.username: row.active_seconds for row in stats_result}
 
+    # 마지막 활동일 조회
+    last_act_result = await session.execute(
+        select(ActivityLog.username, func.max(ActivityLog.date).label("last_date"))
+        .group_by(ActivityLog.username)
+    )
+    last_activity = {row.username: row.last_date for row in last_act_result}
+
     groups_result = await session.execute(select(Group))
     group_names = {g.id: g.name for g in groups_result.scalars().all()}
 
@@ -118,6 +125,7 @@ async def list_users(
             "created_at": u.created_at.isoformat(),
             "today_seconds": today_stats.get(u.username, 0),
             "today_minutes": round(today_stats.get(u.username, 0) / 60, 1),
+            "last_activity_date": last_activity.get(u.username),
         }
         for u in users
     ]
@@ -353,9 +361,114 @@ async def get_attendance(
     ]
 
 
+# ── 그룹별 통계 ────────────────────────────────────────
+
+@router.get("/group-stats")
+async def get_group_stats(
+    target_date: Optional[str] = None,
+    period: str = "daily",
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_admin),
+):
+    d = target_date or date.today().isoformat()
+    try:
+        d_obj = date.fromisoformat(d)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="날짜 형식이 올바르지 않습니다 (YYYY-MM-DD)")
+
+    if period == "weekly":
+        start = d_obj - timedelta(days=d_obj.weekday())
+        end = start + timedelta(days=6)
+        period_days = 7
+    elif period == "monthly":
+        start = d_obj.replace(day=1)
+        if start.month == 12:
+            end = start.replace(year=start.year + 1, month=1, day=1) - timedelta(days=1)
+        else:
+            end = start.replace(month=start.month + 1, day=1) - timedelta(days=1)
+        period_days = (end - start).days + 1
+    else:
+        start = end = d_obj
+        period_days = 1
+
+    # 유저 그룹 정보
+    query = select(User.username, User.group_id)
+    if current["role"] == "group_admin":
+        query = query.where(User.group_id == current.get("group_id"))
+    user_rows = (await session.execute(query)).all()
+    user_group_map = {r.username: r.group_id for r in user_rows}
+
+    groups_result = await session.execute(select(Group))
+    group_names = {g.id: g.name for g in groups_result.scalars().all()}
+
+    # 활동 데이터
+    act_rows = (await session.execute(
+        select(ActivityLog.username, func.sum(ActivityLog.active_seconds).label("total"))
+        .where(ActivityLog.date.between(start.isoformat(), end.isoformat()))
+        .group_by(ActivityLog.username)
+    )).all()
+
+    group_totals: dict = {}
+    group_members: dict = {}
+    group_active: dict = {}
+    group_top: dict = {}
+
+    for r in act_rows:
+        gid = user_group_map.get(r.username)
+        if gid is None:
+            continue
+        total = r.total or 0
+        if gid not in group_totals:
+            group_totals[gid] = 0
+            group_active[gid] = 0
+            group_top[gid] = (None, 0)
+        group_totals[gid] += total
+        group_active[gid] += 1
+        if total > group_top[gid][1]:
+            group_top[gid] = (r.username, total)
+
+    for r in user_rows:
+        gid = r.group_id
+        if gid is None:
+            continue
+        group_members[gid] = group_members.get(gid, 0) + 1
+
+    # 목표 조회
+    goals = (await session.execute(select(StudyGoal))).scalars().all()
+    goal_by_group = {g.group_id: g.daily_target_minutes for g in goals if not g.username}
+    default_goal = goal_by_group.get(None, 480)
+
+    result = []
+    for gid, gname in group_names.items():
+        if current["role"] == "group_admin" and gid != current.get("group_id"):
+            continue
+        total_secs = group_totals.get(gid, 0)
+        member_count = group_members.get(gid, 0)
+        active_count = group_active.get(gid, 0)
+        daily_goal = goal_by_group.get(gid, default_goal)
+        period_goal = daily_goal * period_days * max(member_count, 1)
+        avg_minutes = round(total_secs / 60 / max(member_count, 1), 1)
+        top_user, top_secs = group_top.get(gid, (None, 0))
+        result.append({
+            "group_id": gid,
+            "group_name": gname,
+            "total_minutes": round(total_secs / 60, 1),
+            "avg_minutes": avg_minutes,
+            "member_count": member_count,
+            "active_count": active_count,
+            "daily_goal_minutes": daily_goal,
+            "achievement_rate": round(total_secs / 60 / max(period_goal, 1) * 100, 1),
+            "top_user": top_user,
+            "top_user_minutes": round(top_secs / 60, 1),
+        })
+    result.sort(key=lambda x: -x["total_minutes"])
+    return result
+
+
 # ── 목표 시간 관리 ──────────────────────────────────────
 
 class GoalRequest(BaseModel):
+    username: Optional[str] = Field(None, max_length=30)  # 개인 목표
     group_id: Optional[int] = None
     daily_target_minutes: int = Field(..., ge=1, le=1440)
 
@@ -374,8 +487,9 @@ async def list_goals(
     return [
         {
             "id": g.id,
+            "username": g.username,
             "group_id": g.group_id,
-            "group_name": group_names.get(g.group_id, "–") if g.group_id else "전체 기본",
+            "group_name": group_names.get(g.group_id, "–") if g.group_id else ("전체 기본" if not g.username else None),
             "daily_target_minutes": g.daily_target_minutes,
         }
         for g in goals
@@ -389,17 +503,29 @@ async def upsert_goal(
     current: dict = Depends(get_current_admin),
 ):
     if current["role"] == "group_admin":
+        if req.username:
+            raise HTTPException(status_code=403, detail="그룹 관리자는 개인 목표를 설정할 수 없습니다")
         if req.group_id != current.get("group_id"):
             raise HTTPException(status_code=403, detail="자기 그룹 목표만 설정할 수 있습니다")
 
-    result = await session.execute(
-        select(StudyGoal).where(StudyGoal.group_id == req.group_id)
-    )
+    if req.username:
+        # 유저 존재 확인
+        user_check = await session.execute(select(User).where(User.username == req.username))
+        if not user_check.scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="존재하지 않는 유저입니다")
+        # 개인 목표: username 기준으로 upsert
+        result = await session.execute(
+            select(StudyGoal).where(StudyGoal.username == req.username)
+        )
+    else:
+        result = await session.execute(
+            select(StudyGoal).where(StudyGoal.username.is_(None), StudyGoal.group_id == req.group_id)
+        )
     goal = result.scalar_one_or_none()
     if goal:
         goal.daily_target_minutes = req.daily_target_minutes
     else:
-        goal = StudyGoal(group_id=req.group_id, daily_target_minutes=req.daily_target_minutes)
+        goal = StudyGoal(username=req.username, group_id=req.group_id, daily_target_minutes=req.daily_target_minutes)
         session.add(goal)
     await session.commit()
     return {"message": "목표 시간이 설정되었습니다"}

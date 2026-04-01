@@ -12,7 +12,7 @@ if %errorlevel% neq 0 (
 )
 
 echo Installing packages...
-python -m pip install pynput requests pyinstaller
+python -m pip install pynput requests pyinstaller plyer
 
 echo.
 echo Building EXE...

@@ -68,6 +68,7 @@ class CheatLog(Base):
 class StudyGoal(Base):
     __tablename__ = "study_goals"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    username: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # 개인 목표 (우선순위 최고)
     group_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("groups.id"), nullable=True)
     daily_target_minutes: Mapped[int] = mapped_column(Integer, default=480)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

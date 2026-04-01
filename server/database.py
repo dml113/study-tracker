@@ -19,6 +19,7 @@ async def init_db():
             "ALTER TABLE feedbacks ADD COLUMN is_resolved BOOLEAN NOT NULL DEFAULT 0",
             "ALTER TABLE feedbacks ADD COLUMN admin_comment VARCHAR",
             "ALTER TABLE notices ADD COLUMN group_id INTEGER REFERENCES groups(id)",
+            "ALTER TABLE study_goals ADD COLUMN username VARCHAR",
         ]:
             try:
                 await conn.execute(text(stmt))

@@ -20,8 +20,13 @@ from collections import deque
 import requests
 from datetime import datetime
 from pynput import keyboard, mouse
+try:
+    from plyer import notification as plyer_notification
+    _PLYER_OK = True
+except Exception:
+    _PLYER_OK = False
 
-VERSION = "1.1.0"
+VERSION = "1.1.1"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".study_tracker.json")
 SEND_INTERVAL = 30
@@ -48,6 +53,8 @@ state = {
     "is_cheating": False,
     "cheat_reason": "",
     "listeners": [],  # keyboard/mouse 리스너 레퍼런스 (워치독용)
+    "daily_goal_minutes": 480,  # 기본값, 로그인 후 서버에서 가져옴
+    "goal_notified": False,     # 목표 달성 알림 중복 방지
 }
 
 
@@ -234,10 +241,24 @@ def sender():
                     state["active_buffer"] += seconds
 
 
+def fetch_daily_goal():
+    """서버에서 오늘 목표 시간을 가져와 state에 저장."""
+    try:
+        res = api("get", "/api/my-stats?days=1")
+        if res.ok:
+            data = res.json()
+            goal = data.get("daily_goal_minutes", 480)
+            with state["lock"]:
+                state["daily_goal_minutes"] = goal
+    except Exception:
+        pass
+
+
 def start_tracking():
     start_listeners()
     threading.Thread(target=activity_counter, daemon=True).start()
     threading.Thread(target=sender, daemon=True).start()
+    threading.Thread(target=fetch_daily_goal, daemon=True).start()
 
 
 # ── 메인 창 ──────────────────────────────────────
@@ -292,6 +313,10 @@ class MainWindow:
                                    font=("Segoe UI", 9, "bold"))
         self.lbl_active.pack(pady=(2, 0))
 
+        self.lbl_goal = tk.Label(body, text="", bg=self.BG, fg=self.MUTED,
+                                 font=("Segoe UI", 8))
+        self.lbl_goal.pack(pady=(1, 0))
+
         self.lbl_cheat = tk.Label(body, text="", bg=self.BG, fg=self.RED,
                                   font=("Segoe UI", 8, "bold"))
         self.lbl_cheat.pack(pady=(2, 0))
@@ -334,7 +359,25 @@ class MainWindow:
             cheating = state["is_cheating"]
             cheat_reason = state["cheat_reason"]
         total_mins = round(total / 60, 1)
+        goal_mins = state["daily_goal_minutes"]
         self.lbl_active.config(text=f"오늘 활동: {total_mins}분 (이번 세션)")
+
+        # 목표 남은 시간 표시
+        remaining = goal_mins - total_mins
+        if remaining <= 0:
+            self.lbl_goal.config(text=f"🎉 목표 달성! ({goal_mins}분)", fg=self.GREEN)
+            # 목표 달성 알림 (최초 1회)
+            if not state["goal_notified"] and _PLYER_OK and state["checked_in"]:
+                state["goal_notified"] = True
+                threading.Thread(target=lambda: plyer_notification.notify(
+                    title="🎉 목표 달성!",
+                    message=f"오늘 {goal_mins}분 목표를 달성했습니다!",
+                    app_name="공부 트래커",
+                    timeout=5,
+                ), daemon=True).start()
+        else:
+            self.lbl_goal.config(text=f"목표까지 {round(remaining, 1)}분 남음 / {goal_mins}분", fg=self.MUTED)
+
         if cheating:
             self.lbl_cheat.config(text=f"⚠ 비정상 입력 감지 — 측정 중단 ({cheat_reason})")
         else:
@@ -366,6 +409,8 @@ class MainWindow:
             if res.ok:
                 state["checked_in"] = True
                 state["is_absent"] = False
+                state["goal_notified"] = False  # 하루 시작 시 알림 초기화
+                threading.Thread(target=fetch_daily_goal, daemon=True).start()
             else:
                 messagebox.showerror("오류", data.get("detail", "출근 실패"))
         except Exception:

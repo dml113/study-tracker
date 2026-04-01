@@ -24,7 +24,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install pyinstaller pynput requests
+        run: pip install pyinstaller pynput requests plyer
 
       - name: Read version
         id: ver

@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel, Field
 from typing import Optional
-from models import ActivityLog, Attendance, Absence, CheatLog, User, StudyGoal, Feedback, Notice
+from models import ActivityLog, Attendance, Absence, CheatLog, User, StudyGoal, Feedback, Notice, Group
 from auth import get_current_user, verify_password, hash_password
 from database import get_session
 from datetime import date, datetime, timedelta
@@ -378,15 +378,28 @@ async def my_stats(
     }
 
 
+@router.get("/groups")
+async def get_groups(
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_user),
+):
+    result = await session.execute(select(Group).order_by(Group.name))
+    return [{"id": g.id, "name": g.name} for g in result.scalars().all()]
+
+
 @router.get("/stats")
 async def get_stats(
     target_date: Optional[str] = None,
     period: str = "daily",
+    group_id: Optional[int] = None,
     session: AsyncSession = Depends(get_session),
     current: dict = Depends(get_current_user),
 ):
     d = target_date or date.today().isoformat()
-    d_obj = date.fromisoformat(d)
+    try:
+        d_obj = date.fromisoformat(d)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="날짜 형식이 올바르지 않습니다 (YYYY-MM-DD)")
 
     if period == "weekly":
         start = d_obj - timedelta(days=d_obj.weekday())
@@ -415,8 +428,14 @@ async def get_stats(
         for row in (await session.execute(select(User.username, User.group_id, User.animal_type))).all()
     }
     user_groups = {u: v["group_id"] for u, v in user_info.items()}
+
+    # group_id 필터 적용
+    if group_id is not None:
+        rows = [r for r in rows if user_groups.get(r.username) == group_id]
+
     goals = (await session.execute(select(StudyGoal))).scalars().all()
-    goal_by_group = {g.group_id: g.daily_target_minutes for g in goals}
+    goal_by_user = {g.username: g.daily_target_minutes for g in goals if g.username}
+    goal_by_group = {g.group_id: g.daily_target_minutes for g in goals if not g.username}
     default_goal = goal_by_group.get(None, 480)
 
     # 알 부화 계산용 평생 누적 공부시간
@@ -430,8 +449,8 @@ async def get_stats(
     for row in rows:
         if row.username not in user_groups:
             continue
-        group_id = user_groups.get(row.username)
-        daily_goal = goal_by_group.get(group_id, default_goal)
+        uid = user_groups.get(row.username)
+        daily_goal = goal_by_user.get(row.username) or goal_by_group.get(uid, default_goal)
         period_goal = daily_goal * period_days
         active_minutes = round(row.total / 60, 1)
         lifetime_minutes = round(lifetime_map.get(row.username, 0) / 60, 1)

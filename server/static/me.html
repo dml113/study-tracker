@@ -88,6 +88,15 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
 .goal-bar-wrap { background:rgba(200,180,220,0.15); border-radius:99px; height:4px; margin-top:8px; overflow:hidden; }
 .goal-bar { height:100%; border-radius:99px; transition:width 0.6s ease; }
 
+/* Heatmap */
+.heatmap-container { background:var(--surface); border:1.5px solid var(--border); border-radius:18px; padding:18px 16px 14px; box-shadow:var(--shadow); overflow-x:auto; }
+.heatmap-grid { display:flex; gap:3px; }
+.heatmap-week { display:flex; flex-direction:column; gap:3px; }
+.heatmap-cell { width:13px; height:13px; border-radius:3px; cursor:default; transition:opacity 0.15s; }
+.heatmap-cell:hover { opacity:0.75; }
+.heatmap-month-labels { display:flex; gap:3px; margin-bottom:4px; font-size:0.65rem; font-weight:700; color:var(--muted); }
+.heatmap-legend { display:flex; align-items:center; gap:5px; margin-top:10px; font-size:0.7rem; color:var(--muted); font-weight:600; }
+
 @media (max-width:640px) { .summary-grid{grid-template-columns:repeat(2,1fr)} .weekly-grid{grid-template-columns:repeat(2,1fr)} }
 </style>
 </head>
@@ -143,6 +152,12 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
     <div class="section-title">📊 주간 요약 — 최근 4주</div>
     <div class="weekly-grid" id="weeklyGrid"></div>
   </div>
+  <div class="section">
+    <div class="section-title">🗓 활동 히트맵 — 최근 1년</div>
+    <div class="heatmap-container" id="heatmapContainer">
+      <div style="color:var(--muted);font-size:0.85rem;font-weight:600;text-align:center;padding:20px 0">로딩 중...</div>
+    </div>
+  </div>
 </div>
 <script>
   const EGG_COLORS = [
@@ -193,6 +208,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
   document.getElementById('myName').textContent = myUsername;
   function authH() { return { 'Authorization': 'Bearer ' + token }; }
   function logout() { localStorage.clear(); location.href = '/'; }
+  function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
   function getEggType(username) {
     return Array.from(username).reduce((s,c)=>s+c.charCodeAt(0),0) % 8;
@@ -235,6 +251,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
   }
 
   async function loadStats(days, btn) {
+    try {
     if (btn) { document.querySelectorAll('.period-btn').forEach(function(b){b.classList.remove('active');}); btn.classList.add('active'); }
     document.getElementById('periodLabel').textContent = days;
     const res = await fetch('/api/my-stats?days=' + days, { headers: authH() });
@@ -280,8 +297,92 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
         + '<div class="week-sub">' + w.active_minutes + '분 · 목표 ' + rate + '%</div>'
         + '<div class="goal-bar-wrap"><div class="goal-bar" style="width:' + rate + '%;background:' + color + '"></div></div></div>';
     }).join('');
+    } catch { /* 네트워크 오류 시 무시 */ }
   }
+
+  async function loadHeatmap() {
+    try {
+      const res = await fetch('/api/my-stats?days=365', { headers: authH() });
+      if (!res.ok) return;
+      const d = await res.json();
+      const goal = d.daily_goal_minutes * 60;
+      const daily = d.daily; // 365 items, oldest first
+
+      // daily를 날짜 맵으로 변환
+      const dayMap = {};
+      daily.forEach(function(item) { dayMap[item.date] = item.active_seconds; });
+
+      // 오늘 기준으로 53주 x 7일 그리드 구성 (GitHub 스타일)
+      const today = new Date();
+      // 그리드는 오늘이 속한 주의 토요일부터 거꾸로 53주
+      const todayDay = today.getDay(); // 0=일, 6=토
+      // 그리드 시작일: 오늘로부터 (53*7 - (6 - todayDay) - 1)일 전의 일요일
+      const gridEnd = new Date(today);
+      gridEnd.setDate(gridEnd.getDate() + (6 - todayDay)); // 이번주 토요일
+      const gridStart = new Date(gridEnd);
+      gridStart.setDate(gridEnd.getDate() - 53*7 + 1);
+
+      const weeks = [];
+      let cur = new Date(gridStart);
+      const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const monthPositions = [];
+      let weekIdx = 0;
+      while (cur <= gridEnd) {
+        const week = [];
+        for (let i = 0; i < 7; i++) {
+          const iso = cur.toISOString().split('T')[0];
+          const secs = dayMap[iso] || 0;
+          const isFuture = cur > today;
+          week.push({ date: iso, secs, isFuture, day: i, month: cur.getMonth() });
+          if (i === 0 && (weekIdx === 0 || cur.getDate() <= 7)) {
+            monthPositions.push({ weekIdx, month: cur.getMonth() });
+          }
+          cur.setDate(cur.getDate() + 1);
+        }
+        weeks.push(week);
+        weekIdx++;
+      }
+
+      function cellColor(secs, isFuture) {
+        if (isFuture) return '#f0eaf8';
+        if (secs === 0) return 'rgba(200,180,220,0.2)';
+        const ratio = Math.min(secs / goal, 1);
+        if (ratio >= 1) return '#6bcb77';
+        if (ratio >= 0.6) return '#ff8fab';
+        if (ratio >= 0.3) return '#ffd166';
+        return '#ddd0ee';
+      }
+
+      // 월 라벨
+      const monthLabelHtml = weeks.map(function(week, wi) {
+        const first = week[0];
+        const show = wi === 0 || (first.day === 0 && first.date.slice(8) <= '07');
+        return '<div style="min-width:16px;font-size:0.62rem;font-weight:700;color:var(--muted)">' + (show ? MONTH_NAMES[first.month] : '') + '</div>';
+      }).join('');
+
+      const gridHtml = weeks.map(function(week) {
+        const cells = week.map(function(cell) {
+          const mins = Math.round(cell.secs / 60);
+          const title = cell.date + ': ' + mins + '분';
+          return '<div class="heatmap-cell" style="background:' + cellColor(cell.secs, cell.isFuture) + '" title="' + esc(title) + '"></div>';
+        }).join('');
+        return '<div class="heatmap-week">' + cells + '</div>';
+      }).join('');
+
+      document.getElementById('heatmapContainer').innerHTML =
+        '<div class="heatmap-month-labels" style="display:flex;gap:3px;margin-bottom:4px">' + monthLabelHtml + '</div>' +
+        '<div class="heatmap-grid">' + gridHtml + '</div>' +
+        '<div class="heatmap-legend"><span>적음</span>' +
+        ['rgba(200,180,220,0.2)','#ddd0ee','#ffd166','#ff8fab','#6bcb77'].map(function(c){
+          return '<div class="heatmap-cell" style="background:' + c + '"></div>';
+        }).join('') +
+        '<span>많음</span></div>';
+    } catch { /* 히트맵 로드 실패 시 무시 */ }
+  }
+
   loadStats(30);
+  loadHeatmap();
 </script>
+
 </body>
 </html>

@@ -139,6 +139,9 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
     <input type="date" id="dateInput" class="date-input">
     <button class="query-btn" onclick="loadStats()">조회</button>
   </div>
+  <div class="period-tabs" id="groupTabs" style="margin-bottom:14px;display:none">
+    <button class="period-tab active" onclick="setGroup(null, this)" id="groupTab-all">전체</button>
+  </div>
   <div class="period-label" id="periodLabel"></div>
   <div class="live-section">
     <div class="live-header"><div class="live-dot"></div><span class="live-label">현재 출근 중 ✨</span></div>
@@ -233,19 +236,45 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
   document.getElementById('myName').textContent = myUsername;
   document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
   let currentPeriod = 'daily';
+  let currentGroupId = null;
   function logout() { localStorage.clear(); location.href = '/'; }
   function authHeaders() { return { 'Authorization': 'Bearer ' + token }; }
   function setPeriod(p, el) {
     currentPeriod = p;
-    document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('#periodTabs .period-tab, .period-tabs:first-child .period-tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
     loadStats();
+  }
+  function setGroup(gid, el) {
+    currentGroupId = gid;
+    document.querySelectorAll('#groupTabs .period-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    loadStats();
+  }
+  async function loadGroups() {
+    try {
+      const res = await fetch('/api/groups', { headers: authHeaders() });
+      if (!res.ok) return;
+      const groups = await res.json();
+      if (!groups.length) return;
+      const tabs = document.getElementById('groupTabs');
+      tabs.style.display = 'flex';
+      groups.forEach(g => {
+        const btn = document.createElement('button');
+        btn.className = 'period-tab';
+        btn.textContent = g.name;
+        btn.onclick = function() { setGroup(g.id, btn); };
+        tabs.appendChild(btn);
+      });
+    } catch {}
   }
   async function loadStats() {
     try {
     const d = document.getElementById('dateInput').value;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
-    const res = await fetch('/api/stats?target_date=' + encodeURIComponent(d) + '&period=' + encodeURIComponent(currentPeriod), { headers: authHeaders() });
+    let url = '/api/stats?target_date=' + encodeURIComponent(d) + '&period=' + encodeURIComponent(currentPeriod);
+    if (currentGroupId !== null) url += '&group_id=' + currentGroupId;
+    const res = await fetch(url, { headers: authHeaders() });
     if (res.status === 401) { logout(); return; }
     if (!res.ok) return;
     const data = await res.json();
@@ -305,7 +334,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
     btn.textContent = '⬇ 클라이언트' + (d.version && d.version !== '0.0.0' ? ' v' + d.version : '');
     btn.style.display = 'inline-block';
   }).catch(() => {});
-  loadStats(); loadLive();
+  loadGroups(); loadStats(); loadLive();
   setInterval(loadStats, 30000); setInterval(loadLive, 30000);
 </script>
 </body>
