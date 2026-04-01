@@ -69,7 +69,7 @@ async def delete_group(
 _ALLOWED_ROLES = {"member", "group_admin"}
 
 class CreateUserRequest(BaseModel):
-    username: str = Field(..., min_length=2, max_length=30)
+    username: str = Field(..., min_length=2, max_length=30, pattern=r'^[a-zA-Z0-9_가-힣\-]+$')
     password: str = Field(..., min_length=4, max_length=72)
     role: str = Field(default="member")
     group_id: Optional[int] = None
@@ -549,12 +549,19 @@ async def resolve_feedback(
     feedback_id: int,
     req: FeedbackResolveRequest,
     session: AsyncSession = Depends(get_session),
-    _: dict = Depends(get_current_admin),
+    current: dict = Depends(get_current_admin),
 ):
     result = await session.execute(select(Feedback).where(Feedback.id == feedback_id))
     fb = result.scalar_one_or_none()
     if not fb:
         raise HTTPException(status_code=404, detail="피드백을 찾을 수 없습니다")
+    # group_admin은 자기 그룹 유저의 피드백만 처리 가능
+    if current["role"] == "group_admin":
+        user_result = await session.execute(
+            select(User).where(User.username == fb.username, User.group_id == current.get("group_id"))
+        )
+        if not user_result.scalar_one_or_none():
+            raise HTTPException(status_code=403, detail="다른 그룹의 피드백은 처리할 수 없습니다")
     fb.is_resolved = req.is_resolved
     fb.admin_comment = req.admin_comment
     await session.commit()
@@ -617,6 +624,10 @@ async def create_notice(
         raise HTTPException(status_code=400, detail="제목을 입력해주세요")
     if not req.body.strip():
         raise HTTPException(status_code=400, detail="내용을 입력해주세요")
+    if req.group_id is not None:
+        group_result = await session.execute(select(Group).where(Group.id == req.group_id))
+        if not group_result.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="존재하지 않는 그룹입니다")
     notice = Notice(title=req.title.strip(), body=req.body.strip(), group_id=req.group_id)
     session.add(notice)
     await session.commit()
