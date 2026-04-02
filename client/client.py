@@ -26,7 +26,7 @@ try:
 except Exception:
     _PLYER_OK = False
 
-VERSION = "1.1.5"
+VERSION = "1.1.6"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".study_tracker.json")
 SEND_INTERVAL = 30
@@ -58,6 +58,17 @@ state = {
     "warning_notified_date": None,  # 오후 6시 미달 경고 발송 날짜
     "auth_expired": False,      # JWT 만료 감지 플래그
 }
+
+
+# ── 시간 포맷 ────────────────────────────────────
+def fmt_min(minutes: float) -> str:
+    m = round(minutes)
+    h, r = divmod(m, 60)
+    if h == 0:
+        return f"{r}분"
+    if r == 0:
+        return f"{h}시간"
+    return f"{h}시간 {r}분"
 
 
 # ── 식사 시간 판별 ──────────────────────────────
@@ -232,7 +243,7 @@ def activity_counter():
                         threading.Thread(
                             target=lambda r=remaining, g=goal_mins, t=t_str: plyer_notification.notify(
                                 title="⚠ 목표 미달 경고",
-                                message=f"오늘 목표까지 {r}분 남았어요! (현재 {t}분/{g}분)",
+                                message=f"오늘 목표까지 {fmt_min(r)} 남았어요! (현재 {fmt_min(t)}/{fmt_min(g)})",
                                 app_name="공부 트래커",
                                 timeout=8,
                             ),
@@ -446,23 +457,23 @@ class MainWindow:
             cheat_reason = state["cheat_reason"]
         total_mins = round(total / 60, 1)
         goal_mins = state["daily_goal_minutes"]
-        self.lbl_active.config(text=f"오늘 활동: {total_mins}분 (이번 세션)")
+        self.lbl_active.config(text=f"오늘 활동: {fmt_min(total_mins)} (이번 세션)")
 
         # 목표 남은 시간 표시
         remaining = goal_mins - total_mins
         if remaining <= 0:
-            self.lbl_goal.config(text=f"🎉 목표 달성! ({goal_mins}분)", fg=self.GREEN)
+            self.lbl_goal.config(text=f"🎉 목표 달성! ({fmt_min(goal_mins)})", fg=self.GREEN)
             # 목표 달성 알림 (최초 1회)
             if not state["goal_notified"] and _PLYER_OK and state["checked_in"]:
                 state["goal_notified"] = True
                 threading.Thread(target=lambda: plyer_notification.notify(
                     title="🎉 목표 달성!",
-                    message=f"오늘 {goal_mins}분 목표를 달성했습니다!",
+                    message=f"오늘 {fmt_min(goal_mins)} 목표를 달성했습니다!",
                     app_name="공부 트래커",
                     timeout=5,
                 ), daemon=True).start()
         else:
-            self.lbl_goal.config(text=f"목표까지 {round(remaining, 1)}분 남음 / {goal_mins}분", fg=self.MUTED)
+            self.lbl_goal.config(text=f"목표까지 {fmt_min(remaining)} 남음 / {fmt_min(goal_mins)}", fg=self.MUTED)
 
         if cheating:
             self.lbl_cheat.config(text=f"⚠ 비정상 입력 감지 — 측정 중단 ({cheat_reason})")
