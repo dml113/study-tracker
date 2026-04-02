@@ -26,7 +26,7 @@ try:
 except Exception:
     _PLYER_OK = False
 
-VERSION = "1.1.4"
+VERSION = "1.1.5"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".study_tracker.json")
 SEND_INTERVAL = 30
@@ -289,11 +289,54 @@ def fetch_daily_goal():
         pass
 
 
+def vmware_watcher():
+    """VMware 창 화면 변화 감지 → last_activity 갱신 (5초마다 체크).
+    VMware 안에서 뭔가 움직이면 pynput 없이도 활동으로 인정."""
+    try:
+        import win32gui
+        from PIL import ImageGrab
+    except ImportError:
+        return  # 의존성 없으면 조용히 종료
+
+    prev_data = None
+    INTERVAL = 5
+
+    while state["running"]:
+        time.sleep(INTERVAL)
+        try:
+            vmware_rect = None
+
+            def enum_cb(hwnd, _):
+                nonlocal vmware_rect
+                if win32gui.IsWindowVisible(hwnd) and "VMware" in win32gui.GetWindowText(hwnd):
+                    vmware_rect = win32gui.GetWindowRect(hwnd)
+
+            win32gui.EnumWindows(enum_cb, None)
+
+            if vmware_rect is None:
+                prev_data = None
+                continue
+
+            # 64×48로 축소 캡처 (성능 최적화)
+            img = ImageGrab.grab(bbox=vmware_rect).resize((64, 48))
+            curr_data = list(img.getdata())
+
+            if prev_data is not None:
+                changed = sum(1 for a, b in zip(prev_data, curr_data) if a != b)
+                if changed / len(curr_data) > 0.01:  # 1% 이상 픽셀 변화 = 실제 활동
+                    state["last_activity"] = time.time()
+
+            prev_data = curr_data
+        except Exception:
+            pass
+
+
 def start_tracking():
     start_listeners()
     threading.Thread(target=activity_counter, daemon=True).start()
     threading.Thread(target=sender, daemon=True).start()
     threading.Thread(target=fetch_daily_goal, daemon=True).start()
+    threading.Thread(target=vmware_watcher, daemon=True).start()
 
 
 # ── 메인 창 ──────────────────────────────────────

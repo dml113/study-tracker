@@ -24,7 +24,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install pyinstaller pynput requests plyer
+        run: pip install pyinstaller pynput requests plyer Pillow pywin32
 
       - name: Read version
         id: ver
@@ -42,6 +42,10 @@ jobs:
           pyinstaller --onedir --windowed --name StudyTracker `
             --hidden-import=pynput.keyboard._win32 `
             --hidden-import=pynput.mouse._win32 `
+            --hidden-import=win32gui `
+            --hidden-import=win32process `
+            --hidden-import=PIL `
+            --hidden-import=PIL.ImageGrab `
             client.py
           Compress-Archive -Path dist/StudyTracker/* -DestinationPath dist/StudyTracker.zip
 

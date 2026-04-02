@@ -12,7 +12,7 @@ if %errorlevel% neq 0 (
 )
 
 echo Installing packages...
-python -m pip install pynput requests pyinstaller plyer
+python -m pip install pynput requests pyinstaller plyer Pillow pywin32
 
 echo.
 echo Building EXE...
