@@ -26,7 +26,7 @@ try:
 except Exception:
     _PLYER_OK = False
 
-VERSION = "1.1.3"
+VERSION = "1.1.4"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".study_tracker.json")
 SEND_INTERVAL = 30
@@ -614,9 +614,7 @@ class MainWindow:
             except Exception:
                 pass
         if state["checked_in"]:
-            if not messagebox.askyesno("종료", "아직 퇴근하지 않았습니다.\n그래도 종료하시겠습니까?"):
-                return
-            # 남은 버퍼 전송
+            # 남은 버퍼 전송 후 자동 퇴근
             with state["lock"]:
                 seconds = state["active_buffer"]
                 state["active_buffer"] = 0.0
@@ -625,6 +623,10 @@ class MainWindow:
                     api("post", "/api/heartbeat", json={"active_seconds": seconds, "client_version": VERSION})
                 except Exception:
                     pass
+            try:
+                api("post", "/api/checkout")
+            except Exception:
+                pass
         state["running"] = False
         self.root.destroy()
 
@@ -856,7 +858,10 @@ if __name__ == "__main__":
                 state["checked_in"] = data["checked_in"]
                 state["is_absent"] = data["is_absent"]
                 start_tracking()
-                MainWindow().run()
+                main_win = MainWindow()
+                notices = fetch_notices()
+                show_notices(main_win.root, notices)
+                main_win.run()
                 exit()
         except Exception:
             pass
