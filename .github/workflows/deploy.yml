@@ -24,3 +24,10 @@ jobs:
           sudo systemctl restart study-tracker
           sleep 2
           systemctl is-active study-tracker
+
+      - name: Notify Slack
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          curl -s -X POST "https://hooks.slack.com/services/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" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\":\"🖥 *서버 업데이트 배포 완료*\n${COMMIT_MSG}\",\"username\":\"Study-Deploy\",\"icon_emoji\":\":hammer_and_wrench:\"}"
