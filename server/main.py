@@ -5,7 +5,7 @@ from database import init_db, SessionLocal
 from routers import auth_router, admin_router, api_router
 from models import User
 from auth import hash_password, get_current_superadmin
-from backup import backup_scheduler, run_backup, list_backups, auto_checkout_scheduler, weekly_report_scheduler
+from backup import backup_scheduler, run_backup, list_backups, auto_checkout_scheduler, weekly_report_scheduler, daily_report_scheduler
 from sqlalchemy import select
 import asyncio
 import os
@@ -64,6 +64,7 @@ async def startup():
     asyncio.create_task(backup_scheduler())
     asyncio.create_task(auto_checkout_scheduler())
     asyncio.create_task(weekly_report_scheduler())
+    asyncio.create_task(daily_report_scheduler())
 
 
 @app.get("/", response_class=HTMLResponse)
