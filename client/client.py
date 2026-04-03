@@ -26,7 +26,7 @@ try:
 except Exception:
     _PLYER_OK = False
 
-VERSION = "1.1.6"
+VERSION = "1.1.7"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".study_tracker.json")
 SEND_INTERVAL = 30
@@ -57,7 +57,20 @@ state = {
     "goal_notified": False,     # 목표 달성 알림 중복 방지
     "warning_notified_date": None,  # 오후 6시 미달 경고 발송 날짜
     "auth_expired": False,      # JWT 만료 감지 플래그
+    "egg_stage": -1,            # 알 스테이지 (-1: 미조회, 0~3)
+    "lifetime_minutes": 0.0,    # 평생 누적 공부시간 (분)
 }
+
+EGG_THRESHOLDS = [300, 900, 1800]  # 스테이지 1/2/3 달성 기준 (분)
+EGG_STAGE_MSGS = {
+    1: ("🥚 알에 금이 갔어요!", "조금만 더 공부하면 부화해요!"),
+    2: ("🐣 알이 깨지고 있어요!", "거의 다 됐어요, 힘내요!"),
+    3: ("🎉 동물이 부화했어요!", "축하해요! 계속 열심히 공부해요!"),
+}
+
+
+def _get_egg_stage(lifetime_minutes: float) -> int:
+    return sum(1 for t in EGG_THRESHOLDS if lifetime_minutes >= t)
 
 
 # ── 시간 포맷 ────────────────────────────────────
@@ -282,13 +295,27 @@ def sender():
                 else:
                     with state["lock"]:
                         state["session_total"] += seconds
+                        if state["egg_stage"] >= 0:
+                            prev_stage = state["egg_stage"]
+                            state["lifetime_minutes"] += seconds / 60
+                            new_stage = _get_egg_stage(state["lifetime_minutes"])
+                            if new_stage > prev_stage:
+                                state["egg_stage"] = new_stage
+                                if _PLYER_OK:
+                                    title, msg = EGG_STAGE_MSGS.get(new_stage, ("알 부화", "스테이지가 올라갔어요!"))
+                                    threading.Thread(
+                                        target=lambda t=title, m=msg: plyer_notification.notify(
+                                            title=t, message=m, app_name="공부 트래커", timeout=8,
+                                        ),
+                                        daemon=True,
+                                    ).start()
             except Exception:
                 with state["lock"]:
                     state["active_buffer"] += seconds
 
 
 def fetch_daily_goal():
-    """서버에서 오늘 목표 시간을 가져와 state에 저장."""
+    """서버에서 오늘 목표 시간 + 평생 누적 공부시간을 가져와 state에 저장."""
     try:
         res = api("get", "/api/my-stats?days=1")
         if res.ok:
@@ -296,6 +323,22 @@ def fetch_daily_goal():
             goal = data.get("daily_goal_minutes", 480)
             with state["lock"]:
                 state["daily_goal_minutes"] = goal
+    except Exception:
+        pass
+    try:
+        res = api("get", "/api/stats")
+        if res.ok:
+            username = state["username"]
+            for row in res.json():
+                if row.get("username") == username:
+                    lifetime = row.get("lifetime_minutes", 0)
+                    with state["lock"]:
+                        state["lifetime_minutes"] = lifetime
+                        state["egg_stage"] = _get_egg_stage(lifetime)
+                    return
+            with state["lock"]:
+                state["lifetime_minutes"] = 0
+                state["egg_stage"] = 0
     except Exception:
         pass
 

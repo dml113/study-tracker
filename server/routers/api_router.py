@@ -7,6 +7,8 @@ from models import ActivityLog, Attendance, Absence, CheatLog, User, StudyGoal, 
 from auth import get_current_user, verify_password, hash_password
 from database import get_session
 from datetime import date, datetime, timedelta
+import asyncio
+from backup import _post_slack
 
 router = APIRouter(prefix="/api", tags=["api"])
 
@@ -280,6 +282,8 @@ async def cheat_report(
     log = CheatLog(username=username, date=today, reason=req.reason)
     session.add(log)
     await session.commit()
+    slack_text = f"🚨 *치트 감지* — {username}\n사유: {req.reason}\n시각: {datetime.now().strftime('%H:%M')}"
+    await asyncio.to_thread(_post_slack, slack_text)
     return {"status": "ok"}
 
 
