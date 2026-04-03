@@ -2,12 +2,33 @@ import asyncio
 import shutil
 import os
 import glob
+import urllib.request
+import json
 from datetime import datetime, timedelta, date
 from sqlalchemy import select, func
 from database import get_session
 from models import Attendance, Absence, ActivityLog, User, Group, Notice
 
 BACKUP_DIR = "backups"
+SLACK_WEBHOOK_URL = os.environ.get(
+    "SLACK_WEBHOOK_URL",
+    "https://hooks.slack.com/services/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",
+)
+
+
+def _post_slack(text: str):
+    if not SLACK_WEBHOOK_URL:
+        return
+    try:
+        data = json.dumps({"text": text}).encode("utf-8")
+        req = urllib.request.Request(
+            SLACK_WEBHOOK_URL,
+            data=data,
+            headers={"Content-Type": "application/json"},
+        )
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        print(f"[슬랙] 전송 실패: {e}")
 DB_PATH = "study_tracker.db"
 MAX_BACKUPS = 7
 
@@ -154,6 +175,9 @@ async def generate_weekly_report():
             session.add(notice)
             await session.commit()
             print(f"[주간랭킹] {period_str} 공지 등록 완료")
+
+            slack_text = f"🏆 *주간 랭킹 ({period_str})*\n매일 순공시간 1위=3점·2위=2점·3위=1점 기준\n\n" + "\n".join(lines)
+            _post_slack(slack_text)
         except Exception as e:
             print(f"[주간랭킹] 실패: {e}")
 
