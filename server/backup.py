@@ -217,10 +217,10 @@ async def generate_daily_report():
 
 
 async def daily_report_scheduler():
-    """매일 01:00에 전날 공부 랭킹을 슬랙으로 전송."""
+    """매일 01:10에 전날 공부 랭킹을 슬랙으로 전송 (자동퇴근 00:50 이후 여유)."""
     while True:
         now = datetime.now()
-        target = now.replace(hour=1, minute=0, second=0, microsecond=0)
+        target = now.replace(hour=1, minute=10, second=0, microsecond=0)
         if now >= target:
             target += timedelta(days=1)
         await asyncio.sleep((target - now).total_seconds())
@@ -228,6 +228,43 @@ async def daily_report_scheduler():
             await generate_daily_report()
         except Exception as e:
             print(f"[일간랭킹] 스케줄러 오류: {e}")
+
+
+async def generate_morning_checkin():
+    """오전 10시 현재 출근 중인 인원 슬랙 전송."""
+    today = date.today().isoformat()
+    async for session in get_session():
+        try:
+            att_result = await session.execute(
+                select(Attendance).where(
+                    Attendance.date == today,
+                    Attendance.checkin_at != None,
+                    Attendance.checkout_at == None,
+                ).order_by(Attendance.checkin_at)
+            )
+            attendances = att_result.scalars().all()
+            if not attendances:
+                _post_slack(f"☀️ *오전 10시 출석 현황* — 아직 아무도 없어요 😴")
+                return
+            lines = [f"• {a.username} ({a.checkin_at.strftime('%H:%M')} 출근)" for a in attendances]
+            _post_slack(f"☀️ *오전 10시 출석 현황* — {len(attendances)}명 공부 중 📚\n\n" + "\n".join(lines))
+            print(f"[아침출석] 슬랙 전송 완료 ({len(attendances)}명)")
+        except Exception as e:
+            print(f"[아침출석] 실패: {e}")
+
+
+async def morning_checkin_scheduler():
+    """매일 10:00에 출석 현황을 슬랙으로 전송."""
+    while True:
+        now = datetime.now()
+        target = now.replace(hour=10, minute=0, second=0, microsecond=0)
+        if now >= target:
+            target += timedelta(days=1)
+        await asyncio.sleep((target - now).total_seconds())
+        try:
+            await generate_morning_checkin()
+        except Exception as e:
+            print(f"[아침출석] 스케줄러 오류: {e}")
 
 
 async def weekly_report_scheduler():
