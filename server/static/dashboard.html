@@ -229,6 +229,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
   }
 
   function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function fmtMin(m) { m = Math.round(m || 0); const h = Math.floor(m / 60), r = m % 60; if (h === 0) return r + '분'; if (r === 0) return h + '시간'; return h + '시간 ' + r + '분'; }
 
   const token = localStorage.getItem('token');
   if (!token) location.href = '/';
@@ -305,7 +306,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
         + '<div class="rank-badge ' + rankClass + '">' + (i === 0 ? '👑' : i+1) + '</div>'
         + renderEgg(u.username, lt, u.animal_type)
         + '<div class="info"><div class="name">' + esc(u.username) + (isMe ? '<span class="me-tag">ME</span>' : '') + '</div>'
-        + '<div class="time">오늘 ' + esc(String(u.active_minutes)) + '분</div>'
+        + '<div class="time">오늘 ' + fmtMin(u.active_minutes) + '</div>'
         + '<div class="egg-label">' + esc(eggLabel) + '</div></div>'
         + '<div class="bar-col"><div class="bar-wrap"><div class="' + barClass + '" style="width:' + w + '%"></div></div>'
         + '<div class="goal-row"><div class="goal-bar-wrap"><div class="goal-bar" style="width:' + rate + '%;background:' + goalColor + '"></div></div>'

@@ -236,6 +236,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
   function authH() { return { 'Authorization': 'Bearer ' + token }; }
   function logout() { localStorage.clear(); location.href = '/'; }
   function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function fmtMin(m) { m = Math.round(m || 0); const h = Math.floor(m / 60), r = m % 60; if (h === 0) return r + '분'; if (r === 0) return h + '시간'; return h + '시간 ' + r + '분'; }
 
   function getEggType(username) {
     return Array.from(username).reduce((s,c)=>s+c.charCodeAt(0),0) % 8;
@@ -286,7 +287,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
     const d = await res.json();
     const totalMins = d.total_minutes;
     document.getElementById('totalHours').textContent = Math.floor(totalMins/60) + 'h ' + Math.round(totalMins%60) + 'm';
-    document.getElementById('totalMinutes').textContent = totalMins + '분 총합';
+    document.getElementById('totalMinutes').textContent = fmtMin(totalMins) + ' 총합';
     document.getElementById('attendDays').textContent = d.attend_days + '일';
     document.getElementById('attendRate').textContent = '전체 ' + days + '일 중 ' + Math.round(d.attend_days/days*100) + '%';
     document.getElementById('currentStreak').textContent = d.current_streak;
@@ -307,7 +308,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
       const pct = Math.max(item.active_seconds/maxSecs*100, item.active_seconds>0?4:0);
       const gp = Math.min(item.active_seconds/goal*100,100);
       const color = gp>=100?'linear-gradient(180deg,#6bcb77,#3a9b44)':gp>=50?'linear-gradient(180deg,#ff8fab,#c77dff)':item.active_seconds>0?'linear-gradient(180deg,#ddd0ee,#c4b5d5)':'#f0eaf8';
-      return '<div class="day-col"><div class="tip">' + esc(item.date) + '\n' + esc(String(item.active_minutes)) + '분 · 목표 ' + Math.round(gp) + '%</div>'
+      return '<div class="day-col"><div class="tip">' + esc(item.date) + '\n' + fmtMin(item.active_minutes) + ' · 목표 ' + Math.round(gp) + '%</div>'
         + '<div class="day-bar" style="height:' + pct + '%;background:' + color + '"></div>'
         + '<div class="day-label">' + esc(item.date.slice(8)) + '</div></div>';
     }).join('');
@@ -320,8 +321,8 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
       const color = rate>=100?'#6bcb77':rate>=50?'#ff8fab':'#ddd0ee';
       return '<div class="week-card"><div class="week-label">' + label + '</div>'
         + '<div class="week-date">' + w.start.slice(5) + ' ~ ' + w.end.slice(5) + '</div>'
-        + '<div class="week-value">' + Math.floor(w.active_minutes/60) + 'h</div>'
-        + '<div class="week-sub">' + w.active_minutes + '분 · 목표 ' + rate + '%</div>'
+        + '<div class="week-value">' + fmtMin(w.active_minutes) + '</div>'
+        + '<div class="week-sub">목표 ' + rate + '%</div>'
         + '<div class="goal-bar-wrap"><div class="goal-bar" style="width:' + rate + '%;background:' + color + '"></div></div></div>';
     }).join('');
     } catch { /* 네트워크 오류 시 무시 */ }
@@ -390,7 +391,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
       const gridHtml = weeks.map(function(week) {
         const cells = week.map(function(cell) {
           const mins = Math.round(cell.secs / 60);
-          const title = cell.date + ': ' + mins + '분';
+          const title = cell.date + ': ' + fmtMin(mins);
           return '<div class="heatmap-cell" style="background:' + cellColor(cell.secs, cell.isFuture) + '" title="' + esc(title) + '"></div>';
         }).join('');
         return '<div class="heatmap-week">' + cells + '</div>';
@@ -426,12 +427,12 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
         document.getElementById('weekdayChart').innerHTML = dayAvgs.map(function(avg, i) {
           const pct = Math.max(avg / maxAvg * 100, avg > 0 ? 5 : 0);
           const color = avg >= d.daily_goal_minutes ? 'linear-gradient(180deg,#6bcb77,#3a9b44)' : avg > 0 ? 'linear-gradient(180deg,#ff8fab,#c77dff)' : '#f0eaf8';
-          return '<div class="weekday-col"><div class="weekday-value">' + (avg > 0 ? avg + '분' : '-') + '</div>'
+          return '<div class="weekday-col"><div class="weekday-value">' + (avg > 0 ? fmtMin(avg) : '-') + '</div>'
             + '<div class="weekday-bar" style="height:' + pct + '%;background:' + color + '"></div>'
             + '<div class="weekday-label">' + DAY_NAMES[i] + '</div></div>';
         }).join('');
         document.getElementById('weekdayInsight').textContent = dayAvgs[bestIdx] > 0
-          ? DAY_NAMES[bestIdx] + '요일에 평균 ' + dayAvgs[bestIdx] + '분으로 가장 많이 공부해요!'
+          ? DAY_NAMES[bestIdx] + '요일에 평균 ' + fmtMin(dayAvgs[bestIdx]) + '으로 가장 많이 공부해요!'
           : '아직 데이터가 부족해요';
       }
     } catch { /* 히트맵 로드 실패 시 무시 */ }
@@ -450,7 +451,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
       document.getElementById('absenceGrid').innerHTML =
         '<div class="absence-stat"><div class="absence-stat-val">' + d.total_absence_count + '회</div><div class="absence-stat-label">총 외출 횟수</div></div>' +
         '<div class="absence-stat"><div class="absence-stat-val">' + (h > 0 ? h + 'h ' : '') + m + 'm</div><div class="absence-stat-label">총 외출 시간</div></div>' +
-        '<div class="absence-stat"><div class="absence-stat-val">' + d.avg_per_outing + '분</div><div class="absence-stat-label">외출당 평균</div></div>';
+        '<div class="absence-stat"><div class="absence-stat-val">' + fmtMin(d.avg_per_outing) + '</div><div class="absence-stat-label">외출당 평균</div></div>';
     } catch {}
   }
 
