@@ -182,6 +182,53 @@ async def generate_weekly_report():
             print(f"[주간랭킹] 실패: {e}")
 
 
+async def generate_daily_report():
+    """오늘 하루 공부 랭킹을 슬랙으로 전송."""
+    today = date.today() - timedelta(days=1)  # 새벽 1시이므로 어제 날짜
+    today_str = today.isoformat()
+
+    async for session in get_session():
+        try:
+            rows = (await session.execute(
+                select(ActivityLog.username, ActivityLog.active_seconds)
+                .where(ActivityLog.date == today_str)
+                .where(ActivityLog.active_seconds > 0)
+                .order_by(ActivityLog.active_seconds.desc())
+            )).all()
+
+            if not rows:
+                return
+
+            medals = ["🥇", "🥈", "🥉"]
+            lines = []
+            for i, row in enumerate(rows):
+                medal = medals[i] if i < 3 else f"{i+1}."
+                lines.append(f"{medal} {row.username}  {_fmt_min(row.active_seconds)}")
+
+            date_str = today.strftime("%m/%d (%a)").replace(
+                "Mon", "월").replace("Tue", "화").replace("Wed", "수").replace(
+                "Thu", "목").replace("Fri", "금").replace("Sat", "토").replace("Sun", "일")
+            slack_text = f"📅 *{date_str} 공부 랭킹*\n\n" + "\n".join(lines)
+            _post_slack(slack_text)
+            print(f"[일간랭킹] {today_str} 슬랙 전송 완료")
+        except Exception as e:
+            print(f"[일간랭킹] 실패: {e}")
+
+
+async def daily_report_scheduler():
+    """매일 01:00에 전날 공부 랭킹을 슬랙으로 전송."""
+    while True:
+        now = datetime.now()
+        target = now.replace(hour=1, minute=0, second=0, microsecond=0)
+        if now >= target:
+            target += timedelta(days=1)
+        await asyncio.sleep((target - now).total_seconds())
+        try:
+            await generate_daily_report()
+        except Exception as e:
+            print(f"[일간랭킹] 스케줄러 오류: {e}")
+
+
 async def weekly_report_scheduler():
     """매주 일요일 09:00에 주간 랭킹 공지 자동 등록."""
     while True:
