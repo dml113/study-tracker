@@ -12,15 +12,15 @@ from models import Attendance, Absence, ActivityLog, User, Group, Notice
 BACKUP_DIR = "backups"
 SLACK_WEBHOOK_URL = os.environ.get(
     "SLACK_WEBHOOK_URL",
-    "https://hooks.slack.com/services/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",
+    "https://hooks.slack.com/services/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",
 )
 
 
-def _post_slack(text: str):
+def _post_slack(text: str, username: str = "Study-Tracker", icon_emoji: str = ":books:"):
     if not SLACK_WEBHOOK_URL:
         return
     try:
-        data = json.dumps({"text": text}).encode("utf-8")
+        data = json.dumps({"text": text, "username": username, "icon_emoji": icon_emoji}).encode("utf-8")
         req = urllib.request.Request(
             SLACK_WEBHOOK_URL,
             data=data,
@@ -177,7 +177,7 @@ async def generate_weekly_report():
             print(f"[주간랭킹] {period_str} 공지 등록 완료")
 
             slack_text = f"🏆 *주간 랭킹 ({period_str})*\n매일 순공시간 1위=3점·2위=2점·3위=1점 기준\n\n" + "\n".join(lines)
-            _post_slack(slack_text)
+            _post_slack(slack_text, username="Study-Ranking", icon_emoji=":trophy:")
             print(f"[주간랭킹] {period_str} 슬랙 전송 완료")
         except Exception as e:
             print(f"[주간랭킹] 실패: {e}")
@@ -210,7 +210,7 @@ async def generate_daily_report():
                 "Mon", "월").replace("Tue", "화").replace("Wed", "수").replace(
                 "Thu", "목").replace("Fri", "금").replace("Sat", "토").replace("Sun", "일")
             slack_text = f"📅 *{date_str} 공부 랭킹*\n\n" + "\n".join(lines)
-            _post_slack(slack_text)
+            _post_slack(slack_text, username="Study-Ranking", icon_emoji=":bar_chart:")
             print(f"[일간랭킹] {today_str} 슬랙 전송 완료")
         except Exception as e:
             print(f"[일간랭킹] 실패: {e}")
@@ -244,10 +244,10 @@ async def generate_morning_checkin():
             )
             attendances = att_result.scalars().all()
             if not attendances:
-                _post_slack(f"☀️ *오전 10시 출석 현황* — 아직 아무도 없어요 😴")
+                _post_slack("☀️ *오전 10시 출석 현황* — 아직 아무도 없어요 😴", username="Study-Morning", icon_emoji=":sunny:")
                 return
             lines = [f"• {a.username} ({a.checkin_at.strftime('%H:%M')} 출근)" for a in attendances]
-            _post_slack(f"☀️ *오전 10시 출석 현황* — {len(attendances)}명 공부 중 📚\n\n" + "\n".join(lines))
+            _post_slack(f"☀️ *오전 10시 출석 현황* — {len(attendances)}명 공부 중 📚\n\n" + "\n".join(lines), username="Study-Morning", icon_emoji=":sunny:")
             print(f"[아침출석] 슬랙 전송 완료 ({len(attendances)}명)")
         except Exception as e:
             print(f"[아침출석] 실패: {e}")
