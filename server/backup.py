@@ -178,6 +178,7 @@ async def generate_weekly_report():
 
             slack_text = f"🏆 *주간 랭킹 ({period_str})*\n매일 순공시간 1위=3점·2위=2점·3위=1점 기준\n\n" + "\n".join(lines)
             _post_slack(slack_text)
+            print(f"[주간랭킹] {period_str} 슬랙 전송 완료")
         except Exception as e:
             print(f"[주간랭킹] 실패: {e}")
 
