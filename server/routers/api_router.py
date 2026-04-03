@@ -534,6 +534,19 @@ async def get_notices(
     ]
 
 
+@router.get("/my-lifetime")
+async def my_lifetime(
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_user),
+):
+    username = current["sub"]
+    result = await session.execute(
+        select(func.sum(ActivityLog.active_seconds)).where(ActivityLog.username == username)
+    )
+    total_secs = result.scalar() or 0
+    return {"lifetime_minutes": round(total_secs / 60, 1)}
+
+
 @router.get("/my-feedbacks")
 async def my_feedbacks(
     session: AsyncSession = Depends(get_session),

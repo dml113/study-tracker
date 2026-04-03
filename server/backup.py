@@ -137,6 +137,7 @@ async def generate_weekly_report():
         try:
             points: dict[str, int] = {}
             total_secs: dict[str, int] = {}
+            days_studied: dict[str, int] = {}
             medal_pts = [3, 2, 1]
 
             for day in week_days:
@@ -149,6 +150,7 @@ async def generate_weekly_report():
 
                 for i, row in enumerate(rows):
                     total_secs[row.username] = total_secs.get(row.username, 0) + (row.active_seconds or 0)
+                    days_studied[row.username] = days_studied.get(row.username, 0) + 1
                     if i < 3:
                         points[row.username] = points.get(row.username, 0) + medal_pts[i]
 
@@ -161,7 +163,8 @@ async def generate_weekly_report():
             for i, (username, pt) in enumerate(ranked[:10]):
                 medal = medals[i] if i < 3 else f"{i+1}."
                 time_str = _fmt_min(total_secs.get(username, 0))
-                lines.append(f"{medal} {username}  {pt}점 ({time_str})")
+                days = days_studied.get(username, 0)
+                lines.append(f"{medal} {username}  {pt}점 ({time_str}, {days}일 출석)")
 
             period_str = f"{this_monday.strftime('%m/%d')}~{(this_monday + timedelta(days=5)).strftime('%m/%d')}"
             body = f"이번 주({period_str}) 매일 순공시간 1위=3점·2위=2점·3위=1점 기준 집계입니다.\n\n"
@@ -179,6 +182,23 @@ async def generate_weekly_report():
             slack_text = f"🏆 *주간 랭킹 ({period_str})*\n매일 순공시간 1위=3점·2위=2점·3위=1점 기준\n\n" + "\n".join(lines)
             _post_slack(slack_text, username="Study-Ranking", icon_emoji=":trophy:")
             print(f"[주간랭킹] {period_str} 슬랙 전송 완료")
+
+            # 그룹별 슬랙
+            user_rows = (await session.execute(select(User.username, User.group_id))).all()
+            group_rows = (await session.execute(select(Group))).scalars().all()
+            user_group = {r.username: r.group_id for r in user_rows}
+            group_names = {g.id: g.name for g in group_rows}
+            for gid, gname in group_names.items():
+                g_ranked = [(u, p) for u, p in ranked if user_group.get(u) == gid]
+                if len(g_ranked) < 2:
+                    continue
+                g_lines = []
+                for i, (username, pt) in enumerate(g_ranked[:5]):
+                    medal = medals[i] if i < 3 else f"{i+1}."
+                    time_str = _fmt_min(total_secs.get(username, 0))
+                    days = days_studied.get(username, 0)
+                    g_lines.append(f"{medal} {username}  {pt}점 ({time_str}, {days}일)")
+                _post_slack(f"🏆 *[{gname}] 주간 랭킹 ({period_str})*\n\n" + "\n".join(g_lines), username="Study-Ranking", icon_emoji=":trophy:")
         except Exception as e:
             print(f"[주간랭킹] 실패: {e}")
 
@@ -212,6 +232,23 @@ async def generate_daily_report():
             slack_text = f"📅 *{date_str} 공부 랭킹*\n\n" + "\n".join(lines)
             _post_slack(slack_text, username="Study-Ranking", icon_emoji=":bar_chart:")
             print(f"[일간랭킹] {today_str} 슬랙 전송 완료")
+
+            # 그룹별 슬랙
+            user_rows = (await session.execute(select(User.username, User.group_id))).all()
+            group_rows = (await session.execute(select(Group))).scalars().all()
+            user_group = {r.username: r.group_id for r in user_rows}
+            group_names = {g.id: g.name for g in group_rows}
+            row_map = {r.username: r.active_seconds for r in rows}
+            for gid, gname in group_names.items():
+                g_rows = [(u, s) for u, s in row_map.items() if user_group.get(u) == gid]
+                g_rows.sort(key=lambda x: -x[1])
+                if len(g_rows) < 2:
+                    continue
+                g_lines = []
+                for i, (uname, secs) in enumerate(g_rows[:5]):
+                    medal = medals[i] if i < 3 else f"{i+1}."
+                    g_lines.append(f"{medal} {uname}  {_fmt_min(secs)}")
+                _post_slack(f"📅 *[{gname}] {date_str} 랭킹*\n\n" + "\n".join(g_lines), username="Study-Ranking", icon_emoji=":bar_chart:")
         except Exception as e:
             print(f"[일간랭킹] 실패: {e}")
 
