@@ -1,0 +1,26 @@
+name: Auto Deploy Server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy server files
+        run: |
+          cp server/*.py ~/study-tracker/
+          cp server/routers/*.py ~/study-tracker/routers/
+          cp server/static/*.html ~/study-tracker/static/
+
+      - name: Clear pycache and restart service
+        run: |
+          find ~/study-tracker -name "__pycache__" -not -path "*/venv/*" -exec rm -rf {} + 2>/dev/null || true
+          sudo systemctl restart study-tracker
+          sleep 2
+          systemctl is-active study-tracker
