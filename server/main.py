@@ -17,7 +17,7 @@ CLIENT_DIR = "client_dist"
 VERSION_FILE = os.path.join(CLIENT_DIR, "version.txt")
 ZIP_FILE = os.path.join(CLIENT_DIR, "StudyTracker.zip")
 
-app = FastAPI(title="Study Tracker")  # v1.0.11
+app = FastAPI(title="Study Tracker")
 
 
 @app.middleware("http")
