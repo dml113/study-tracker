@@ -30,4 +30,4 @@ jobs:
           COMMIT_MSG=$(git log -1 --pretty=%s)
           curl -s -X POST "https://hooks.slack.com/services/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" \
             -H "Content-Type: application/json" \
-            -d "{\"text\":\"🖥 *서버 업데이트 배포 완료*\n${COMMIT_MSG}\",\"username\":\"Study-Deploy\",\"icon_emoji\":\":hammer_and_wrench:\"}"
+            -d "{\"text\":\"🛠️ 서버가 새롭게 업데이트됐어요!\n> ${COMMIT_MSG}\n잘 부탁드려요 🙏\",\"username\":\"Study-Deploy\",\"icon_emoji\":\":sparkles:\"}"

@@ -282,7 +282,7 @@ async def cheat_report(
     log = CheatLog(username=username, date=today, reason=req.reason)
     session.add(log)
     await session.commit()
-    slack_text = f"🚨 *치트 감지* — {username}\n사유: {req.reason}\n시각: {datetime.now().strftime('%H:%M')}"
+    slack_text = f"🚨 어머! {username}님한테 수상한 입력이 감지됐어요!\n사유: {req.reason}\n시각: {datetime.now().strftime('%H:%M')}\n확인 부탁드려요 👀"
     await asyncio.to_thread(_post_slack, slack_text, "Study-Alert", ":rotating_light:")
     return {"status": "ok"}
 

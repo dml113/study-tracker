@@ -179,7 +179,7 @@ async def generate_weekly_report():
             await session.commit()
             print(f"[주간랭킹] {period_str} 공지 등록 완료")
 
-            slack_text = f"🏆 *주간 랭킹 ({period_str})*\n매일 순공시간 1위=3점·2위=2점·3위=1점 기준\n\n" + "\n".join(lines)
+            slack_text = f"🏆 이번 주 랭킹이 나왔어요! ({period_str})\n매일 1위=3점·2위=2점·3위=1점 기준이에요 🎯\n\n" + "\n".join(lines) + "\n\n다음 주도 열심히 해봐요 💪"
             _post_slack(slack_text, username="Study-Ranking", icon_emoji=":trophy:")
             print(f"[주간랭킹] {period_str} 슬랙 전송 완료")
 
@@ -198,7 +198,7 @@ async def generate_weekly_report():
                     time_str = _fmt_min(total_secs.get(username, 0))
                     days = days_studied.get(username, 0)
                     g_lines.append(f"{medal} {username}  {pt}점 ({time_str}, {days}일)")
-                _post_slack(f"🏆 *[{gname}] 주간 랭킹 ({period_str})*\n\n" + "\n".join(g_lines), username="Study-Ranking", icon_emoji=":trophy:")
+                _post_slack(f"🏆 [{gname}] 이번 주 랭킹이에요! ({period_str}) 🎉\n\n" + "\n".join(g_lines) + "\n\n다음 주도 화이팅! 💪", username="Study-Ranking", icon_emoji=":trophy:")
         except Exception as e:
             print(f"[주간랭킹] 실패: {e}")
 
@@ -229,7 +229,7 @@ async def generate_daily_report():
             date_str = today.strftime("%m/%d (%a)").replace(
                 "Mon", "월").replace("Tue", "화").replace("Wed", "수").replace(
                 "Thu", "목").replace("Fri", "금").replace("Sat", "토").replace("Sun", "일")
-            slack_text = f"📅 *{date_str} 공부 랭킹*\n\n" + "\n".join(lines)
+            slack_text = f"📅 {date_str} 공부 랭킹이에요! 오늘도 수고했어요 😊\n\n" + "\n".join(lines) + "\n\n내일도 파이팅! 🔥"
             _post_slack(slack_text, username="Study-Ranking", icon_emoji=":bar_chart:")
             print(f"[일간랭킹] {today_str} 슬랙 전송 완료")
 
@@ -248,7 +248,7 @@ async def generate_daily_report():
                 for i, (uname, secs) in enumerate(g_rows[:5]):
                     medal = medals[i] if i < 3 else f"{i+1}."
                     g_lines.append(f"{medal} {uname}  {_fmt_min(secs)}")
-                _post_slack(f"📅 *[{gname}] {date_str} 랭킹*\n\n" + "\n".join(g_lines), username="Study-Ranking", icon_emoji=":bar_chart:")
+                _post_slack(f"📅 [{gname}] {date_str} 랭킹이에요! 모두 수고했어요 😊\n\n" + "\n".join(g_lines) + "\n\n내일도 파이팅! 🔥", username="Study-Ranking", icon_emoji=":bar_chart:")
         except Exception as e:
             print(f"[일간랭킹] 실패: {e}")
 
@@ -281,10 +281,10 @@ async def generate_morning_checkin():
             )
             attendances = att_result.scalars().all()
             if not attendances:
-                _post_slack("☀️ *오전 10시 출석 현황* — 아직 아무도 없어요 😴", username="Study-Morning", icon_emoji=":sunny:")
+                _post_slack("☀️ 좋은 아침이에요! 아직 아무도 출근하지 않았어요 😴\n먼저 시작하는 사람이 오늘의 주인공! 🌟", username="Study-Morning", icon_emoji=":sunny:")
                 return
             lines = [f"• {a.username} ({a.checkin_at.strftime('%H:%M')} 출근)" for a in attendances]
-            _post_slack(f"☀️ *오전 10시 출석 현황* — {len(attendances)}명 공부 중 📚\n\n" + "\n".join(lines), username="Study-Morning", icon_emoji=":sunny:")
+            _post_slack(f"☀️ 좋은 아침이에요! 지금 {len(attendances)}명이 열심히 공부 중이에요 📚\n\n" + "\n".join(lines) + "\n\n오늘도 화이팅! 🌟", username="Study-Morning", icon_emoji=":sunny:")
             print(f"[아침출석] 슬랙 전송 완료 ({len(attendances)}명)")
         except Exception as e:
             print(f"[아침출석] 실패: {e}")
