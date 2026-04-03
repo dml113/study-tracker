@@ -21,3 +21,10 @@ jobs:
           RESULT=$(curl -s -X POST http://localhost:8000/admin/client/sync-github \
             -H "Authorization: Bearer ${TOKEN}")
           echo "${RESULT}"
+
+      - name: Notify Slack
+        run: |
+          VERSION=$(cat ~/study-tracker/client_dist/version.txt 2>/dev/null || echo "unknown")
+          curl -s -X POST "https://hooks.slack.com/services/REDACTED" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\":\"🚀 *클라이언트 v${VERSION} 배포 완료*\n앱 재실행 시 자동 업데이트됩니다.\",\"username\":\"Study-Deploy\",\"icon_emoji\":\":rocket:\"}"
