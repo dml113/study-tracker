@@ -15,10 +15,10 @@ server/
 ├── models.py            # SQLAlchemy 모델 (User, Group, ActivityLog, Attendance, Absence, CheatLog, StudyGoal, Feedback, Notice)
 ├── auth.py              # JWT 토큰 생성·검증, 비밀번호 해싱, get_current_admin/get_current_superadmin
 ├── database.py          # DB 엔진, 세션, init_db, 자동 마이그레이션 (컬럼/테이블 추가)
-├── backup.py            # DB 자동 백업 (매일 자정 asyncio 스케줄러, 최근 7일 보관) + 매일 00:50 자동 퇴근 스케줄러
+├── backup.py            # DB 자동 백업 (매일 자정) + 자동 퇴근 (00:50) + 주간 랭킹 공지 (일요일 09:00)
 ├── routers/
 │   ├── auth_router.py   # POST /auth/login (role, group_id JWT에 포함)
-│   ├── api_router.py    # /api/* (heartbeat, checkin, checkout, absence, stats, cheat-report, change-password, attendance/live, feedback, notices, my-absence-stats)
+│   ├── api_router.py    # /api/* (heartbeat, checkin, checkout, absence, stats, cheat-report, change-password, attendance/live, feedback, notices, my-absence-stats, my-feedbacks)
 │   └── admin_router.py  # /admin/* (유저 CRUD, 그룹 CRUD, 출퇴근·외출 조회, 치트 조회, goals CRUD, absence-stats, feedbacks, activity 수정, notices CRUD)
 ├── static/
 │   ├── login.html       # 로그인 페이지 (/) + 클라이언트 다운로드 버튼
@@ -29,12 +29,14 @@ server/
 └── client_dist/         # 배포용 EXE + version.txt (서버 시작 시 자동 생성)
 
 client/
-├── client.py            # Windows 클라이언트 (tkinter UI + pynput 감지 + 자동 업데이트 + 치트 감지 + 비밀번호 변경 + 공지 팝업 + 목표 달성/미달 알림)
+├── client.py            # Windows 클라이언트 (tkinter UI + pynput 감지 + VMware 화면 변화 감지 + 자동 업데이트 + 치트 감지 + 비밀번호 변경 + 공지 팝업 + 목표 달성/미달 알림 + JWT 만료 감지 + 앱 종료 시 자동 퇴근)
 ├── build.bat            # PyInstaller EXE 빌드 스크립트 (로컬 빌드용)
 └── VERSION              # 클라이언트 버전 파일 (변경 시 GitHub Actions 빌드 트리거)
 
 .github/workflows/
-└── build-client.yml     # GitHub Actions: Windows EXE 자동 빌드 → Release 업로드
+├── build-client.yml     # GitHub Actions: Windows EXE 자동 빌드 → Release 업로드 (cloud runner)
+├── deploy.yml           # server/** 변경 push → self-hosted runner로 서버 자동 배포
+└── sync-client.yml      # build-client 완료 후 → self-hosted runner로 클라이언트 자동 동기화
 ```
 
 ## 역할(Role) 체계
@@ -53,6 +55,7 @@ client/
 ### 활동 측정 규칙
 - 출근 버튼 클릭 후부터만 측정 시작
 - 키보드·마우스 이벤트 감지, **60초** 이상 입력 없으면 비활성 처리
+- **VMware 화면 변화 감지**: 5초마다 VMware 창 캡처 → 픽셀 1% 이상 변화 시 활성으로 인정 (`win32gui` + `Pillow`)
 - 외출 중·식사 시간에는 측정 중지
 - **30초**마다 서버에 누적 활동 시간 전송 (heartbeat)
 - 퇴근 시 / 앱 강제 종료 시 남은 버퍼 즉시 전송
@@ -101,13 +104,13 @@ MEAL_TIMES = {
 - 그룹 목표 없으면 전체 기본 목표 사용
 - `achievement_rate = active_minutes / (daily_goal * period_days) * 100`
 
-### DB 자동 백업 및 자동 퇴근 (backup.py)
-- asyncio 스케줄러: 매일 자정 `shutil.copy2`로 DB 파일 복사
+### DB 자동 백업 및 스케줄러 (backup.py)
+- **자동 백업**: 매일 자정 `shutil.copy2`로 DB 파일 복사, 최근 7개 유지
 - 저장 경로: `backups/study_tracker_YYYYMMDD_HHMMSS.db`
-- 최근 7개만 유지, 오래된 파일 자동 삭제
 - 수동 백업: `POST /admin/backup` (superadmin 전용)
 - 목록 조회: `GET /admin/backups` (superadmin 전용)
 - **자동 퇴근**: 매일 00:50에 미퇴근 인원 전원 자동 퇴근 처리 (`auto_checkout_scheduler`)
+- **주간 랭킹**: 매주 일요일 09:00에 그 주 월~토 일별 점수(1위 3점·2위 2점·3위 1점) 합산 공지 자동 등록 (`weekly_report_scheduler`)
 
 ### 공지사항 시스템 (Notice 모델)
 - `GET /api/notices`: 활성 공지 목록 (인증 필요, 클라이언트 로그인 후 조회)
@@ -116,6 +119,7 @@ MEAL_TIMES = {
 - `PATCH /admin/notices/{id}/toggle`: 활성/비활성 토글 (superadmin 전용)
 - `DELETE /admin/notices/{id}`: 공지 삭제 (superadmin 전용)
 - 클라이언트: 로그인 성공 후 `show_notices()` 호출 → 활성 공지 있으면 tkinter 팝업
+- 공지에 `group_id` 설정 가능 (NULL=전체, 특정 group_id=해당 그룹만 수신)
 
 ### DB 모델 관계
 - `Group`: 그룹 (C.C, IT, C.S 등)
@@ -175,11 +179,11 @@ sshpass -p 'PASSWORD' ssh user@172.16.145.16 \
 - `WorkingDirectory`가 `~/study-tracker`임에 주의 (scp 경로 혼동 주의)
 
 ### 클라이언트 EXE 빌드 및 배포
-- **기본 방식: GitHub Actions 자동 빌드** (권장)
-  1. `client/VERSION` 파일을 새 버전으로 수정 (예: `1.0.1`)
-  2. commit & push → GitHub Actions가 Windows runner에서 자동 빌드 (약 1~2분)
-  3. 빌드된 EXE가 GitHub Release에 자동 업로드 (태그: `v{버전}`)
-  4. 관리자 페이지 → 클라이언트 배포 탭 → **"GitHub에서 동기화"** 클릭
+- **기본 방식: GitHub Actions 완전 자동** (권장)
+  1. `client/VERSION` + `client/client.py` VERSION 수정
+  2. commit & push → Windows runner에서 EXE 자동 빌드 (약 1~2분)
+  3. 빌드된 EXE가 GitHub Release에 자동 업로드
+  4. `sync-client.yml` 워크플로우가 빌드 완료 감지 → 서버 자동 동기화 (**수동 동기화 불필요**)
   5. 부원들 다음 실행 시 자동 업데이트 알림
 - **수동 빌드** (보조 수단): 로컬 Windows에서 `build.bat` 실행 후 관리자 페이지에서 직접 업로드
 - Python **3.11** 권장 (3.12+ PyInstaller/pynput 호환 이슈)
@@ -190,13 +194,13 @@ sshpass -p 'PASSWORD' ssh user@172.16.145.16 \
   ```
 
 ### GitHub Actions CI/CD
-- 워크플로우: `.github/workflows/build-client.yml`
-- 트리거: `client/VERSION` 변경 후 main push, 또는 수동 실행(workflow_dispatch)
-- `permissions: contents: write` 설정됨
-- GitHub Secrets (이미 등록):
-  - `SERVER_URL`: `http://172.16.145.16:8000`
-  - `ADMIN_PASSWORD`: 관리자 비밀번호
-- 서버가 사설IP(`172.16.145.x`)라 GitHub Actions에서 직접 업로드 불가 → `sync-github` 엔드포인트로 우회
+- **`build-client.yml`**: `client/VERSION` 변경 push → Windows EXE 빌드 → GitHub Release 업로드
+- **`deploy.yml`**: `server/**` 변경 push → self-hosted runner가 서버에 직접 파일 복사 + 재시작
+- **`sync-client.yml`**: `build-client.yml` 완료 감지 → self-hosted runner가 sync API 호출
+- Self-hosted runner: `172.16.145.16` 서버에 설치됨 (`~/actions-runner`, systemd 서비스)
+- GitHub Secrets:
+  - `ADMIN_PASSWORD`: 관리자 비밀번호 (sync-client.yml에서 사용)
+- 서버가 사설IP라 self-hosted runner 방식 사용 (아웃바운드만 필요, 방화벽 설정 불필요)
 
 ### HTML 페이지
 - 순수 HTML + Vanilla JS (프레임워크 없음)

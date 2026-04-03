@@ -1,0 +1,23 @@
+name: Sync Client After Build
+
+on:
+  workflow_run:
+    workflows: ["Build & Deploy Client"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  sync:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: self-hosted
+    steps:
+      - name: Sync client from GitHub Release
+        env:
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
+            -d "username=admin&password=${ADMIN_PASSWORD}" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+          RESULT=$(curl -s -X POST http://localhost:8000/admin/client/sync-github \
+            -H "Authorization: Bearer ${TOKEN}")
+          echo "${RESULT}"
