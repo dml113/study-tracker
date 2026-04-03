@@ -330,6 +330,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
   }
 
   function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function fmtMin(m) { m = Math.round(m || 0); const h = Math.floor(m / 60), r = m % 60; if (h === 0) return r + '분'; if (r === 0) return h + '시간'; return h + '시간 ' + r + '분'; }
 
   let editingUserId = null, groups = [];
   function authH() { return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }; }
@@ -400,7 +401,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
         <td><span class="role-badge role-${u.role}">${roleName(u.role)}</span></td>
         <td>${u.group_name ? `<span class="group-badge">${esc(u.group_name)}</span>` : '<span style="color:var(--muted)">–</span>'}</td>
         <td><span class="status-dot ${u.is_active ? 'dot-active' : 'dot-inactive'}"></span>${u.is_active ? '활성' : '비활성'}</td>
-        <td>${esc(String(u.today_minutes))}분 <span class="time-bar-wrap"><span class="time-bar" style="width:${u.today_seconds/maxSec*100}%"></span></span></td>
+        <td>${fmtMin(u.today_minutes)} <span class="time-bar-wrap"><span class="time-bar" style="width:${u.today_seconds/maxSec*100}%"></span></span></td>
         <td style="font-size:0.82rem;font-weight:700;color:${u.client_version ? 'var(--primary)' : 'var(--muted)'}">${esc(u.client_version || '-')}</td>
         <td style="color:var(--muted);font-size:0.82rem">${esc(u.created_at.slice(0,10))}</td>
         <td><div class="td-actions">
@@ -500,7 +501,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     list.innerHTML = data.map((u,i) => `
       <div style="background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:14px 20px;margin-bottom:10px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow)">
         <div style="font-size:1.4rem;min-width:32px;text-align:center">${medals[i]||'#'+(i+1)}</div>
-        <div style="flex:1"><div style="font-weight:800">${esc(u.username)}</div><div style="color:var(--primary);font-size:0.82rem;font-weight:700;margin-top:2px">${u.active_minutes}분 활동</div></div>
+        <div style="flex:1"><div style="font-weight:800">${esc(u.username)}</div><div style="color:var(--primary);font-size:0.82rem;font-weight:700;margin-top:2px">${fmtMin(u.active_minutes)} 활동</div></div>
         <div style="flex:2;background:rgba(200,180,220,0.15);border-radius:99px;height:8px;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,var(--primary),#c77dff);border-radius:99px;width:${max>0?u.active_minutes/max*100:0}%"></div></div>
       </div>
     `).join('');
@@ -515,7 +516,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
       <div class="att-card">
         <div class="att-header">
           <div class="att-name">${esc(u.username)}</div>
-          <div class="att-active">📚 ${u.active_minutes}분</div>
+          <div class="att-active">📚 ${fmtMin(u.active_minutes)}</div>
         </div>
         ${u.checkin_at ? `<div class="att-times"><div class="att-time-item"><span>출근 </span><strong>${u.checkin_at}</strong></div><div class="att-time-item"><span>퇴근 </span><strong>${u.checkout_at || '–'}</strong></div></div>` : '<div class="no-checkin">출근 기록 없음</div>'}
         ${u.absences.length ? `<div class="absence-list">${u.absences.map(a=>`<div class="absence-chip"><span class="reason">${esc(a.reason)}</span> ${a.start}~${a.end||'진행중'}</div>`).join('')}</div>` : ''}
@@ -540,7 +541,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     const list = document.getElementById('actList');
     const addRow = `<div style="background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow)"><div style="font-size:0.78rem;font-weight:800;color:var(--text-light);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">📝 기록 직접 추가</div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end"><div class="form-group"><label>유저</label><select id="newActUser" style="min-width:120px">${(window._allUsers||[]).map(u=>`<option value="${esc(u.username)}">${esc(u.username)}</option>`).join('')}</select></div><div class="form-group"><label>날짜</label><input type="date" id="newActDate" value="${d}"></div><div class="form-group"><label>활동 시간 (분)</label><input type="number" id="newActMinutes" min="0" placeholder="예: 120" style="min-width:100px"></div><button class="btn btn-primary" onclick="createActivity()">추가</button></div></div>`;
     if (!data.length) { list.innerHTML = addRow + '<div class="empty-state">기록이 없습니다</div>'; return; }
-    list.innerHTML = addRow + `<table><thead><tr><th>유저</th><th>날짜</th><th>활동 시간</th><th>마지막 업데이트</th><th>수정</th></tr></thead><tbody>${data.map(r=>`<tr id="row-${r.id}"><td><strong>${esc(r.username)}</strong></td><td style="color:var(--muted);font-size:0.82rem">${r.date}</td><td><span id="disp-${r.id}">${r.active_minutes}분</span><input type="number" id="inp-${r.id}" value="${r.active_minutes}" min="0" style="display:none;width:80px;background:#faf7fd;border:1.5px solid var(--border);border-radius:8px;color:var(--text);padding:4px 8px;font-family:'Nunito',sans-serif;font-size:0.9rem;font-weight:600"></td><td style="color:var(--muted);font-size:0.78rem">${r.last_updated.slice(0,16).replace('T',' ')}</td><td><div class="td-actions"><button class="btn-sm" style="background:rgba(116,185,255,0.12);border:1.5px solid rgba(116,185,255,0.3);color:#0984e3" id="editBtn-${r.id}" onclick="startEdit(${r.id})">✏️ 수정</button><button class="btn-sm btn-primary" id="saveBtn-${r.id}" style="display:none" onclick="saveActivity(${r.id})">저장</button><button class="btn-sm" style="background:rgba(200,180,220,0.12);border:1.5px solid var(--border);color:var(--text-light);display:none" id="cancelBtn-${r.id}" onclick="cancelEdit(${r.id},${r.active_minutes})">취소</button></div></td></tr>`).join('')}</tbody></table>`;
+    list.innerHTML = addRow + `<table><thead><tr><th>유저</th><th>날짜</th><th>활동 시간</th><th>마지막 업데이트</th><th>수정</th></tr></thead><tbody>${data.map(r=>`<tr id="row-${r.id}"><td><strong>${esc(r.username)}</strong></td><td style="color:var(--muted);font-size:0.82rem">${r.date}</td><td><span id="disp-${r.id}">${fmtMin(r.active_minutes)}</span><input type="number" id="inp-${r.id}" value="${r.active_minutes}" min="0" style="display:none;width:80px;background:#faf7fd;border:1.5px solid var(--border);border-radius:8px;color:var(--text);padding:4px 8px;font-family:'Nunito',sans-serif;font-size:0.9rem;font-weight:600"></td><td style="color:var(--muted);font-size:0.78rem">${r.last_updated.slice(0,16).replace('T',' ')}</td><td><div class="td-actions"><button class="btn-sm" style="background:rgba(116,185,255,0.12);border:1.5px solid rgba(116,185,255,0.3);color:#0984e3" id="editBtn-${r.id}" onclick="startEdit(${r.id})">✏️ 수정</button><button class="btn-sm btn-primary" id="saveBtn-${r.id}" style="display:none" onclick="saveActivity(${r.id})">저장</button><button class="btn-sm" style="background:rgba(200,180,220,0.12);border:1.5px solid var(--border);color:var(--text-light);display:none" id="cancelBtn-${r.id}" onclick="cancelEdit(${r.id},${r.active_minutes})">취소</button></div></td></tr>`).join('')}</tbody></table>`;
   }
 
   function startEdit(id) { document.getElementById('disp-'+id).style.display='none'; document.getElementById('inp-'+id).style.display=''; document.getElementById('editBtn-'+id).style.display='none'; document.getElementById('saveBtn-'+id).style.display=''; document.getElementById('cancelBtn-'+id).style.display=''; }
@@ -551,7 +552,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     if (isNaN(minutes)||minutes<0) { showToast('올바른 값을 입력하세요','error'); return; }
     const res = await fetch('/admin/activity/'+id, { method:'PATCH', headers:authH(), body:JSON.stringify({active_seconds:minutes*60}) });
     const data = await res.json();
-    if (res.ok) { showToast(data.message); document.getElementById('disp-'+id).textContent=minutes+'분'; cancelEdit(id,minutes); }
+    if (res.ok) { showToast(data.message); document.getElementById('disp-'+id).textContent=fmtMin(minutes); cancelEdit(id,minutes); }
     else showToast(data.detail,'error');
   }
 
@@ -591,7 +592,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     if (!data.length) { list.innerHTML='<div class="empty-state">🎯 설정된 목표가 없습니다 (기본값: 480분/일)</div>'; return; }
     list.innerHTML = `<table><thead><tr><th>대상</th><th>하루 목표</th><th>주간</th><th>관리</th></tr></thead><tbody>${data.map(g=>{
       const label = g.username ? '👤 ' + esc(g.username) : (g.group_name ? '🏠 ' + esc(g.group_name) : '🌐 전체 기본');
-      return `<tr><td><strong>${label}</strong></td><td>${g.daily_target_minutes}분 (${Math.round(g.daily_target_minutes/60*10)/10}시간)</td><td style="color:var(--muted)">${g.daily_target_minutes*7}분</td><td>${isSuperAdmin?`<button class="btn-sm btn-danger" onclick="deleteGoal(${g.id})">🗑️ 삭제</button>`:''}</td></tr>`;
+      return `<tr><td><strong>${label}</strong></td><td>${fmtMin(g.daily_target_minutes)}</td><td style="color:var(--muted)">${fmtMin(g.daily_target_minutes*7)}</td><td>${isSuperAdmin?`<button class="btn-sm btn-danger" onclick="deleteGoal(${g.id})">🗑️ 삭제</button>`:''}</td></tr>`;
     }).join('')}</tbody></table>`;
   }
 
@@ -632,15 +633,14 @@ tr:hover td { background:rgba(255,143,171,0.03); }
         </div>
         <div style="flex:1">
           <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-            <span style="font-size:0.85rem;font-weight:800;color:var(--primary)">${esc(String(g.avg_minutes))}분/인 평균</span>
+            <span style="font-size:0.85rem;font-weight:800;color:var(--primary)">${fmtMin(g.avg_minutes)}/인 평균</span>
             <span style="font-size:0.78rem;color:var(--muted);font-weight:600">목표 ${esc(String(g.achievement_rate))}%</span>
           </div>
           <div class="group-stat-bar-wrap"><div class="group-stat-bar" style="width:${Math.min(g.total_minutes/maxMins*100,100)}%"></div></div>
-          ${g.top_user ? `<div style="font-size:0.72rem;color:var(--text-light);margin-top:4px;font-weight:700">🏆 ${esc(g.top_user)} ${esc(String(g.top_user_minutes))}분</div>` : ''}
+          ${g.top_user ? `<div style="font-size:0.72rem;color:var(--text-light);margin-top:4px;font-weight:700">🏆 ${esc(g.top_user)} ${fmtMin(g.top_user_minutes)}</div>` : ''}
         </div>
         <div style="text-align:right;min-width:80px">
-          <div style="font-size:1.4rem;font-weight:900;color:var(--text)">${esc(String(Math.floor(g.total_minutes/60)))}h</div>
-          <div style="font-size:0.72rem;color:var(--muted);font-weight:600">${esc(String(g.total_minutes))}분</div>
+          <div style="font-size:1.1rem;font-weight:900;color:var(--text)">${fmtMin(g.total_minutes)}</div>
         </div>
       </div>
     `).join('');
@@ -664,7 +664,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     const list = document.getElementById('absStatsList');
     if (data.total_count===0) { list.innerHTML='<div class="empty-state">🚶 외출 기록이 없습니다</div>'; return; }
     const byReasonRows = data.by_reason.map(r=>`<tr><td><strong>${esc(r.reason)}</strong></td><td>${r.count}회</td><td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;background:rgba(200,180,220,0.15);border-radius:99px;height:6px;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,var(--primary),#c77dff);border-radius:99px;width:${r.percentage}%"></div></div><span style="font-size:0.78rem;color:var(--muted);min-width:40px;font-weight:700">${r.percentage}%</span></div></td></tr>`).join('');
-    const byUserRows = data.by_user.map(u=>`<tr><td><strong>${esc(u.username)}</strong></td><td>${u.count}회</td><td style="color:var(--muted)">${u.total_minutes}분</td></tr>`).join('');
+    const byUserRows = data.by_user.map(u=>`<tr><td><strong>${esc(u.username)}</strong></td><td>${u.count}회</td><td style="color:var(--muted)">${fmtMin(u.total_minutes)}</td></tr>`).join('');
     list.innerHTML = `<div style="font-size:0.8rem;font-weight:700;color:var(--muted);margin-bottom:12px">${data.period.start} ~ ${data.period.end} · 총 ${data.total_count}건</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px"><div><div style="font-size:0.78rem;font-weight:800;color:var(--text-light);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">사유별</div><table><thead><tr><th>사유</th><th>횟수</th><th>비율</th></tr></thead><tbody>${byReasonRows}</tbody></table></div><div><div style="font-size:0.78rem;font-weight:800;color:var(--text-light);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">유저별</div><table><thead><tr><th>유저</th><th>횟수</th><th>총 시간</th></tr></thead><tbody>${byUserRows}</tbody></table></div></div>`;
   }
 

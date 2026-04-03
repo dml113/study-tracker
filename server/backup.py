@@ -89,84 +89,92 @@ async def run_auto_checkout():
     return count
 
 
+def _fmt_min(seconds: int) -> str:
+    """초 → 'X시간 Y분' 형식."""
+    m = round(seconds / 60)
+    h, r = divmod(m, 60)
+    if h == 0:
+        return f"{r}분"
+    if r == 0:
+        return f"{h}시간"
+    return f"{h}시간 {r}분"
+
+
 async def generate_weekly_report():
-    """지난주 (월~일) 랭킹 리포트를 공지로 등록."""
+    """이번 주 월~토 일별 점수제 랭킹 리포트를 공지로 등록.
+
+    매일 순공시간 1위=3점, 2위=2점, 3위=1점을 부여.
+    일요일 09:00에 주간 총점 상위 3명을 공지로 발표.
+    """
     today = date.today()
-    last_monday = today - timedelta(days=today.weekday() + 7)
-    last_sunday = last_monday + timedelta(days=6)
+    # 이번 주 월요일
+    this_monday = today - timedelta(days=today.weekday())
+    # 월~토 (6일)
+    week_days = [this_monday + timedelta(days=i) for i in range(6)]
 
     async for session in get_session():
         try:
-            rows = (await session.execute(
-                select(ActivityLog.username, func.sum(ActivityLog.active_seconds).label("total"))
-                .where(ActivityLog.date.between(last_monday.isoformat(), last_sunday.isoformat()))
-                .group_by(ActivityLog.username)
-                .order_by(func.sum(ActivityLog.active_seconds).desc())
-            )).all()
+            points: dict[str, int] = {}
+            total_secs: dict[str, int] = {}
+            medal_pts = [3, 2, 1]
 
-            if not rows:
+            for day in week_days:
+                rows = (await session.execute(
+                    select(ActivityLog.username, ActivityLog.active_seconds)
+                    .where(ActivityLog.date == day.isoformat())
+                    .where(ActivityLog.active_seconds > 0)
+                    .order_by(ActivityLog.active_seconds.desc())
+                )).all()
+
+                for i, row in enumerate(rows):
+                    total_secs[row.username] = total_secs.get(row.username, 0) + (row.active_seconds or 0)
+                    if i < 3:
+                        points[row.username] = points.get(row.username, 0) + medal_pts[i]
+
+            if not points:
                 return
 
-            # 그룹별 집계
-            user_info = {
-                row.username: row.group_id
-                for row in (await session.execute(select(User.username, User.group_id))).all()
-            }
-            group_names = {g.id: g.name for g in (await session.execute(select(Group))).scalars().all()}
-
-            group_totals: dict = {}
-            group_counts: dict = {}
-            for row in rows:
-                gid = user_info.get(row.username)
-                gname = group_names.get(gid, "미배정") if gid else "미배정"
-                group_totals[gname] = group_totals.get(gname, 0) + (row.total or 0)
-                group_counts[gname] = group_counts.get(gname, 0) + 1
-
+            ranked = sorted(points.items(), key=lambda x: (-x[1], -total_secs.get(x[0], 0)))
             medals = ["🥇", "🥈", "🥉"]
-            ranking_lines = []
-            for i, row in enumerate(rows[:10]):
-                mins = int((row.total or 0) // 60)
+            lines = []
+            for i, (username, pt) in enumerate(ranked[:10]):
                 medal = medals[i] if i < 3 else f"{i+1}."
-                ranking_lines.append(f"{medal} {row.username}  {mins}분")
+                time_str = _fmt_min(total_secs.get(username, 0))
+                lines.append(f"{medal} {username}  {pt}점 ({time_str})")
 
-            group_lines = []
-            for gname, total in sorted(group_totals.items(), key=lambda x: -x[1]):
-                avg = int(total // 60 // max(group_counts[gname], 1))
-                group_lines.append(f"• {gname}: 평균 {avg}분")
-
-            period_str = f"{last_monday.strftime('%m/%d')}~{last_sunday.strftime('%m/%d')}"
-            body = "📊 개인 랭킹 (상위 10명)\n"
-            body += "\n".join(ranking_lines)
-            body += "\n\n🏠 그룹별 평균\n"
-            body += "\n".join(group_lines)
+            period_str = f"{this_monday.strftime('%m/%d')}~{(this_monday + timedelta(days=5)).strftime('%m/%d')}"
+            body = f"이번 주({period_str}) 매일 순공시간 1위=3점·2위=2점·3위=1점 기준 집계입니다.\n\n"
+            body += "\n".join(lines)
 
             notice = Notice(
-                title=f"주간 리포트 ({period_str})",
+                title=f"🏆 주간 랭킹 ({period_str})",
                 body=body,
                 is_active=True,
             )
             session.add(notice)
             await session.commit()
-            print(f"[주간리포트] {period_str} 리포트 공지 등록 완료")
+            print(f"[주간랭킹] {period_str} 공지 등록 완료")
         except Exception as e:
-            print(f"[주간리포트] 실패: {e}")
+            print(f"[주간랭킹] 실패: {e}")
 
 
 async def weekly_report_scheduler():
-    """매주 월요일 07:00에 지난주 리포트 자동 공지."""
+    """매주 일요일 09:00에 주간 랭킹 공지 자동 등록."""
     while True:
         now = datetime.now()
-        # 오늘이 월요일이고 아직 07:00 이전이면 오늘 07:00에 실행
-        if now.weekday() == 0 and now.hour < 7:
-            next_monday = now.replace(hour=7, minute=0, second=0, microsecond=0)
+        # 일요일 = weekday() 6
+        days_until_sunday = (6 - now.weekday()) % 7
+        if days_until_sunday == 0 and now.hour < 9:
+            next_run = now.replace(hour=9, minute=0, second=0, microsecond=0)
         else:
-            days_until_monday = (7 - now.weekday()) % 7 or 7
-            next_monday = (now + timedelta(days=days_until_monday)).replace(hour=7, minute=0, second=0, microsecond=0)
-        await asyncio.sleep((next_monday - now).total_seconds())
+            if days_until_sunday == 0:
+                days_until_sunday = 7
+            next_run = (now + timedelta(days=days_until_sunday)).replace(hour=9, minute=0, second=0, microsecond=0)
+        await asyncio.sleep((next_run - now).total_seconds())
         try:
             await generate_weekly_report()
         except Exception as e:
-            print(f"[주간리포트] 스케줄러 오류: {e}")
+            print(f"[주간랭킹] 스케줄러 오류: {e}")
 
 
 async def auto_checkout_scheduler():
