@@ -26,7 +26,7 @@ try:
 except Exception:
     _PLYER_OK = False
 
-VERSION = "1.1.7"
+VERSION = "1.1.8"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".study_tracker.json")
 SEND_INTERVAL = 30
@@ -159,7 +159,7 @@ def detect_cheat() -> tuple[bool, str]:
     if intervals:
         avg = sum(intervals) / len(intervals)
         std_dev = (sum((x - avg) ** 2 for x in intervals) / len(intervals)) ** 0.5
-        if avg < 0.5 and std_dev < 0.03:
+        if avg < 0.5 and std_dev < 0.02:
             return True, "자동 입력 패턴 감지"
 
     return False, ""
@@ -326,19 +326,12 @@ def fetch_daily_goal():
     except Exception:
         pass
     try:
-        res = api("get", "/api/stats")
+        res = api("get", "/api/my-lifetime")
         if res.ok:
-            username = state["username"]
-            for row in res.json():
-                if row.get("username") == username:
-                    lifetime = row.get("lifetime_minutes", 0)
-                    with state["lock"]:
-                        state["lifetime_minutes"] = lifetime
-                        state["egg_stage"] = _get_egg_stage(lifetime)
-                    return
+            lifetime = res.json().get("lifetime_minutes", 0)
             with state["lock"]:
-                state["lifetime_minutes"] = 0
-                state["egg_stage"] = 0
+                state["lifetime_minutes"] = lifetime
+                state["egg_stage"] = _get_egg_stage(lifetime)
     except Exception:
         pass
 
@@ -571,6 +564,14 @@ class MainWindow:
             res = api("post", "/api/checkout")
             data = res.json()
             if res.ok:
+                with state["lock"]:
+                    total_mins = round(state["session_total"] / 60, 1)
+                goal = state["daily_goal_minutes"]
+                rate = min(round(total_mins / goal * 100), 100) if goal > 0 else 0
+                messagebox.showinfo(
+                    "퇴근 완료 🏠",
+                    f"오늘 {fmt_min(total_mins)} 공부했어요!\n목표 달성률: {rate}%"
+                )
                 state["checked_in"] = False
                 state["is_absent"] = False
             else:
