@@ -801,12 +801,19 @@ def _sanitize_svg(svg: str) -> str:
     """SVG에서 잠재적 XSS 요소 제거."""
     # <script> 태그 제거
     svg = _re.sub(r'<script[\s\S]*?</script>', '', svg, flags=_re.IGNORECASE)
-    # on* 이벤트 핸들러 제거
-    svg = _re.sub(r'\s+on\w+\s*=\s*["\'][^"\']*["\']', '', svg, flags=_re.IGNORECASE)
+    # <foreignObject> 제거 (HTML 삽입 가능)
+    svg = _re.sub(r'<foreignObject[\s\S]*?</foreignObject>', '', svg, flags=_re.IGNORECASE)
+    svg = _re.sub(r'<foreignObject[^>]*/>', '', svg, flags=_re.IGNORECASE)
+    # on* 이벤트 핸들러 제거 (따옴표 있는/없는 모두)
+    svg = _re.sub(r'\s+on\w+\s*=\s*(?:["\'][^"\']*["\']|[^\s>]+)', '', svg, flags=_re.IGNORECASE)
     # javascript: URL 제거
     svg = _re.sub(r'javascript\s*:', '', svg, flags=_re.IGNORECASE)
-    # href/xlink:href에서 외부 URL 제거 (data:, http:, https:, // 등)
+    # href/xlink:href에서 외부 URL 제거
     svg = _re.sub(r'(href|xlink:href)\s*=\s*["\'](?!#)[^"\']*["\']', '', svg, flags=_re.IGNORECASE)
+    # <animate>/<set>의 href 속성 조작 차단
+    svg = _re.sub(r'(<(?:animate|set)[^>]*\battributeName\s*=\s*["\'](?:href|xlink:href)["\'][^>]*>)', '', svg, flags=_re.IGNORECASE)
+    # <use> 태그의 외부 href/xlink:href 제거 (이미 위에서 처리되지만 명시적으로)
+    svg = _re.sub(r'(<use[^>]*)(xlink:href|href)\s*=\s*["\'][^#][^"\']*["\']', r'\1', svg, flags=_re.IGNORECASE)
     return svg.strip()
 
 

@@ -657,9 +657,14 @@ async def change_animal(
     if not user:
         raise HTTPException(status_code=404, detail="유저를 찾을 수 없어요")
 
-    up_result = await session.execute(select(UserPoint).where(UserPoint.username == username))
-    user_point = up_result.scalar_one_or_none()
-    if not user_point or user_point.points < ANIMAL_CHANGE_COST:
+    # atomic UPDATE: 포인트 충분할 때만 차감 (race condition 방지)
+    deduct_result = await session.execute(
+        update(UserPoint)
+        .where(UserPoint.username == username, UserPoint.points >= ANIMAL_CHANGE_COST)
+        .values(points=UserPoint.points - ANIMAL_CHANGE_COST)
+        .returning(UserPoint.points)
+    )
+    if deduct_result.fetchone() is None:
         raise HTTPException(status_code=400, detail=f"포인트가 부족해요 (필요: {ANIMAL_CHANGE_COST}💎)")
 
     # 현재 누적 공부 초 저장 (offset으로 설정 → 부화 초기화)
@@ -668,7 +673,6 @@ async def change_animal(
     )
     total_secs = total_result.scalar() or 0
 
-    user_point.points -= ANIMAL_CHANGE_COST
     session.add(PointLog(username=username, amount=-ANIMAL_CHANGE_COST, reason="캐릭터 변경"))
     user.animal_type = req.animal_type
     user.lifetime_seconds_offset = total_secs
