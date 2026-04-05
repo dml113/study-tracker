@@ -94,3 +94,48 @@ class Notice(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     group_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("groups.id"), nullable=True)  # None=전체
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class UserPoint(Base):
+    __tablename__ = "user_points"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    username: Mapped[str] = mapped_column(String, unique=True, index=True)
+    points: Mapped[int] = mapped_column(Integer, default=0)
+    seconds_buffer: Mapped[float] = mapped_column(Float, default=0.0)  # 포인트 미적립 잔여 초
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class PointLog(Base):
+    __tablename__ = "point_logs"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    username: Mapped[str] = mapped_column(String, index=True)
+    amount: Mapped[int] = mapped_column(Integer)  # 양수=적립, 음수=소비
+    reason: Mapped[str] = mapped_column(String)  # study | streak | ranking | purchase
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class ShopItem(Base):
+    __tablename__ = "shop_items"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String)
+    slot: Mapped[str] = mapped_column(String)  # hat | top | accessory
+    price: Mapped[int] = mapped_column(Integer)
+    svg_data: Mapped[str] = mapped_column(String)  # SVG 내용 직접 저장
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class UserInventory(Base):
+    __tablename__ = "user_inventory"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    username: Mapped[str] = mapped_column(String, index=True)
+    item_id: Mapped[int] = mapped_column(Integer, ForeignKey("shop_items.id"))
+    purchased_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class UserEquip(Base):
+    __tablename__ = "user_equips"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    username: Mapped[str] = mapped_column(String, index=True)
+    slot: Mapped[str] = mapped_column(String)  # hat | top | accessory
+    item_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("shop_items.id"), nullable=True)
