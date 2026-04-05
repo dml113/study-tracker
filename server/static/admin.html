@@ -179,19 +179,21 @@ tr:hover td { background:rgba(255,143,171,0.03); }
         <div id="currentVersion" style="font-size:1.8rem;font-weight:900;color:var(--primary)">로딩 중...</div>
         <a id="downloadLink" href="/client/download" style="font-size:0.8rem;font-weight:700;color:var(--muted);text-decoration:none;display:block;margin-top:5px">다운로드: /client/download</a>
       </div>
-      <hr style="border-color:var(--border);width:100%">
-      <div style="display:flex;gap:10px;align-items:center">
-        <button class="btn btn-primary" onclick="syncGithub()" id="syncBtn">🔄 GitHub에서 동기화</button>
-        <span style="font-size:0.85rem;font-weight:600;color:var(--text-light)">GitHub Release 최신 버전 자동 가져오기</span>
+      <div id="clientSuperAdminSection">
+        <hr style="border-color:var(--border);width:100%">
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn btn-primary" onclick="syncGithub()" id="syncBtn">🔄 GitHub에서 동기화</button>
+          <span style="font-size:0.85rem;font-weight:600;color:var(--text-light)">GitHub Release 최신 버전 자동 가져오기</span>
+        </div>
+        <hr style="border-color:var(--border);width:100%">
+        <div style="font-size:0.78rem;font-weight:800;color:var(--text-light);letter-spacing:1px;text-transform:uppercase">수동 업로드</div>
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+          <div class="form-group"><label>버전 번호</label><input type="text" id="uploadVersion" placeholder="예: 1.0.1" style="min-width:120px"></div>
+          <div class="form-group"><label>ZIP 파일</label><input type="file" id="uploadFile" accept=".zip" style="min-width:200px;color:var(--text)"></div>
+          <button class="btn btn-primary" onclick="uploadClient()">업로드</button>
+        </div>
+        <div id="uploadStatus" style="font-size:0.85rem;font-weight:600;color:var(--muted)"></div>
       </div>
-      <hr style="border-color:var(--border);width:100%">
-      <div style="font-size:0.78rem;font-weight:800;color:var(--text-light);letter-spacing:1px;text-transform:uppercase">수동 업로드</div>
-      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
-        <div class="form-group"><label>버전 번호</label><input type="text" id="uploadVersion" placeholder="예: 1.0.1" style="min-width:120px"></div>
-        <div class="form-group"><label>ZIP 파일</label><input type="file" id="uploadFile" accept=".zip" style="min-width:200px;color:var(--text)"></div>
-        <button class="btn btn-primary" onclick="uploadClient()">업로드</button>
-      </div>
-      <div id="uploadStatus" style="font-size:0.85rem;font-weight:600;color:var(--muted)"></div>
     </div>
   </div>
 
@@ -324,6 +326,8 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     document.getElementById('noticeTab').style.display='';
   }
   if (isGroupAdmin) {
+    document.getElementById('clientTab').style.display='';
+    document.getElementById('clientSuperAdminSection').style.display='none';
     document.getElementById('roleFormGroup').style.display='none';
     document.getElementById('groupFormGroup').style.display='none';
     document.getElementById('myGroupInfo').style.display='';
