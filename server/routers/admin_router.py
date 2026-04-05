@@ -889,6 +889,13 @@ async def admin_delete_shop_item(
     item = result.scalar_one_or_none()
     if not item:
         raise HTTPException(status_code=404, detail="아이템을 찾을 수 없습니다")
+    # 관련 인벤토리/장비 레코드 먼저 정리
+    await session.execute(
+        UserEquip.__table__.delete().where(UserEquip.item_id == item_id)
+    )
+    await session.execute(
+        UserInventory.__table__.delete().where(UserInventory.item_id == item_id)
+    )
     await session.delete(item)
     await session.commit()
     return {"message": "삭제 완료"}

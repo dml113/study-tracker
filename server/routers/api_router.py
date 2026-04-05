@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
 from models import ActivityLog, Attendance, Absence, CheatLog, User, StudyGoal, Feedback, Notice, Group, UserPoint, PointLog, ShopItem, UserInventory, UserEquip
@@ -155,34 +155,47 @@ async def checkin(
         att.checkin_at = now
         att.checkout_at = None
 
-    # 연속 출석 보너스
+    # 연속 출석 보너스 (단일 쿼리로 최근 31일 출석 기록 조회)
     streak_bonus = 0
     streak = 0
-    check_date = date.today()
-    for _ in range(32):
-        check_date -= timedelta(days=1)
-        prev_result = await session.execute(
-            select(Attendance).where(
-                Attendance.username == username,
-                Attendance.date == check_date.isoformat(),
-                Attendance.checkin_at != None,
-            )
+    start_check = (date.today() - timedelta(days=31)).isoformat()
+    past_atts = (await session.execute(
+        select(Attendance.date).where(
+            Attendance.username == username,
+            Attendance.date >= start_check,
+            Attendance.date < date.today().isoformat(),
+            Attendance.checkin_at != None,
         )
-        if prev_result.scalar_one_or_none():
+    )).scalars().all()
+    attended_set = set(past_atts)
+    check_date = date.today()
+    for _ in range(31):
+        check_date -= timedelta(days=1)
+        if check_date.isoformat() in attended_set:
             streak += 1
         else:
             break
 
     if streak in (2, 6, 13, 29):  # 3일, 7일, 14일, 30일째
-        bonus_map = {2: 5, 6: 10, 13: 20, 29: 50}
-        streak_bonus = bonus_map[streak]
-        up_result = await session.execute(select(UserPoint).where(UserPoint.username == username))
-        user_point = up_result.scalar_one_or_none()
-        if not user_point:
-            user_point = UserPoint(username=username)
-            session.add(user_point)
-        user_point.points += streak_bonus
-        session.add(PointLog(username=username, amount=streak_bonus, reason="streak"))
+        # 오늘 이미 streak 보너스를 받았는지 확인 (출퇴근 반복 시 중복 방지)
+        today_str = date.today().isoformat()
+        already_result = await session.execute(
+            select(PointLog).where(
+                PointLog.username == username,
+                PointLog.reason == "streak",
+                func.date(PointLog.created_at) == today_str,
+            )
+        )
+        if not already_result.scalar_one_or_none():
+            bonus_map = {2: 5, 6: 10, 13: 20, 29: 50}
+            streak_bonus = bonus_map[streak]
+            up_result = await session.execute(select(UserPoint).where(UserPoint.username == username))
+            user_point = up_result.scalar_one_or_none()
+            if not user_point:
+                user_point = UserPoint(username=username)
+                session.add(user_point)
+            user_point.points += streak_bonus
+            session.add(PointLog(username=username, amount=streak_bonus, reason="streak"))
 
     await session.commit()
     return {"status": "ok", "checkin_at": now.strftime("%H:%M"), "streak_bonus": streak_bonus, "streak_days": streak + 1}
@@ -791,16 +804,25 @@ async def buy_item(
     if owned_result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="이미 보유 중인 아이템이에요")
 
-    up_result = await session.execute(select(UserPoint).where(UserPoint.username == username))
-    user_point = up_result.scalar_one_or_none()
-    if not user_point or user_point.points < item.price:
+    # 원자적 차감: 잔액 충분한 경우에만 UPDATE
+    deduct_result = await session.execute(
+        update(UserPoint)
+        .where(UserPoint.username == username, UserPoint.points >= item.price)
+        .values(points=UserPoint.points - item.price)
+        .returning(UserPoint.points)
+    )
+    new_points_row = deduct_result.fetchone()
+    if new_points_row is None:
         raise HTTPException(status_code=400, detail="포인트가 부족해요")
 
-    user_point.points -= item.price
     session.add(PointLog(username=username, amount=-item.price, reason="purchase"))
     session.add(UserInventory(username=username, item_id=item_id))
-    await session.commit()
-    return {"message": f"{item.name} 구매 완료!", "remaining_points": user_point.points}
+    try:
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        raise HTTPException(status_code=400, detail="이미 보유 중인 아이템이에요")
+    return {"message": f"{item.name} 구매 완료!", "remaining_points": new_points_row[0]}
 
 
 # ── 인벤토리 / 장비 ────────────────────────────────────────────────

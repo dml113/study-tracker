@@ -1,5 +1,5 @@
 from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
-from sqlalchemy import Integer, String, Float, DateTime, Boolean, ForeignKey
+from sqlalchemy import Integer, String, Float, DateTime, Boolean, ForeignKey, UniqueConstraint
 from datetime import datetime
 from typing import Optional
 
@@ -128,6 +128,7 @@ class ShopItem(Base):
 
 class UserInventory(Base):
     __tablename__ = "user_inventory"
+    __table_args__ = (UniqueConstraint("username", "item_id"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     username: Mapped[str] = mapped_column(String, index=True)
     item_id: Mapped[int] = mapped_column(Integer, ForeignKey("shop_items.id"))
@@ -136,6 +137,7 @@ class UserInventory(Base):
 
 class UserEquip(Base):
     __tablename__ = "user_equips"
+    __table_args__ = (UniqueConstraint("username", "slot"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     username: Mapped[str] = mapped_column(String, index=True)
     slot: Mapped[str] = mapped_column(String)  # hat | top | accessory
