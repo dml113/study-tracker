@@ -81,7 +81,7 @@ class UpdateUserRequest(BaseModel):
     is_active: Optional[bool] = None
     role: Optional[str] = None
     group_id: Optional[int] = None
-    animal_type: Optional[int] = None  # 0~7 설정, -1이면 자동(초기화)
+    animal_type: Optional[int] = None  # 0~8 설정, -1이면 자동(초기화)
 
 
 @router.get("/users")
@@ -193,8 +193,8 @@ async def update_user(
     if req.group_id is not None:
         user.group_id = req.group_id
     if req.animal_type is not None:
-        if req.animal_type != -1 and not (0 <= req.animal_type <= 7):
-            raise HTTPException(status_code=400, detail="animal_type은 -1(자동) 또는 0~7이어야 합니다")
+        if req.animal_type != -1 and not (0 <= req.animal_type <= 8):
+            raise HTTPException(status_code=400, detail="animal_type은 -1(자동) 또는 0~8이어야 합니다")
         user.animal_type = None if req.animal_type == -1 else req.animal_type
 
     await session.commit()
