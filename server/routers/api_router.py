@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, update
+from sqlalchemy import select, func, update, text
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
 from models import ActivityLog, Attendance, Absence, CheatLog, User, StudyGoal, Feedback, Notice, Group, UserPoint, PointLog, ShopItem, UserInventory, UserEquip
@@ -309,23 +309,35 @@ async def heartbeat(
         if user:
             user.client_version = req.client_version
 
-    # 포인트 적립: 360초(6분)당 1포인트
+    # 포인트 적립: 360초(6분)당 1포인트 (원자적 UPDATE로 race condition 방지)
     SECONDS_PER_POINT = 360
-    up_result = await session.execute(select(UserPoint).where(UserPoint.username == username))
-    user_point = up_result.scalar_one_or_none()
-    if not user_point:
-        user_point = UserPoint(username=username)
-        session.add(user_point)
-    user_point.seconds_buffer += req.active_seconds
-    earned = int(user_point.seconds_buffer // SECONDS_PER_POINT)
+    # 행이 없으면 삽입 (INSERT OR IGNORE)
+    await session.execute(
+        text("INSERT OR IGNORE INTO user_point (username, points, seconds_buffer) VALUES (:u, 0, 0)"),
+        {"u": username},
+    )
+    # seconds_buffer 현재값 조회 (earned 계산 및 PointLog 기록용)
+    sb_row = (await session.execute(
+        select(UserPoint.seconds_buffer).where(UserPoint.username == username)
+    )).fetchone()
+    old_sb = sb_row[0] if sb_row else 0
+    earned = int((old_sb + req.active_seconds) // SECONDS_PER_POINT)
+    # 원자적 UPDATE: SQL 정수 산술로 buffer/points 동시 갱신
+    await session.execute(
+        text("""
+            UPDATE user_point
+            SET seconds_buffer = (seconds_buffer + :added) % :spp,
+                points = points + (seconds_buffer + :added) / :spp,
+                updated_at = :now
+            WHERE username = :u
+        """),
+        {"u": username, "added": req.active_seconds, "spp": SECONDS_PER_POINT, "now": now},
+    )
     if earned > 0:
-        user_point.seconds_buffer -= earned * SECONDS_PER_POINT
-        user_point.points += earned
-        user_point.updated_at = now
         session.add(PointLog(username=username, amount=earned, reason="study"))
 
     await session.commit()
-    return {"status": "ok", "points_earned": earned if earned > 0 else 0}
+    return {"status": "ok", "points_earned": earned}
 
 
 @router.post("/cheat-report")
