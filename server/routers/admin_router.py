@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel, Field
 from typing import Optional
-from models import User, ActivityLog, Attendance, Absence, Group, CheatLog, StudyGoal, Feedback, Notice
+from models import User, ActivityLog, Attendance, Absence, Group, CheatLog, StudyGoal, Feedback, Notice, ShopItem, UserInventory, UserEquip, UserPoint, PointLog
 from auth import hash_password, get_current_admin, get_current_superadmin
 from database import get_session
 from datetime import date, datetime, timedelta
@@ -791,3 +791,122 @@ async def delete_notice(
     await session.delete(notice)
     await session.commit()
     return {"message": "삭제되었습니다"}
+
+
+# ── 상점 관리 (superadmin) ────────────────────────────────────────
+
+class ShopItemCreate(BaseModel):
+    name: str = Field(..., max_length=50)
+    slot: str = Field(..., pattern="^(hat|top|accessory)$")
+    price: int = Field(..., gt=0, le=99999)
+    svg_data: str = Field(..., min_length=10)
+
+
+class ShopItemUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=50)
+    price: Optional[int] = Field(None, gt=0, le=99999)
+    is_active: Optional[bool] = None
+
+
+@router.get("/shop")
+async def admin_get_shop(
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_superadmin),
+):
+    result = await session.execute(select(ShopItem).order_by(ShopItem.slot, ShopItem.price))
+    items = result.scalars().all()
+    slot_map = {"hat": "🎩 모자", "top": "👕 상의", "accessory": "✨ 액세서리"}
+    return [
+        {
+            "id": i.id,
+            "name": i.name,
+            "slot": i.slot,
+            "slot_label": slot_map.get(i.slot, i.slot),
+            "price": i.price,
+            "svg_data": i.svg_data,
+            "is_active": i.is_active,
+            "created_at": i.created_at.strftime("%Y-%m-%d"),
+        }
+        for i in items
+    ]
+
+
+@router.post("/shop")
+async def admin_create_shop_item(
+    req: ShopItemCreate,
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_superadmin),
+):
+    item = ShopItem(name=req.name, slot=req.slot, price=req.price, svg_data=req.svg_data)
+    session.add(item)
+    await session.commit()
+    return {"message": "아이템 등록 완료", "id": item.id}
+
+
+@router.patch("/shop/{item_id}")
+async def admin_update_shop_item(
+    item_id: int,
+    req: ShopItemUpdate,
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_superadmin),
+):
+    result = await session.execute(select(ShopItem).where(ShopItem.id == item_id))
+    item = result.scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=404, detail="아이템을 찾을 수 없습니다")
+    if req.name is not None:
+        item.name = req.name
+    if req.price is not None:
+        item.price = req.price
+    if req.is_active is not None:
+        item.is_active = req.is_active
+    await session.commit()
+    return {"message": "수정 완료"}
+
+
+@router.delete("/shop/{item_id}")
+async def admin_delete_shop_item(
+    item_id: int,
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_superadmin),
+):
+    result = await session.execute(select(ShopItem).where(ShopItem.id == item_id))
+    item = result.scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=404, detail="아이템을 찾을 수 없습니다")
+    await session.delete(item)
+    await session.commit()
+    return {"message": "삭제 완료"}
+
+
+@router.get("/points")
+async def admin_get_points(
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_superadmin),
+):
+    result = await session.execute(select(UserPoint).order_by(UserPoint.points.desc()))
+    rows = result.scalars().all()
+    return [{"username": r.username, "points": r.points} for r in rows]
+
+
+class PointAdjust(BaseModel):
+    username: str
+    amount: int = Field(..., ge=-99999, le=99999)
+    reason: str = Field(default="관리자 조정", max_length=100)
+
+
+@router.post("/points/adjust")
+async def admin_adjust_points(
+    req: PointAdjust,
+    session: AsyncSession = Depends(get_session),
+    _: dict = Depends(get_current_superadmin),
+):
+    up_result = await session.execute(select(UserPoint).where(UserPoint.username == req.username))
+    user_point = up_result.scalar_one_or_none()
+    if not user_point:
+        user_point = UserPoint(username=req.username, points=0)
+        session.add(user_point)
+    user_point.points = max(0, user_point.points + req.amount)
+    session.add(PointLog(username=req.username, amount=req.amount, reason=req.reason))
+    await session.commit()
+    return {"message": "포인트 조정 완료", "new_points": user_point.points}

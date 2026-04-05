@@ -7,7 +7,7 @@ import json
 from datetime import datetime, timedelta, date
 from sqlalchemy import select, func
 from database import get_session
-from models import Attendance, Absence, ActivityLog, User, Group, Notice
+from models import Attendance, Absence, ActivityLog, User, Group, Notice, UserPoint, PointLog
 
 BACKUP_DIR = "backups"
 SLACK_WEBHOOK_URL = os.environ.get(
@@ -182,6 +182,19 @@ async def generate_weekly_report():
             slack_text = f"🏆 이번 주 랭킹이 나왔어요! ({period_str})\n매일 1위=3점·2위=2점·3위=1점 기준이에요 🎯\n\n" + "\n".join(lines) + "\n\n다음 주도 열심히 해봐요 💪"
             _post_slack(slack_text, username="Study-Ranking", icon_emoji=":trophy:")
             print(f"[주간랭킹] {period_str} 슬랙 전송 완료")
+
+            # 랭킹 포인트 보너스 (1위=30, 2위=20, 3위=10)
+            ranking_bonuses = [30, 20, 10]
+            for i, (username, _pt) in enumerate(ranked[:3]):
+                bonus = ranking_bonuses[i]
+                up_result = await session.execute(select(UserPoint).where(UserPoint.username == username))
+                user_point = up_result.scalar_one_or_none()
+                if not user_point:
+                    user_point = UserPoint(username=username)
+                    session.add(user_point)
+                user_point.points += bonus
+                session.add(PointLog(username=username, amount=bonus, reason="ranking"))
+            await session.commit()
 
             # 그룹별 슬랙
             user_rows = (await session.execute(select(User.username, User.group_id))).all()

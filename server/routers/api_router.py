@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from pydantic import BaseModel, Field
 from typing import Literal, Optional
-from models import ActivityLog, Attendance, Absence, CheatLog, User, StudyGoal, Feedback, Notice, Group
+from models import ActivityLog, Attendance, Absence, CheatLog, User, StudyGoal, Feedback, Notice, Group, UserPoint, PointLog, ShopItem, UserInventory, UserEquip
 from auth import get_current_user, verify_password, hash_password
 from database import get_session
 from datetime import date, datetime, timedelta
@@ -155,8 +155,37 @@ async def checkin(
         att.checkin_at = now
         att.checkout_at = None
 
+    # 연속 출석 보너스
+    streak_bonus = 0
+    streak = 0
+    check_date = date.today()
+    for _ in range(32):
+        check_date -= timedelta(days=1)
+        prev_result = await session.execute(
+            select(Attendance).where(
+                Attendance.username == username,
+                Attendance.date == check_date.isoformat(),
+                Attendance.checkin_at != None,
+            )
+        )
+        if prev_result.scalar_one_or_none():
+            streak += 1
+        else:
+            break
+
+    if streak in (2, 6, 13, 29):  # 3일, 7일, 14일, 30일째
+        bonus_map = {2: 5, 6: 10, 13: 20, 29: 50}
+        streak_bonus = bonus_map[streak]
+        up_result = await session.execute(select(UserPoint).where(UserPoint.username == username))
+        user_point = up_result.scalar_one_or_none()
+        if not user_point:
+            user_point = UserPoint(username=username)
+            session.add(user_point)
+        user_point.points += streak_bonus
+        session.add(PointLog(username=username, amount=streak_bonus, reason="streak"))
+
     await session.commit()
-    return {"status": "ok", "checkin_at": now.strftime("%H:%M")}
+    return {"status": "ok", "checkin_at": now.strftime("%H:%M"), "streak_bonus": streak_bonus, "streak_days": streak + 1}
 
 
 @router.post("/checkout")
@@ -267,8 +296,23 @@ async def heartbeat(
         if user:
             user.client_version = req.client_version
 
+    # 포인트 적립: 360초(6분)당 1포인트
+    SECONDS_PER_POINT = 360
+    up_result = await session.execute(select(UserPoint).where(UserPoint.username == username))
+    user_point = up_result.scalar_one_or_none()
+    if not user_point:
+        user_point = UserPoint(username=username)
+        session.add(user_point)
+    user_point.seconds_buffer += req.active_seconds
+    earned = int(user_point.seconds_buffer // SECONDS_PER_POINT)
+    if earned > 0:
+        user_point.seconds_buffer -= earned * SECONDS_PER_POINT
+        user_point.points += earned
+        user_point.updated_at = now
+        session.add(PointLog(username=username, amount=earned, reason="study"))
+
     await session.commit()
-    return {"status": "ok"}
+    return {"status": "ok", "points_earned": earned if earned > 0 else 0}
 
 
 @router.post("/cheat-report")
@@ -590,3 +634,192 @@ async def submit_feedback(
     session.add(feedback)
     await session.commit()
     return {"message": "피드백이 등록되었습니다"}
+
+
+# ── 포인트 ────────────────────────────────────────────────────────
+
+@router.get("/my-points")
+async def my_points(
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_user),
+):
+    username = current["sub"]
+    up_result = await session.execute(select(UserPoint).where(UserPoint.username == username))
+    user_point = up_result.scalar_one_or_none()
+    points = user_point.points if user_point else 0
+
+    logs_result = await session.execute(
+        select(PointLog).where(PointLog.username == username).order_by(PointLog.created_at.desc()).limit(20)
+    )
+    logs = logs_result.scalars().all()
+    reason_map = {"study": "📚 공부", "streak": "🔥 연속 출석", "ranking": "🏆 랭킹 보너스", "purchase": "🛍️ 아이템 구매"}
+    return {
+        "points": points,
+        "logs": [
+            {
+                "amount": l.amount,
+                "reason": reason_map.get(l.reason, l.reason),
+                "created_at": l.created_at.strftime("%m/%d %H:%M"),
+            }
+            for l in logs
+        ],
+    }
+
+
+# ── 상점 ────────────────────────────────────────────────────────
+
+@router.get("/shop")
+async def get_shop(
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_user),
+):
+    username = current["sub"]
+    items_result = await session.execute(
+        select(ShopItem).where(ShopItem.is_active == True).order_by(ShopItem.slot, ShopItem.price)
+    )
+    items = items_result.scalars().all()
+
+    owned_result = await session.execute(
+        select(UserInventory.item_id).where(UserInventory.username == username)
+    )
+    owned_ids = {row[0] for row in owned_result.all()}
+
+    up_result = await session.execute(select(UserPoint).where(UserPoint.username == username))
+    user_point = up_result.scalar_one_or_none()
+    my_points = user_point.points if user_point else 0
+
+    slot_map = {"hat": "🎩 모자", "top": "👕 상의", "accessory": "✨ 액세서리"}
+    return {
+        "my_points": my_points,
+        "items": [
+            {
+                "id": i.id,
+                "name": i.name,
+                "slot": i.slot,
+                "slot_label": slot_map.get(i.slot, i.slot),
+                "price": i.price,
+                "svg_data": i.svg_data,
+                "owned": i.id in owned_ids,
+            }
+            for i in items
+        ],
+    }
+
+
+@router.post("/shop/buy/{item_id}")
+async def buy_item(
+    item_id: int,
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_user),
+):
+    username = current["sub"]
+
+    item_result = await session.execute(select(ShopItem).where(ShopItem.id == item_id, ShopItem.is_active == True))
+    item = item_result.scalar_one_or_none()
+    if not item:
+        raise HTTPException(status_code=404, detail="아이템을 찾을 수 없어요")
+
+    owned_result = await session.execute(
+        select(UserInventory).where(UserInventory.username == username, UserInventory.item_id == item_id)
+    )
+    if owned_result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="이미 보유 중인 아이템이에요")
+
+    up_result = await session.execute(select(UserPoint).where(UserPoint.username == username))
+    user_point = up_result.scalar_one_or_none()
+    if not user_point or user_point.points < item.price:
+        raise HTTPException(status_code=400, detail="포인트가 부족해요")
+
+    user_point.points -= item.price
+    session.add(PointLog(username=username, amount=-item.price, reason="purchase"))
+    session.add(UserInventory(username=username, item_id=item_id))
+    await session.commit()
+    return {"message": f"{item.name} 구매 완료!", "remaining_points": user_point.points}
+
+
+# ── 인벤토리 / 장비 ────────────────────────────────────────────────
+
+@router.get("/inventory")
+async def get_inventory(
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_user),
+):
+    username = current["sub"]
+    inv_result = await session.execute(
+        select(UserInventory, ShopItem)
+        .join(ShopItem, UserInventory.item_id == ShopItem.id)
+        .where(UserInventory.username == username)
+        .order_by(ShopItem.slot)
+    )
+    rows = inv_result.all()
+
+    equip_result = await session.execute(select(UserEquip).where(UserEquip.username == username))
+    equips = {e.slot: e.item_id for e in equip_result.scalars().all()}
+
+    slot_map = {"hat": "🎩 모자", "top": "👕 상의", "accessory": "✨ 액세서리"}
+    return [
+        {
+            "inventory_id": inv.id,
+            "item_id": item.id,
+            "name": item.name,
+            "slot": item.slot,
+            "slot_label": slot_map.get(item.slot, item.slot),
+            "svg_data": item.svg_data,
+            "equipped": equips.get(item.slot) == item.id,
+        }
+        for inv, item in rows
+    ]
+
+
+@router.get("/equip")
+async def get_equip(
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_user),
+):
+    username = current["sub"]
+    equip_result = await session.execute(
+        select(UserEquip, ShopItem)
+        .join(ShopItem, UserEquip.item_id == ShopItem.id)
+        .where(UserEquip.username == username, UserEquip.item_id != None)
+    )
+    rows = equip_result.all()
+    return {e.slot: {"item_id": item.id, "name": item.name, "svg_data": item.svg_data} for e, item in rows}
+
+
+class EquipRequest(BaseModel):
+    slot: Literal["hat", "top", "accessory"]
+    item_id: Optional[int] = None  # None이면 해제
+
+
+@router.post("/equip")
+async def equip_item(
+    req: EquipRequest,
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_user),
+):
+    username = current["sub"]
+
+    if req.item_id is not None:
+        owned_result = await session.execute(
+            select(UserInventory).where(UserInventory.username == username, UserInventory.item_id == req.item_id)
+        )
+        if not owned_result.scalar_one_or_none():
+            raise HTTPException(status_code=403, detail="보유하지 않은 아이템이에요")
+
+        item_result = await session.execute(select(ShopItem).where(ShopItem.id == req.item_id))
+        item = item_result.scalar_one_or_none()
+        if not item or item.slot != req.slot:
+            raise HTTPException(status_code=400, detail="슬롯이 맞지 않아요")
+
+    equip_result = await session.execute(
+        select(UserEquip).where(UserEquip.username == username, UserEquip.slot == req.slot)
+    )
+    equip = equip_result.scalar_one_or_none()
+    if equip:
+        equip.item_id = req.item_id
+    else:
+        equip = UserEquip(username=username, slot=req.slot, item_id=req.item_id)
+        session.add(equip)
+
+    await session.commit()
+    return {"message": "착용 변경 완료"}

@@ -138,6 +138,8 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     <button class="tab" id="noticeTab" style="display:none" onclick="switchTab('notices', this)">📢 공지 관리</button>
     <button class="tab" id="animalTab" style="display:none" onclick="switchTab('animals', this)">🐾 동물 관리</button>
     <button class="tab" id="groupTab" style="display:none" onclick="switchTab('groups', this)">🏠 그룹 관리</button>
+    <button class="tab" id="shopTab" style="display:none" onclick="switchTab('shop', this)">🛍️ 상점 관리</button>
+    <button class="tab" id="pointsTab" style="display:none" onclick="switchTab('points', this)">💎 포인트 관리</button>
     <button class="tab" id="clientTab" style="display:none" onclick="switchTab('client', this)">💻 클라이언트 배포</button>
     <button class="tab" id="backupTab" style="display:none" onclick="switchTab('backup', this)">💾 DB 백업</button>
   </div>
@@ -281,6 +283,33 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     </div>
     <div id="groupList"></div>
   </div>
+
+  <div id="tab-shop" style="display:none">
+    <div class="create-form" style="flex-direction:column;align-items:flex-start;gap:12px">
+      <div style="font-size:0.78rem;font-weight:800;color:var(--text-light);letter-spacing:1px;text-transform:uppercase">새 아이템 등록</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;width:100%">
+        <div class="form-group"><label>이름</label><input type="text" id="shopItemName" placeholder="예: 별 왕관" style="min-width:120px"></div>
+        <div class="form-group"><label>슬롯</label><select id="shopItemSlot"><option value="hat">🎩 모자</option><option value="top">👕 상의</option><option value="accessory">✨ 액세서리</option></select></div>
+        <div class="form-group"><label>가격 (💎)</label><input type="number" id="shopItemPrice" placeholder="50" min="1" style="min-width:80px"></div>
+      </div>
+      <div class="form-group" style="width:100%"><label>SVG 데이터</label><textarea id="shopItemSvg" rows="4" style="width:100%;font-family:monospace;font-size:0.75rem;border:1.5px solid var(--border);border-radius:10px;padding:8px;resize:vertical" placeholder='<svg viewBox="0 0 100 150" ...>...</svg>'></textarea></div>
+      <button class="btn btn-primary" onclick="createShopItem()">+ 아이템 등록</button>
+    </div>
+    <div id="shopItemList"></div>
+  </div>
+
+  <div id="tab-points" style="display:none">
+    <div class="create-form" style="flex-direction:column;align-items:flex-start;gap:12px">
+      <div style="font-size:0.78rem;font-weight:800;color:var(--text-light);letter-spacing:1px;text-transform:uppercase">포인트 수동 조정</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div class="form-group"><label>유저</label><input type="text" id="adjustUsername" placeholder="아이디" style="min-width:120px"></div>
+        <div class="form-group"><label>양 (±)</label><input type="number" id="adjustAmount" placeholder="예: 100 or -50" style="min-width:100px"></div>
+        <div class="form-group"><label>사유</label><input type="text" id="adjustReason" placeholder="관리자 조정" style="min-width:120px"></div>
+      </div>
+      <button class="btn btn-primary" onclick="adjustPoints()">포인트 조정</button>
+    </div>
+    <div id="pointsList"></div>
+  </div>
 </div>
 
 <div class="modal-bg" id="pwModal">
@@ -324,6 +353,8 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     document.getElementById('activityTab').style.display='';
     document.getElementById('animalTab').style.display='';
     document.getElementById('noticeTab').style.display='';
+    document.getElementById('shopTab').style.display='';
+    document.getElementById('pointsTab').style.display='';
   }
   if (isGroupAdmin) {
     document.getElementById('clientTab').style.display='';
@@ -345,7 +376,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     _currentTab = tab;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     el.classList.add('active');
-    ['users','stats','attendance','cheats','activity','goals','group-stats','absence-stats','feedbacks','notices','animals','groups','client','backup'].forEach(t => {
+    ['users','stats','attendance','cheats','activity','goals','group-stats','absence-stats','feedbacks','notices','animals','groups','shop','points','client','backup'].forEach(t => {
       const div = document.getElementById('tab-' + t);
       if (div) div.style.display = t === tab ? 'block' : 'none';
     });
@@ -362,6 +393,8 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     if (tab === 'feedbacks') loadFeedbacks();
     if (tab === 'notices') loadNotices();
     if (tab === 'animals') loadAnimals();
+    if (tab === 'shop') loadAdminShop();
+    if (tab === 'points') loadAdminPoints();
   }
 
   function showToast(msg, type = 'success') {
@@ -876,6 +909,73 @@ tr:hover td { background:rgba(255,143,171,0.03); }
   document.getElementById('groupStatsDate').value = today;
   loadUsers();
   setInterval(() => { if (_currentTab === 'stats') loadStats(); if (_currentTab === 'group-stats') loadGroupStats(); }, 30000);
+
+  // ── 상점 관리 ──────────────────────────────────────────────────
+  async function loadAdminShop() {
+    const res = await fetch('/admin/shop', { headers: authH() });
+    if (!res.ok) return;
+    const items = await res.json();
+    const slotLabels = { hat: '🎩 모자', top: '👕 상의', accessory: '✨ 액세서리' };
+    document.getElementById('shopItemList').innerHTML = items.length ? `
+      <table><thead><tr><th>ID</th><th>이름</th><th>슬롯</th><th>가격</th><th>상태</th><th>관리</th></tr></thead>
+      <tbody>${items.map(i => `<tr>
+        <td>${i.id}</td><td>${esc(i.name)}</td>
+        <td>${slotLabels[i.slot]||i.slot}</td>
+        <td>${i.price} 💎</td>
+        <td><span class="role-badge" style="background:${i.is_active?'rgba(85,239,196,0.1);border-color:rgba(85,239,196,0.4);color:#00b894':'rgba(200,180,220,0.12);border-color:var(--border);color:var(--muted)'}">${i.is_active?'활성':'비활성'}</span></td>
+        <td>
+          <button class="btn-sm" onclick="toggleShopItem(${i.id},${i.is_active})">${i.is_active?'비활성화':'활성화'}</button>
+          <button class="btn-sm btn-danger" onclick="deleteShopItem(${i.id})">삭제</button>
+        </td>
+      </tr>`).join('')}</tbody></table>` : '<div style="color:var(--muted);padding:20px;font-size:0.88rem">등록된 아이템 없음</div>';
+  }
+
+  async function createShopItem() {
+    const name = document.getElementById('shopItemName').value.trim();
+    const slot = document.getElementById('shopItemSlot').value;
+    const price = parseInt(document.getElementById('shopItemPrice').value);
+    const svg_data = document.getElementById('shopItemSvg').value.trim();
+    if (!name || !price || !svg_data) { showToast('모든 항목을 입력해주세요', 'error'); return; }
+    const res = await fetch('/admin/shop', { method:'POST', headers:authH(), body:JSON.stringify({name,slot,price,svg_data}) });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); loadAdminShop(); document.getElementById('shopItemName').value=''; document.getElementById('shopItemSvg').value=''; }
+    else showToast(data.detail,'error');
+  }
+
+  async function toggleShopItem(id, isActive) {
+    const res = await fetch('/admin/shop/'+id, { method:'PATCH', headers:authH(), body:JSON.stringify({is_active:!isActive}) });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); loadAdminShop(); } else showToast(data.detail,'error');
+  }
+
+  async function deleteShopItem(id) {
+    if (!confirm('아이템을 삭제할까요?')) return;
+    const res = await fetch('/admin/shop/'+id, { method:'DELETE', headers:authH() });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message); loadAdminShop(); } else showToast(data.detail,'error');
+  }
+
+  // ── 포인트 관리 ──────────────────────────────────────────────────
+  async function loadAdminPoints() {
+    const res = await fetch('/admin/points', { headers: authH() });
+    if (!res.ok) return;
+    const rows = await res.json();
+    document.getElementById('pointsList').innerHTML = rows.length ? `
+      <table><thead><tr><th>유저</th><th>포인트</th></tr></thead>
+      <tbody>${rows.map(r => `<tr><td>${esc(r.username)}</td><td style="font-weight:900;color:var(--primary)">${r.points.toLocaleString()} 💎</td></tr>`).join('')}</tbody></table>`
+      : '<div style="color:var(--muted);padding:20px;font-size:0.88rem">데이터 없음</div>';
+  }
+
+  async function adjustPoints() {
+    const username = document.getElementById('adjustUsername').value.trim();
+    const amount = parseInt(document.getElementById('adjustAmount').value);
+    const reason = document.getElementById('adjustReason').value.trim() || '관리자 조정';
+    if (!username || isNaN(amount)) { showToast('유저와 양을 입력해주세요', 'error'); return; }
+    const res = await fetch('/admin/points/adjust', { method:'POST', headers:authH(), body:JSON.stringify({username,amount,reason}) });
+    const data = await res.json();
+    if (res.ok) { showToast(data.message + ' (' + data.new_points + '💎)'); loadAdminPoints(); }
+    else showToast(data.detail,'error');
+  }
 </script>
 </body>
 </html>

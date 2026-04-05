@@ -112,6 +112,32 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
 .absence-stat { text-align:center; padding:12px 8px; }
 .absence-stat-val { font-size:1.8rem; font-weight:900; background:linear-gradient(135deg,#74b9ff,#a29bfe); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1; margin-bottom:4px; }
 .absence-stat-label { font-size:0.72rem; font-weight:700; color:var(--muted); }
+
+/* Wardrobe */
+.wardrobe-wrap { display:flex; gap:24px; align-items:flex-start; }
+.char-preview { flex-shrink:0; display:flex; flex-direction:column; align-items:center; gap:10px; }
+.char-frame { position:relative; width:110px; height:165px; background:linear-gradient(160deg,#fdf0ff,#fff0f8); border:2px solid var(--border); border-radius:20px; overflow:hidden; }
+.char-layer { position:absolute; inset:0; }
+.char-points { font-size:1.1rem; font-weight:900; color:var(--primary); text-align:center; }
+.char-points-label { font-size:0.72rem; font-weight:700; color:var(--muted); }
+.wardrobe-right { flex:1; min-width:0; }
+.wardrobe-tabs { display:flex; gap:8px; margin-bottom:14px; }
+.wardrobe-tab { padding:7px 18px; border-radius:99px; border:1.5px solid var(--border); background:transparent; font-family:'Nunito',sans-serif; font-size:0.82rem; font-weight:700; color:var(--text-light); cursor:pointer; transition:all 0.18s; }
+.wardrobe-tab.active { background:linear-gradient(135deg,var(--primary),#c77dff); color:white; border-color:transparent; }
+.slot-label { font-size:0.7rem; font-weight:800; color:var(--text-light); letter-spacing:1px; text-transform:uppercase; margin-bottom:8px; margin-top:14px; }
+.slot-label:first-child { margin-top:0; }
+.item-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(80px,1fr)); gap:8px; }
+.item-card { background:var(--surface); border:1.5px solid var(--border); border-radius:14px; padding:10px 6px; text-align:center; cursor:pointer; transition:all 0.18s; position:relative; }
+.item-card:hover { border-color:var(--primary); transform:translateY(-2px); box-shadow:0 4px 16px rgba(255,143,171,0.2); }
+.item-card.equipped { border-color:var(--primary); background:rgba(255,143,171,0.07); }
+.item-card.owned { border-color:#6bcb77; }
+.item-card-img { width:60px; height:60px; margin:0 auto 6px; position:relative; }
+.item-card-name { font-size:0.7rem; font-weight:800; color:var(--text); }
+.item-card-price { font-size:0.68rem; font-weight:700; color:var(--primary); margin-top:2px; }
+.item-card-badge { position:absolute; top:4px; right:4px; font-size:0.6rem; font-weight:800; padding:1px 5px; border-radius:99px; }
+.badge-owned { background:rgba(107,203,119,0.15); color:#27ae60; border:1px solid rgba(107,203,119,0.3); }
+.badge-equipped { background:rgba(255,143,171,0.15); color:var(--primary); border:1px solid rgba(255,143,171,0.3); }
+.empty-inventory { text-align:center; padding:32px 0; color:var(--muted); font-size:0.88rem; font-weight:700; }
 </style>
 </head>
 <body>
@@ -185,6 +211,31 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
       <div class="absence-grid" id="absenceGrid"></div>
     </div>
   </div>
+  <div class="section">
+    <div class="section-title">🧸 내 캐릭터 꾸미기</div>
+    <div class="wardrobe-wrap">
+      <div class="char-preview">
+        <div class="char-frame" id="charFrame">
+          <div class="char-layer" id="layerBase"></div>
+          <div class="char-layer" id="layerTop"></div>
+          <div class="char-layer" id="layerHat"></div>
+          <div class="char-layer" id="layerAccessory"></div>
+        </div>
+        <div class="char-points" id="myPointsDisplay">0</div>
+        <div class="char-points-label">포인트 💎</div>
+      </div>
+      <div class="wardrobe-right">
+        <div class="wardrobe-tabs">
+          <button class="wardrobe-tab active" onclick="switchWardrobeTab('shop', this)">🛍️ 상점</button>
+          <button class="wardrobe-tab" onclick="switchWardrobeTab('inventory', this)">👜 내 옷장</button>
+          <button class="wardrobe-tab" onclick="switchWardrobeTab('log', this)">📜 내역</button>
+        </div>
+        <div id="wardrobeShop"></div>
+        <div id="wardrobeInventory" style="display:none"></div>
+        <div id="wardrobeLog" style="display:none"></div>
+      </div>
+    </div>
+  </div>
 </div>
 <script>
   const EGG_COLORS = [
@@ -219,6 +270,26 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
     `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="25" cy="25" r="16" fill="#2A2A2A"/><circle cx="75" cy="25" r="16" fill="#2A2A2A"/><circle cx="50" cy="58" r="35" fill="#F8F8F5"/><ellipse cx="35" cy="51" rx="14" ry="12" fill="#2A2A2A" transform="rotate(-10 35 51)"/><ellipse cx="65" cy="51" rx="14" ry="12" fill="#2A2A2A" transform="rotate(10 65 51)"/><circle cx="35" cy="52" r="9" fill="white"/><circle cx="65" cy="52" r="9" fill="white"/><circle cx="35" cy="53" r="6" fill="#1A1A1A"/><circle cx="65" cy="53" r="6" fill="#1A1A1A"/><circle cx="38" cy="50" r="2.5" fill="white"/><circle cx="68" cy="50" r="2.5" fill="white"/><ellipse cx="50" cy="66" rx="5" ry="4" fill="#1A1A1A"/><path d="M46,70 Q50,75 54,70" stroke="#555" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="27" cy="67" r="8" fill="rgba(255,160,180,0.25)"/><circle cx="73" cy="67" r="8" fill="rgba(255,160,180,0.25)"/></svg>`,
     // 7: 코알라 (회색, 큰 귀, 큰 코)
     `<svg width="100%" height="100%" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="36" r="22" fill="#A898B8"/><circle cx="84" cy="36" r="22" fill="#A898B8"/><circle cx="16" cy="36" r="14" fill="#C8BAD8"/><circle cx="84" cy="36" r="14" fill="#C8BAD8"/><circle cx="50" cy="60" r="32" fill="#B8AECA"/><circle cx="37" cy="54" r="11" fill="white"/><circle cx="63" cy="54" r="11" fill="white"/><circle cx="37" cy="55" r="7.5" fill="#2A2050"/><circle cx="63" cy="55" r="7.5" fill="#2A2050"/><circle cx="37" cy="55" r="4.5" fill="#110E28"/><circle cx="63" cy="55" r="4.5" fill="#110E28"/><circle cx="40" cy="52" r="2.5" fill="white"/><circle cx="66" cy="52" r="2.5" fill="white"/><ellipse cx="50" cy="67" rx="10" ry="8" fill="#5A4878"/><ellipse cx="47" cy="65" rx="3.5" ry="2.5" fill="rgba(255,255,255,0.25)"/><path d="M44,75 Q50,81 56,75" stroke="#7A6898" stroke-width="2" fill="none" stroke-linecap="round"/><circle cx="26" cy="65" r="8" fill="rgba(200,180,230,0.4)"/><circle cx="74" cy="65" r="8" fill="rgba(200,180,230,0.4)"/></svg>`
+  ];
+
+  // 전신 SVG (viewBox 0 0 100 150) - 옷장 캐릭터 프리뷰용
+  const ANIMAL_FULL_SVGS = [
+    // 0: 고양이
+    `<svg width="100%" height="100%" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg"><polygon points="24,26 16,4 40,18" fill="#FFCDB2"/><polygon points="76,26 84,4 60,18" fill="#FFCDB2"/><polygon points="27,24 20,8 38,17" fill="#FFAAC5"/><polygon points="73,24 80,8 62,17" fill="#FFAAC5"/><circle cx="50" cy="42" r="28" fill="#FFCDB2"/><circle cx="38" cy="38" r="9" fill="white"/><circle cx="62" cy="38" r="9" fill="white"/><circle cx="38" cy="39" r="6" fill="#5BC8E0"/><circle cx="62" cy="39" r="6" fill="#5BC8E0"/><circle cx="38" cy="39" r="3.5" fill="#1A1A2E"/><circle cx="62" cy="39" r="3.5" fill="#1A1A2E"/><circle cx="40" cy="37" r="1.8" fill="white"/><circle cx="64" cy="37" r="1.8" fill="white"/><polygon points="50,48 48,51 52,51" fill="#FF9BAA"/><path d="M47,52 Q50,55 53,52" stroke="#FF9BAA" stroke-width="1.5" fill="none" stroke-linecap="round"/><circle cx="30" cy="47" r="6" fill="rgba(255,150,160,0.3)"/><circle cx="70" cy="47" r="6" fill="rgba(255,150,160,0.3)"/><line x1="16" y1="43" x2="36" y2="45" stroke="rgba(200,180,200,0.8)" stroke-width="1"/><line x1="16" y1="47" x2="36" y2="47" stroke="rgba(200,180,200,0.8)" stroke-width="1"/><line x1="64" y1="45" x2="84" y2="43" stroke="rgba(200,180,200,0.8)" stroke-width="1"/><line x1="64" y1="47" x2="84" y2="47" stroke="rgba(200,180,200,0.8)" stroke-width="1"/><ellipse cx="50" cy="100" rx="16" ry="20" fill="#FFCDB2"/><ellipse cx="33" cy="105" rx="7" ry="11" fill="#FFCDB2" transform="rotate(12 33 105)"/><ellipse cx="67" cy="105" rx="7" ry="11" fill="#FFCDB2" transform="rotate(-12 67 105)"/><ellipse cx="38" cy="132" rx="8" ry="11" fill="#FFCDB2"/><ellipse cx="62" cy="132" rx="8" ry="11" fill="#FFCDB2"/><ellipse cx="38" cy="142" rx="8" ry="5" fill="#FFAAC5"/><ellipse cx="62" cy="142" rx="8" ry="5" fill="#FFAAC5"/><path d="M66,112 Q84,104 80,122 Q76,136 65,130" stroke="#FFCDB2" stroke-width="7" fill="none" stroke-linecap="round"/></svg>`,
+    // 1: 강아지
+    `<svg width="100%" height="100%" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg"><ellipse cx="18" cy="38" rx="12" ry="19" fill="#C8900A"/><ellipse cx="82" cy="38" rx="12" ry="19" fill="#C8900A"/><circle cx="50" cy="42" r="28" fill="#F5C842"/><ellipse cx="50" cy="54" rx="14" ry="10" fill="#E8B430"/><circle cx="38" cy="36" r="9.5" fill="white"/><circle cx="62" cy="36" r="9.5" fill="white"/><circle cx="38" cy="37" r="6.5" fill="#4A2208"/><circle cx="62" cy="37" r="6.5" fill="#4A2208"/><circle cx="38" cy="37" r="3.8" fill="#1A0A00"/><circle cx="62" cy="37" r="3.8" fill="#1A0A00"/><circle cx="40" cy="35" r="2" fill="white"/><circle cx="64" cy="35" r="2" fill="white"/><ellipse cx="50" cy="51" rx="5" ry="4" fill="#1A1A1A"/><ellipse cx="50" cy="59" rx="5" ry="4.5" fill="#FF9999"/><line x1="50" y1="55" x2="50" y2="63" stroke="#FF8080" stroke-width="1.5"/><circle cx="28" cy="46" r="6" fill="rgba(255,160,100,0.3)"/><circle cx="72" cy="46" r="6" fill="rgba(255,160,100,0.3)"/><ellipse cx="50" cy="100" rx="16" ry="20" fill="#F5C842"/><ellipse cx="34" cy="106" rx="7" ry="11" fill="#F0BB3A" transform="rotate(10 34 106)"/><ellipse cx="66" cy="106" rx="7" ry="11" fill="#F0BB3A" transform="rotate(-10 66 106)"/><ellipse cx="38" cy="132" rx="8" ry="11" fill="#E8B430"/><ellipse cx="62" cy="132" rx="8" ry="11" fill="#E8B430"/><ellipse cx="38" cy="141" rx="8" ry="5" fill="#C8900A"/><ellipse cx="62" cy="141" rx="8" ry="5" fill="#C8900A"/><path d="M68,110 Q82,100 78,120" stroke="#C8900A" stroke-width="6" fill="none" stroke-linecap="round"/></svg>`,
+    // 2: 햄스터
+    `<svg width="100%" height="100%" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg"><circle cx="30" cy="18" r="11" fill="#F0C070"/><circle cx="70" cy="18" r="11" fill="#F0C070"/><circle cx="30" cy="18" r="7" fill="#FFAAB0"/><circle cx="70" cy="18" r="7" fill="#FFAAB0"/><circle cx="50" cy="44" r="28" fill="#F0C870"/><ellipse cx="18" cy="52" rx="14" ry="11" fill="#F5C896"/><ellipse cx="82" cy="52" rx="14" ry="11" fill="#F5C896"/><circle cx="38" cy="38" r="9" fill="white"/><circle cx="62" cy="38" r="9" fill="white"/><circle cx="38" cy="39" r="6" fill="#1A1020"/><circle cx="62" cy="39" r="6" fill="#1A1020"/><circle cx="38" cy="39" r="3.5" fill="#0A0818"/><circle cx="62" cy="39" r="3.5" fill="#0A0818"/><circle cx="40" cy="37" r="2" fill="white"/><circle cx="64" cy="37" r="2" fill="white"/><ellipse cx="50" cy="50" rx="3" ry="2.2" fill="#FF9090"/><path d="M47,53 Q50,57 53,53" stroke="#E07050" stroke-width="1.5" fill="none" stroke-linecap="round"/><circle cx="20" cy="50" r="6" fill="rgba(255,150,130,0.4)"/><circle cx="80" cy="50" r="6" fill="rgba(255,150,130,0.4)"/><ellipse cx="50" cy="104" rx="18" ry="22" fill="#F0C870"/><ellipse cx="34" cy="108" rx="7" ry="10" fill="#F0C070" transform="rotate(8 34 108)"/><ellipse cx="66" cy="108" rx="7" ry="10" fill="#F0C070" transform="rotate(-8 66 108)"/><ellipse cx="38" cy="133" rx="9" ry="11" fill="#F0C070"/><ellipse cx="62" cy="133" rx="9" ry="11" fill="#F0C070"/><ellipse cx="38" cy="142" rx="9" ry="5" fill="#FFAAB0"/><ellipse cx="62" cy="142" rx="9" ry="5" fill="#FFAAB0"/></svg>`,
+    // 3: 토끼
+    `<svg width="100%" height="100%" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg"><ellipse cx="34" cy="12" rx="9" ry="22" fill="#EAE0F5"/><ellipse cx="66" cy="12" rx="9" ry="22" fill="#EAE0F5"/><ellipse cx="34" cy="12" rx="5.5" ry="17" fill="#FFBBD8"/><ellipse cx="66" cy="12" rx="5.5" ry="17" fill="#FFBBD8"/><circle cx="50" cy="46" r="28" fill="#EAE0F5"/><circle cx="38" cy="40" r="9" fill="white"/><circle cx="62" cy="40" r="9" fill="white"/><circle cx="38" cy="41" r="6" fill="#E05080"/><circle cx="62" cy="41" r="6" fill="#E05080"/><circle cx="38" cy="41" r="3.5" fill="#8B1A4A"/><circle cx="62" cy="41" r="3.5" fill="#8B1A4A"/><circle cx="40" cy="39" r="1.8" fill="white"/><circle cx="64" cy="39" r="1.8" fill="white"/><ellipse cx="50" cy="51" rx="2.8" ry="2" fill="#FFAAC8"/><path d="M47,54 Q50,57 53,54" stroke="#FFAAC8" stroke-width="1.5" fill="none" stroke-linecap="round"/><circle cx="29" cy="49" r="6" fill="rgba(255,160,200,0.3)"/><circle cx="71" cy="49" r="6" fill="rgba(255,160,200,0.3)"/><ellipse cx="50" cy="100" rx="15" ry="20" fill="#EAE0F5"/><ellipse cx="34" cy="105" rx="7" ry="11" fill="#E0D0EE" transform="rotate(10 34 105)"/><ellipse cx="66" cy="105" rx="7" ry="11" fill="#E0D0EE" transform="rotate(-10 66 105)"/><ellipse cx="37" cy="132" rx="8" ry="11" fill="#E0D0EE"/><ellipse cx="63" cy="132" rx="8" ry="11" fill="#E0D0EE"/><ellipse cx="37" cy="141" rx="8" ry="5" fill="#FFBBD8"/><ellipse cx="63" cy="141" rx="8" ry="5" fill="#FFBBD8"/><circle cx="50" cy="138" r="5" fill="#FFBBD8"/></svg>`,
+    // 4: 개구리
+    `<svg width="100%" height="100%" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg"><circle cx="28" cy="22" r="14" fill="#6DD47E"/><circle cx="72" cy="22" r="14" fill="#6DD47E"/><circle cx="28" cy="22" r="10" fill="white"/><circle cx="72" cy="22" r="10" fill="white"/><circle cx="28" cy="23" r="7" fill="#1A3A18"/><circle cx="72" cy="23" r="7" fill="#1A3A18"/><circle cx="28" cy="23" r="4" fill="#0A1A08"/><circle cx="72" cy="23" r="4" fill="#0A1A08"/><circle cx="30" cy="21" r="2" fill="white"/><circle cx="74" cy="21" r="2" fill="white"/><ellipse cx="50" cy="52" rx="30" ry="24" fill="#7ED68A"/><ellipse cx="50" cy="57" rx="20" ry="15" fill="#C0F0B8"/><ellipse cx="38" cy="46" r="2" fill="#4A9A50"/><ellipse cx="62" cy="46" r="2" fill="#4A9A50"/><path d="M32,62 Q50,74 68,62" stroke="#3A8040" stroke-width="2.5" fill="none" stroke-linecap="round"/><circle cx="24" cy="58" r="5" fill="rgba(140,230,140,0.4)"/><circle cx="76" cy="58" r="5" fill="rgba(140,230,140,0.4)"/><ellipse cx="50" cy="106" rx="20" ry="22" fill="#7ED68A"/><ellipse cx="50" cy="116" rx="14" ry="10" fill="#C0F0B8"/><ellipse cx="28" cy="110" rx="10" ry="7" fill="#6DD47E" transform="rotate(15 28 110)"/><ellipse cx="72" cy="110" rx="10" ry="7" fill="#6DD47E" transform="rotate(-15 72 110)"/><ellipse cx="32" cy="136" rx="12" ry="8" fill="#6DD47E"/><ellipse cx="68" cy="136" rx="12" ry="8" fill="#6DD47E"/><ellipse cx="22" cy="140" rx="8" ry="5" fill="#4ABB58"/><ellipse cx="38" cy="142" rx="8" ry="5" fill="#4ABB58"/><ellipse cx="62" cy="142" rx="8" ry="5" fill="#4ABB58"/><ellipse cx="78" cy="140" rx="8" ry="5" fill="#4ABB58"/></svg>`,
+    // 5: 여우
+    `<svg width="100%" height="100%" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg"><polygon points="22,30 14,6 42,22" fill="#E8742C"/><polygon points="78,30 86,6 58,22" fill="#E8742C"/><polygon points="25,28 18,10 40,21" fill="#FFBBB0"/><polygon points="75,28 82,10 60,21" fill="#FFBBB0"/><circle cx="50" cy="44" r="28" fill="#E8742C"/><ellipse cx="50" cy="56" rx="18" ry="12" fill="#FFF5EE"/><circle cx="38" cy="38" r="9.5" fill="white"/><circle cx="62" cy="38" r="9.5" fill="white"/><circle cx="38" cy="39" r="6.5" fill="#3A1E08"/><circle cx="62" cy="39" r="6.5" fill="#3A1E08"/><circle cx="38" cy="39" r="4" fill="#1A0A00"/><circle cx="62" cy="39" r="4" fill="#1A0A00"/><circle cx="40" cy="37" r="2" fill="white"/><circle cx="64" cy="37" r="2" fill="white"/><ellipse cx="50" cy="52" rx="4" ry="3" fill="#1A1A1A"/><path d="M47,55 Q50,59 53,55" stroke="#C06030" stroke-width="1.5" fill="none" stroke-linecap="round"/><circle cx="28" cy="48" r="5.5" fill="rgba(255,130,80,0.25)"/><circle cx="72" cy="48" r="5.5" fill="rgba(255,130,80,0.25)"/><ellipse cx="50" cy="100" rx="16" ry="20" fill="#E8742C"/><ellipse cx="50" cy="108" rx="10" ry="8" fill="#FFF5EE"/><ellipse cx="33" cy="105" rx="7" ry="11" fill="#DC6A20" transform="rotate(12 33 105)"/><ellipse cx="67" cy="105" rx="7" ry="11" fill="#DC6A20" transform="rotate(-12 67 105)"/><ellipse cx="38" cy="132" rx="8" ry="11" fill="#DC6A20"/><ellipse cx="62" cy="132" rx="8" ry="11" fill="#DC6A20"/><ellipse cx="38" cy="141" rx="8" ry="5" fill="#C8580C"/><ellipse cx="62" cy="141" rx="8" ry="5" fill="#C8580C"/><path d="M67,115 Q86,105 84,125 Q82,140 68,135" stroke="#E8742C" stroke-width="8" fill="none" stroke-linecap="round"/><circle cx="84" cy="133" r="6" fill="#FFF5EE"/></svg>`,
+    // 6: 판다
+    `<svg width="100%" height="100%" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="18" r="15" fill="#2A2A2A"/><circle cx="76" cy="18" r="15" fill="#2A2A2A"/><circle cx="50" cy="46" r="28" fill="#F8F8F5"/><ellipse cx="36" cy="39" rx="12" ry="10" fill="#2A2A2A" transform="rotate(-10 36 39)"/><ellipse cx="64" cy="39" rx="12" ry="10" fill="#2A2A2A" transform="rotate(10 64 39)"/><circle cx="36" cy="40" r="7.5" fill="white"/><circle cx="64" cy="40" r="7.5" fill="white"/><circle cx="36" cy="41" r="5" fill="#1A1A1A"/><circle cx="64" cy="41" r="5" fill="#1A1A1A"/><circle cx="38" cy="39" r="2" fill="white"/><circle cx="66" cy="39" r="2" fill="white"/><ellipse cx="50" cy="54" rx="4.5" ry="3.5" fill="#1A1A1A"/><path d="M46,58 Q50,63 54,58" stroke="#555" stroke-width="1.8" fill="none" stroke-linecap="round"/><circle cx="28" cy="55" r="5.5" fill="rgba(255,160,180,0.25)"/><circle cx="72" cy="55" r="5.5" fill="rgba(255,160,180,0.25)"/><ellipse cx="50" cy="100" rx="17" ry="21" fill="#2A2A2A"/><ellipse cx="50" cy="107" rx="10" ry="10" fill="#F8F8F5"/><ellipse cx="33" cy="106" rx="7" ry="11" fill="#1A1A1A" transform="rotate(10 33 106)"/><ellipse cx="67" cy="106" rx="7" ry="11" fill="#1A1A1A" transform="rotate(-10 67 106)"/><ellipse cx="38" cy="133" rx="8" ry="11" fill="#1A1A1A"/><ellipse cx="62" cy="133" rx="8" ry="11" fill="#1A1A1A"/><ellipse cx="38" cy="141" rx="8" ry="5" fill="#333"/><ellipse cx="62" cy="141" rx="8" ry="5" fill="#333"/></svg>`,
+    // 7: 코알라
+    `<svg width="100%" height="100%" viewBox="0 0 100 150" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="30" r="20" fill="#A898B8"/><circle cx="84" cy="30" r="20" fill="#A898B8"/><circle cx="16" cy="30" r="13" fill="#C8BAD8"/><circle cx="84" cy="30" r="13" fill="#C8BAD8"/><circle cx="50" cy="48" r="28" fill="#B8AECA"/><circle cx="38" cy="42" r="9" fill="white"/><circle cx="62" cy="42" r="9" fill="white"/><circle cx="38" cy="43" r="6.2" fill="#2A2050"/><circle cx="62" cy="43" r="6.2" fill="#2A2050"/><circle cx="38" cy="43" r="3.8" fill="#110E28"/><circle cx="62" cy="43" r="3.8" fill="#110E28"/><circle cx="40" cy="41" r="2" fill="white"/><circle cx="64" cy="41" r="2" fill="white"/><ellipse cx="50" cy="55" rx="9" ry="7" fill="#5A4878"/><ellipse cx="47" cy="53" rx="3" ry="2.2" fill="rgba(255,255,255,0.25)"/><path d="M44,62 Q50,67 56,62" stroke="#7A6898" stroke-width="1.8" fill="none" stroke-linecap="round"/><circle cx="26" cy="53" r="6" fill="rgba(200,180,230,0.4)"/><circle cx="74" cy="53" r="6" fill="rgba(200,180,230,0.4)"/><ellipse cx="50" cy="100" rx="17" ry="21" fill="#B8AECA"/><ellipse cx="34" cy="106" rx="7" ry="11" fill="#A898B8" transform="rotate(10 34 106)"/><ellipse cx="66" cy="106" rx="7" ry="11" fill="#A898B8" transform="rotate(-10 66 106)"/><ellipse cx="38" cy="133" rx="8" ry="11" fill="#A898B8"/><ellipse cx="62" cy="133" rx="8" ry="11" fill="#A898B8"/><ellipse cx="38" cy="141" rx="8" ry="5" fill="#8878A0"/><ellipse cx="62" cy="141" rx="8" ry="5" fill="#8878A0"/></svg>`
   ];
 
   function getEggStageSVG(stage, c) {
@@ -299,6 +370,7 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
       const statsData = await statsRes.json();
       const myEntry = statsData.find(function(u){return u.username===myUsername;});
       updateEggHero(myEntry ? (myEntry.lifetime_minutes || 0) : 0, myEntry ? myEntry.animal_type : null);
+      if (myEntry && myEntry.animal_type != null) { wardrobeData.myAnimalType = myEntry.animal_type; renderCharPreview(); }
     }
 
     const chart = document.getElementById('dailyChart');
@@ -458,6 +530,164 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
   loadStats(30);
   loadHeatmap();
   loadAbsenceStats();
+
+  // ── 옷장 / 상점 ────────────────────────────────────────────────
+  let wardrobeData = { shop: null, inventory: null, equip: {}, myAnimalType: null, myPoints: 0 };
+  let currentWardrobeTab = 'shop';
+
+  function renderCharPreview() {
+    const type = wardrobeData.myAnimalType != null ? wardrobeData.myAnimalType : getEggType(myUsername);
+    document.getElementById('layerBase').innerHTML = ANIMAL_FULL_SVGS[type] || '';
+    ['hat', 'top', 'accessory'].forEach(function(slot) {
+      const eq = wardrobeData.equip[slot];
+      const layerId = 'layer' + slot.charAt(0).toUpperCase() + slot.slice(1);
+      document.getElementById(layerId).innerHTML = eq ? eq.svg_data : '';
+    });
+    document.getElementById('myPointsDisplay').textContent = wardrobeData.myPoints.toLocaleString();
+  }
+
+  function switchWardrobeTab(tab, btn) {
+    currentWardrobeTab = tab;
+    document.querySelectorAll('.wardrobe-tab').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    ['wardrobeShop', 'wardrobeInventory', 'wardrobeLog'].forEach(function(id) {
+      document.getElementById(id).style.display = 'none';
+    });
+    if (tab === 'shop') { document.getElementById('wardrobeShop').style.display = ''; renderShop(); }
+    else if (tab === 'inventory') { document.getElementById('wardrobeInventory').style.display = ''; renderInventory(); }
+    else if (tab === 'log') { document.getElementById('wardrobeLog').style.display = ''; renderPointLog(); }
+  }
+
+  function renderShop() {
+    const el = document.getElementById('wardrobeShop');
+    if (!wardrobeData.shop) { el.innerHTML = '<div class="empty-inventory">로딩 중...</div>'; return; }
+    const slotOrder = ['hat', 'top', 'accessory'];
+    const slotLabels = { hat: '🎩 모자', top: '👕 상의', accessory: '✨ 액세서리' };
+    let html = '';
+    slotOrder.forEach(function(slot) {
+      const items = wardrobeData.shop.filter(function(i) { return i.slot === slot; });
+      if (!items.length) return;
+      html += '<div class="slot-label">' + slotLabels[slot] + '</div><div class="item-grid">';
+      items.forEach(function(item) {
+        const owned = item.owned;
+        const equipped = wardrobeData.equip[slot] && wardrobeData.equip[slot].item_id === item.id;
+        const canBuy = !owned && wardrobeData.myPoints >= item.price;
+        html += '<div class="item-card' + (equipped ? ' equipped' : owned ? ' owned' : '') + '" onclick="' + (owned ? 'equipItem(' + item.id + ',\'' + slot + '\')' : 'buyItem(' + item.id + ')') + '">';
+        if (equipped) html += '<span class="item-card-badge badge-equipped">착용 중</span>';
+        else if (owned) html += '<span class="item-card-badge badge-owned">보유</span>';
+        html += '<div class="item-card-img" style="position:relative">';
+        html += '<div style="position:relative;width:60px;height:60px">';
+        html += '<div style="position:absolute;inset:0;opacity:0.18">' + (ANIMAL_FULL_SVGS[getEggType(myUsername)] || '') + '</div>';
+        html += '<div style="position:absolute;inset:0">' + item.svg_data + '</div>';
+        html += '</div></div>';
+        html += '<div class="item-card-name">' + esc(item.name) + '</div>';
+        html += '<div class="item-card-price">' + (owned ? (equipped ? '✓ 착용' : '클릭해서 착용') : (canBuy ? item.price + ' 💎' : '<span style="color:var(--muted)">' + item.price + ' 💎</span>')) + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    });
+    el.innerHTML = html || '<div class="empty-inventory">등록된 아이템이 없어요</div>';
+  }
+
+  function renderInventory() {
+    const el = document.getElementById('wardrobeInventory');
+    if (!wardrobeData.inventory) { el.innerHTML = '<div class="empty-inventory">로딩 중...</div>'; return; }
+    if (!wardrobeData.inventory.length) { el.innerHTML = '<div class="empty-inventory">아직 보유한 아이템이 없어요 💎<br>상점에서 아이템을 구매해보세요!</div>'; return; }
+    const slotLabels = { hat: '🎩 모자', top: '👕 상의', accessory: '✨ 액세서리' };
+    const grouped = {};
+    wardrobeData.inventory.forEach(function(item) {
+      if (!grouped[item.slot]) grouped[item.slot] = [];
+      grouped[item.slot].push(item);
+    });
+    let html = '';
+    ['hat', 'top', 'accessory'].forEach(function(slot) {
+      if (!grouped[slot]) return;
+      html += '<div class="slot-label">' + slotLabels[slot] + '</div><div class="item-grid">';
+      grouped[slot].forEach(function(item) {
+        const equipped = item.equipped;
+        html += '<div class="item-card' + (equipped ? ' equipped' : '') + '" onclick="toggleEquip(' + item.item_id + ',\'' + item.slot + '\',' + equipped + ')">';
+        if (equipped) html += '<span class="item-card-badge badge-equipped">착용 중</span>';
+        html += '<div class="item-card-img"><div style="position:relative;width:60px;height:60px">';
+        html += '<div style="position:absolute;inset:0;opacity:0.18">' + (ANIMAL_FULL_SVGS[getEggType(myUsername)] || '') + '</div>';
+        html += '<div style="position:absolute;inset:0">' + item.svg_data + '</div>';
+        html += '</div></div>';
+        html += '<div class="item-card-name">' + esc(item.name) + '</div>';
+        html += '<div class="item-card-price">' + (equipped ? '클릭해서 해제' : '클릭해서 착용') + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+    });
+    el.innerHTML = html;
+  }
+
+  function renderPointLog() {
+    const el = document.getElementById('wardrobeLog');
+    fetch('/api/my-points', { headers: authH() }).then(function(r) { return r.json(); }).then(function(d) {
+      wardrobeData.myPoints = d.points;
+      document.getElementById('myPointsDisplay').textContent = d.points.toLocaleString();
+      if (!d.logs.length) { el.innerHTML = '<div class="empty-inventory">포인트 내역이 없어요</div>'; return; }
+      el.innerHTML = d.logs.map(function(l) {
+        const color = l.amount > 0 ? '#27ae60' : '#e74c3c';
+        const sign = l.amount > 0 ? '+' : '';
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">'
+          + '<div><div style="font-size:0.82rem;font-weight:700;color:var(--text)">' + esc(l.reason) + '</div>'
+          + '<div style="font-size:0.72rem;color:var(--muted)">' + esc(l.created_at) + '</div></div>'
+          + '<div style="font-size:0.9rem;font-weight:900;color:' + color + '">' + sign + l.amount + ' 💎</div></div>';
+      }).join('');
+    }).catch(function() { el.innerHTML = '<div class="empty-inventory">로드 실패</div>'; });
+  }
+
+  async function buyItem(itemId) {
+    try {
+      const res = await fetch('/api/shop/buy/' + itemId, { method: 'POST', headers: authH() });
+      const d = await res.json();
+      if (!res.ok) { alert(d.detail || '구매 실패'); return; }
+      wardrobeData.myPoints = d.remaining_points;
+      document.getElementById('myPointsDisplay').textContent = d.remaining_points.toLocaleString();
+      await loadWardrobe();
+      renderShop();
+    } catch { alert('오류가 발생했어요'); }
+  }
+
+  async function equipItem(itemId, slot) {
+    const equipped = wardrobeData.equip[slot] && wardrobeData.equip[slot].item_id === itemId;
+    await toggleEquip(itemId, slot, equipped);
+    renderShop();
+  }
+
+  async function toggleEquip(itemId, slot, isEquipped) {
+    try {
+      const body = isEquipped ? { slot: slot, item_id: null } : { slot: slot, item_id: itemId };
+      const res = await fetch('/api/equip', { method: 'POST', headers: { ...authH(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!res.ok) { const d = await res.json(); alert(d.detail || '오류'); return; }
+      const equipRes = await fetch('/api/equip', { headers: authH() });
+      wardrobeData.equip = await equipRes.json();
+      const invRes = await fetch('/api/inventory', { headers: authH() });
+      wardrobeData.inventory = await invRes.json();
+      renderCharPreview();
+      renderInventory();
+    } catch { alert('오류가 발생했어요'); }
+  }
+
+  async function loadWardrobe() {
+    try {
+      const [shopRes, invRes, equipRes, pointsRes] = await Promise.all([
+        fetch('/api/shop', { headers: authH() }),
+        fetch('/api/inventory', { headers: authH() }),
+        fetch('/api/equip', { headers: authH() }),
+        fetch('/api/my-points', { headers: authH() }),
+      ]);
+      const shopData = await shopRes.json();
+      wardrobeData.shop = shopData.items;
+      wardrobeData.myPoints = shopData.my_points;
+      wardrobeData.inventory = await invRes.json();
+      wardrobeData.equip = await equipRes.json();
+      renderCharPreview();
+      renderShop();
+    } catch {}
+  }
+
+  loadWardrobe();
 </script>
 
 </body>
