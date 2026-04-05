@@ -23,7 +23,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(String, default="member")  # superadmin | group_admin | member
     group_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("groups.id"), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    animal_type: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # 0~7, None=자동(username 해시)
+    animal_type: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)  # 0~8, None=자동(username 해시)
     lifetime_seconds_offset: Mapped[float] = mapped_column(Float, default=0.0)  # 캐릭터 변경 시 이전 누적 초 저장 (부화 초기화용)
     client_version: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

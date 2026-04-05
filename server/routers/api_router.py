@@ -637,11 +637,11 @@ async def my_feedbacks(
 
 
 ANIMAL_CHANGE_COST = 500  # 캐릭터 변경 포인트 비용
-ANIMAL_NAMES_KO = ['고양이', '강아지', '햄스터', '토끼', '개구리', '여우', '판다', '코알라']
+ANIMAL_NAMES_KO = ['고양이', '강아지', '햄스터', '토끼', '개구리', '여우', '판다', '코알라', '벨루가']
 
 
 class ChangeAnimalRequest(BaseModel):
-    animal_type: int = Field(..., ge=0, le=7)
+    animal_type: int = Field(..., ge=0, le=8)
 
 
 @router.post("/shop/change-animal")
