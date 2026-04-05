@@ -20,6 +20,7 @@ async def init_db():
             "ALTER TABLE feedbacks ADD COLUMN admin_comment VARCHAR",
             "ALTER TABLE notices ADD COLUMN group_id INTEGER REFERENCES groups(id)",
             "ALTER TABLE study_goals ADD COLUMN username VARCHAR",
+            "ALTER TABLE users ADD COLUMN lifetime_seconds_offset REAL NOT NULL DEFAULT 0",
             "CREATE TABLE IF NOT EXISTS user_points (id INTEGER PRIMARY KEY, username VARCHAR NOT NULL UNIQUE, points INTEGER NOT NULL DEFAULT 0, seconds_buffer REAL NOT NULL DEFAULT 0, updated_at DATETIME)",
             "CREATE TABLE IF NOT EXISTS point_logs (id INTEGER PRIMARY KEY, username VARCHAR NOT NULL, amount INTEGER NOT NULL, reason VARCHAR NOT NULL, created_at DATETIME)",
             "CREATE TABLE IF NOT EXISTS shop_items (id INTEGER PRIMARY KEY, name VARCHAR NOT NULL, slot VARCHAR NOT NULL, price INTEGER NOT NULL, svg_data TEXT NOT NULL, is_active BOOLEAN NOT NULL DEFAULT 1, created_at DATETIME)",

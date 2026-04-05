@@ -228,10 +228,12 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
         <div class="wardrobe-tabs">
           <button class="wardrobe-tab active" onclick="switchWardrobeTab('shop', this)">🛍️ 상점</button>
           <button class="wardrobe-tab" onclick="switchWardrobeTab('inventory', this)">👜 내 옷장</button>
+          <button class="wardrobe-tab" onclick="switchWardrobeTab('animal', this)">🥚 캐릭터 변경</button>
           <button class="wardrobe-tab" onclick="switchWardrobeTab('log', this)">📜 내역</button>
         </div>
         <div id="wardrobeShop"></div>
         <div id="wardrobeInventory" style="display:none"></div>
+        <div id="wardrobeAnimal" style="display:none"></div>
         <div id="wardrobeLog" style="display:none"></div>
       </div>
     </div>
@@ -550,11 +552,12 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
     currentWardrobeTab = tab;
     document.querySelectorAll('.wardrobe-tab').forEach(function(b) { b.classList.remove('active'); });
     btn.classList.add('active');
-    ['wardrobeShop', 'wardrobeInventory', 'wardrobeLog'].forEach(function(id) {
+    ['wardrobeShop', 'wardrobeInventory', 'wardrobeAnimal', 'wardrobeLog'].forEach(function(id) {
       document.getElementById(id).style.display = 'none';
     });
     if (tab === 'shop') { document.getElementById('wardrobeShop').style.display = ''; renderShop(); }
     else if (tab === 'inventory') { document.getElementById('wardrobeInventory').style.display = ''; renderInventory(); }
+    else if (tab === 'animal') { document.getElementById('wardrobeAnimal').style.display = ''; renderAnimalShop(); }
     else if (tab === 'log') { document.getElementById('wardrobeLog').style.display = ''; renderPointLog(); }
   }
 
@@ -685,6 +688,46 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
       renderCharPreview();
       renderShop();
     } catch {}
+  }
+
+  async function renderAnimalShop() {
+    const el = document.getElementById('wardrobeAnimal');
+    el.innerHTML = '<div class="empty-inventory">로딩 중...</div>';
+    try {
+      const res = await fetch('/api/shop/animal-prices', { headers: authH() });
+      const d = await res.json();
+      const canAfford = d.my_points >= d.cost;
+      let html = '<div style="font-size:0.82rem;font-weight:700;color:var(--text-light);margin-bottom:12px">포인트 <strong style="color:var(--primary)">' + d.cost + ' 💎</strong>를 소비해서 새 캐릭터로 변경할 수 있어요.<br><span style="color:var(--muted);font-size:0.75rem">⚠️ 변경하면 알이 처음부터 다시 시작돼요!</span></div>';
+      html += '<div class="item-grid">';
+      d.animals.forEach(function(a) {
+        const isCurrent = a.type === d.current_animal || (d.current_animal == null && a.type === getEggType(myUsername));
+        html += '<div class="item-card' + (isCurrent ? ' equipped' : '') + '" onclick="' + (isCurrent ? '' : 'changeAnimal(' + a.type + ')') + '" style="' + (isCurrent ? 'cursor:default' : '') + '">';
+        if (isCurrent) html += '<span class="item-card-badge badge-equipped">현재</span>';
+        html += '<div class="item-card-img"><div style="width:60px;height:90px;overflow:hidden">' + (ANIMAL_FULL_SVGS[a.type] || '') + '</div></div>';
+        html += '<div class="item-card-name">' + esc(a.name) + '</div>';
+        html += '<div class="item-card-price">' + (isCurrent ? '현재 캐릭터' : (canAfford ? d.cost + ' 💎' : '<span style="color:var(--muted)">' + d.cost + ' 💎</span>')) + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+      el.innerHTML = html;
+    } catch { el.innerHTML = '<div class="empty-inventory">로드 실패</div>'; }
+  }
+
+  async function changeAnimal(animalType) {
+    const names = ['고양이','강아지','햄스터','토끼','개구리','여우','판다','코알라'];
+    if (!confirm(names[animalType] + ' 알로 변경할까요?\n⚠️ 알이 처음부터 다시 시작돼요! 500💎 소비')) return;
+    try {
+      const res = await fetch('/api/shop/change-animal', { method:'POST', headers:{ ...authH(), 'Content-Type':'application/json' }, body:JSON.stringify({animal_type:animalType}) });
+      const d = await res.json();
+      if (!res.ok) { alert(d.detail || '변경 실패'); return; }
+      alert(d.message);
+      wardrobeData.myAnimalType = animalType;
+      wardrobeData.myPoints -= 500;
+      document.getElementById('myPointsDisplay').textContent = wardrobeData.myPoints.toLocaleString();
+      renderCharPreview();
+      renderAnimalShop();
+      location.reload(); // 알 부화 진행도 새로고침
+    } catch { alert('오류가 발생했어요'); }
   }
 
   loadWardrobe();
