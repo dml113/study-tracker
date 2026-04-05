@@ -805,9 +805,9 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     if (res.ok) { showToast(data.message); loadNotices(); } else showToast(data.detail, 'error');
   }
 
-  const ANIMAL_NAMES = ['고양이','강아지','햄스터','토끼','개구리','여우','판다','코알라'];
-  const ANIMAL_EMOJIS = ['🐱','🐶','🐹','🐰','🐸','🦊','🐼','🐨'];
-  function getEggTypeLocal(username) { return Array.from(username).reduce((s,c)=>s+c.charCodeAt(0),0) % 8; }
+  const ANIMAL_NAMES = ['고양이','강아지','햄스터','토끼','개구리','여우','판다','코알라','벨루가'];
+  const ANIMAL_EMOJIS = ['🐱','🐶','🐹','🐰','🐸','🦊','🐼','🐨','🐳'];
+  function getEggTypeLocal(username) { return Array.from(username).reduce((s,c)=>s+c.charCodeAt(0),0) % 9; }
 
   async function loadAnimals() {
     const res = await fetch('/admin/users', { headers: authH() });
