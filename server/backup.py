@@ -10,10 +10,7 @@ from database import get_session
 from models import Attendance, Absence, ActivityLog, User, Group, Notice, UserPoint, PointLog
 
 BACKUP_DIR = "backups"
-SLACK_WEBHOOK_URL = os.environ.get(
-    "SLACK_WEBHOOK_URL",
-    "https://hooks.slack.com/services/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",
-)
+SLACK_WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL", "")
 
 
 def _post_slack(text: str, username: str = "Study-Tracker", icon_emoji: str = ":books:"):
