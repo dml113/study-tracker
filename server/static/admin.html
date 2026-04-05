@@ -337,12 +337,13 @@ tr:hover td { background:rgba(255,143,171,0.03); }
 <div class="toast" id="toast"></div>
 
 <script>
+  function parseJwt(t) { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch { return {}; } }
   const token = localStorage.getItem('token');
-  const role = localStorage.getItem('role');
+  const {role, sub: _adminUsername, group_id: _adminGroupId} = parseJwt(token);
   const isSuperAdmin = role === 'superadmin';
   const isGroupAdmin = role === 'group_admin';
   if (!token || !['superadmin', 'group_admin'].includes(role)) location.href = '/';
-  document.getElementById('adminName').textContent = localStorage.getItem('username');
+  document.getElementById('adminName').textContent = _adminUsername || '';
   const badge = document.getElementById('roleBadge');
   badge.textContent = isSuperAdmin ? 'SUPER ADMIN' : 'GROUP ADMIN';
   badge.className = 'badge badge-' + role;
@@ -415,7 +416,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
       if (cur) sel.value = cur;
     });
     if (isGroupAdmin) {
-      const myGroup = groups.find(g => g.id === parseInt(localStorage.getItem('group_id') || '0'));
+      const myGroup = groups.find(g => g.id === (_adminGroupId || 0));
       if (myGroup) document.getElementById('myGroupName').textContent = myGroup.name;
     }
   }

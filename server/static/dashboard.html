@@ -234,9 +234,10 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
   function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
   function fmtMin(m) { m = Math.round(m || 0); const h = Math.floor(m / 60), r = m % 60; if (h === 0) return r + '분'; if (r === 0) return h + '시간'; return h + '시간 ' + r + '분'; }
 
+  function parseJwt(t) { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch { return {}; } }
   const token = localStorage.getItem('token');
   if (!token) location.href = '/';
-  const myUsername = localStorage.getItem('username');
+  const myUsername = parseJwt(token).sub || '';
   document.getElementById('myName').textContent = myUsername;
   document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
   let currentPeriod = 'daily';

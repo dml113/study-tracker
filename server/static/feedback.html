@@ -141,10 +141,10 @@ textarea { resize:vertical; min-height:130px; line-height:1.6; }
   </div>
 </div>
 <script>
+  function parseJwt(t) { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch { return {}; } }
   const token = localStorage.getItem('token');
   if (!token) location.href = '/';
-  const myUsername = localStorage.getItem('username');
-  const myRole = localStorage.getItem('role');
+  const {sub: myUsername, role: myRole} = parseJwt(token);
   document.getElementById('myName').textContent = myUsername;
   if (['superadmin', 'group_admin'].includes(myRole)) {
     document.getElementById('backBtn').href = '/admin';
