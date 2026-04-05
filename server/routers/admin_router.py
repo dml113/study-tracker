@@ -795,11 +795,26 @@ async def delete_notice(
 
 # ── 상점 관리 (superadmin) ────────────────────────────────────────
 
+import re as _re
+
+def _sanitize_svg(svg: str) -> str:
+    """SVG에서 잠재적 XSS 요소 제거."""
+    # <script> 태그 제거
+    svg = _re.sub(r'<script[\s\S]*?</script>', '', svg, flags=_re.IGNORECASE)
+    # on* 이벤트 핸들러 제거
+    svg = _re.sub(r'\s+on\w+\s*=\s*["\'][^"\']*["\']', '', svg, flags=_re.IGNORECASE)
+    # javascript: URL 제거
+    svg = _re.sub(r'javascript\s*:', '', svg, flags=_re.IGNORECASE)
+    # href/xlink:href에서 외부 URL 제거 (data:, http:, https:, // 등)
+    svg = _re.sub(r'(href|xlink:href)\s*=\s*["\'](?!#)[^"\']*["\']', '', svg, flags=_re.IGNORECASE)
+    return svg.strip()
+
+
 class ShopItemCreate(BaseModel):
     name: str = Field(..., max_length=50)
     slot: str = Field(..., pattern="^(hat|top|accessory)$")
     price: int = Field(..., gt=0, le=99999)
-    svg_data: str = Field(..., min_length=10)
+    svg_data: str = Field(..., min_length=10, max_length=50000)
 
 
 class ShopItemUpdate(BaseModel):
@@ -837,7 +852,7 @@ async def admin_create_shop_item(
     session: AsyncSession = Depends(get_session),
     _: dict = Depends(get_current_superadmin),
 ):
-    item = ShopItem(name=req.name, slot=req.slot, price=req.price, svg_data=req.svg_data)
+    item = ShopItem(name=req.name, slot=req.slot, price=req.price, svg_data=_sanitize_svg(req.svg_data))
     session.add(item)
     await session.commit()
     return {"message": "아이템 등록 완료", "id": item.id}

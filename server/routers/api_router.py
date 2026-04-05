@@ -504,8 +504,8 @@ async def get_stats(
     )).all()
 
     user_info = {
-        row.username: {"group_id": row.group_id, "animal_type": row.animal_type}
-        for row in (await session.execute(select(User.username, User.group_id, User.animal_type))).all()
+        row.username: {"group_id": row.group_id, "animal_type": row.animal_type, "offset": row.lifetime_seconds_offset or 0}
+        for row in (await session.execute(select(User.username, User.group_id, User.animal_type, User.lifetime_seconds_offset))).all()
     }
     user_groups = {u: v["group_id"] for u, v in user_info.items()}
 
@@ -533,7 +533,9 @@ async def get_stats(
         daily_goal = goal_by_user.get(row.username) or goal_by_group.get(uid, default_goal)
         period_goal = daily_goal * period_days
         active_minutes = round(row.total / 60, 1)
-        lifetime_minutes = round(lifetime_map.get(row.username, 0) / 60, 1)
+        offset = user_info.get(row.username, {}).get("offset", 0)
+        raw_lifetime = lifetime_map.get(row.username, 0)
+        lifetime_minutes = round(max(0, raw_lifetime - offset) / 60, 1)
         result.append({
             "username": row.username,
             "active_seconds": row.total,
@@ -584,11 +586,15 @@ async def my_lifetime(
     current: dict = Depends(get_current_user),
 ):
     username = current["sub"]
-    result = await session.execute(
+    total_result = await session.execute(
         select(func.sum(ActivityLog.active_seconds)).where(ActivityLog.username == username)
     )
-    total_secs = result.scalar() or 0
-    return {"lifetime_minutes": round(total_secs / 60, 1)}
+    total_secs = total_result.scalar() or 0
+    user_result = await session.execute(select(User).where(User.username == username))
+    user = user_result.scalar_one_or_none()
+    offset = (user.lifetime_seconds_offset or 0) if user else 0
+    current_secs = max(0, total_secs - offset)
+    return {"lifetime_minutes": round(current_secs / 60, 1), "total_lifetime_minutes": round(total_secs / 60, 1)}
 
 
 @router.get("/my-feedbacks")
@@ -615,6 +621,66 @@ async def my_feedbacks(
         }
         for f in feedbacks
     ]
+
+
+ANIMAL_CHANGE_COST = 500  # 캐릭터 변경 포인트 비용
+ANIMAL_NAMES_KO = ['고양이', '강아지', '햄스터', '토끼', '개구리', '여우', '판다', '코알라']
+
+
+class ChangeAnimalRequest(BaseModel):
+    animal_type: int = Field(..., ge=0, le=7)
+
+
+@router.post("/shop/change-animal")
+async def change_animal(
+    req: ChangeAnimalRequest,
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_user),
+):
+    username = current["sub"]
+
+    user_result = await session.execute(select(User).where(User.username == username))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="유저를 찾을 수 없어요")
+
+    up_result = await session.execute(select(UserPoint).where(UserPoint.username == username))
+    user_point = up_result.scalar_one_or_none()
+    if not user_point or user_point.points < ANIMAL_CHANGE_COST:
+        raise HTTPException(status_code=400, detail=f"포인트가 부족해요 (필요: {ANIMAL_CHANGE_COST}💎)")
+
+    # 현재 누적 공부 초 저장 (offset으로 설정 → 부화 초기화)
+    total_result = await session.execute(
+        select(func.sum(ActivityLog.active_seconds)).where(ActivityLog.username == username)
+    )
+    total_secs = total_result.scalar() or 0
+
+    user_point.points -= ANIMAL_CHANGE_COST
+    session.add(PointLog(username=username, amount=-ANIMAL_CHANGE_COST, reason="캐릭터 변경"))
+    user.animal_type = req.animal_type
+    user.lifetime_seconds_offset = total_secs
+
+    await session.commit()
+    animal_name = ANIMAL_NAMES_KO[req.animal_type]
+    return {"message": f"{animal_name} 알을 새로 받았어요! 🥚 처음부터 키워봐요!", "animal_type": req.animal_type}
+
+
+@router.get("/shop/animal-prices")
+async def get_animal_prices(
+    session: AsyncSession = Depends(get_session),
+    current: dict = Depends(get_current_user),
+):
+    username = current["sub"]
+    user_result = await session.execute(select(User).where(User.username == username))
+    user = user_result.scalar_one_or_none()
+    up_result = await session.execute(select(UserPoint).where(UserPoint.username == username))
+    user_point = up_result.scalar_one_or_none()
+    return {
+        "cost": ANIMAL_CHANGE_COST,
+        "my_points": user_point.points if user_point else 0,
+        "current_animal": user.animal_type if user else None,
+        "animals": [{"type": i, "name": n} for i, n in enumerate(ANIMAL_NAMES_KO)],
+    }
 
 
 @router.post("/feedback")
