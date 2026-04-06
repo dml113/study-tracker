@@ -619,7 +619,11 @@ async def my_lifetime(
     user = user_result.scalar_one_or_none()
     offset = (user.lifetime_seconds_offset or 0) if user else 0
     current_secs = max(0, total_secs - offset)
-    return {"lifetime_minutes": round(current_secs / 60, 1), "total_lifetime_minutes": round(total_secs / 60, 1)}
+    return {
+        "lifetime_minutes": round(current_secs / 60, 1),
+        "total_lifetime_minutes": round(total_secs / 60, 1),
+        "animal_type": user.animal_type if user else None,
+    }
 
 
 @router.get("/my-feedbacks")

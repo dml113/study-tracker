@@ -377,8 +377,20 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
     if (statsRes.ok) {
       const statsData = await statsRes.json();
       const myEntry = statsData.find(function(u){return u.username===myUsername;});
-      updateEggHero(myEntry ? (myEntry.lifetime_minutes || 0) : 0, myEntry ? myEntry.animal_type : null);
-      if (myEntry && myEntry.animal_type != null) { wardrobeData.myAnimalType = myEntry.animal_type; renderCharPreview(); }
+      if (myEntry) {
+        updateEggHero(myEntry.lifetime_minutes || 0, myEntry.animal_type);
+        if (myEntry.animal_type != null) { wardrobeData.myAnimalType = myEntry.animal_type; renderCharPreview(); }
+      } else {
+        // 오늘 활동 없는 경우 - /api/my-lifetime으로 실제 누적 시간 조회
+        const ltRes = await fetch('/api/my-lifetime', { headers: authH() });
+        if (ltRes.ok) {
+          const ltData = await ltRes.json();
+          updateEggHero(ltData.lifetime_minutes || 0, ltData.animal_type);
+          if (ltData.animal_type != null) { wardrobeData.myAnimalType = ltData.animal_type; renderCharPreview(); }
+        } else {
+          updateEggHero(0, null);
+        }
+      }
     }
 
     const chart = document.getElementById('dailyChart');
