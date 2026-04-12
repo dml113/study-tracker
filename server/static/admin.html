@@ -375,8 +375,10 @@ tr:hover td { background:rgba(255,143,171,0.03); }
   let _currentTab = 'users';
   function switchTab(tab, el) {
     _currentTab = tab;
+    if (location.hash !== '#' + tab) location.hash = tab;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    el.classList.add('active');
+    if (!el) el = document.querySelector(`.tab[onclick*="switchTab('${tab}'"]`);
+    if (el) el.classList.add('active');
     ['users','stats','attendance','cheats','activity','goals','group-stats','absence-stats','feedbacks','notices','animals','groups','shop','points','client','backup'].forEach(t => {
       const div = document.getElementById('tab-' + t);
       if (div) div.style.display = t === tab ? 'block' : 'none';
@@ -509,9 +511,10 @@ tr:hover td { background:rgba(255,143,171,0.03); }
   async function loadGroups() {
     const res = await fetch('/admin/groups', { headers: authH() });
     const data = await res.json();
+    window._allGroups = data;
     const list = document.getElementById('groupList');
     if (!data.length) { list.innerHTML = '<div class="empty-state">🏠 그룹이 없습니다</div>'; return; }
-    list.innerHTML = data.map(g => `<div class="group-card"><div><div class="group-name">${esc(g.name)}</div><div class="group-meta">생성일: ${g.created_at.slice(0,10)}</div></div><button class="btn-sm btn-danger" onclick="deleteGroup(${g.id},${JSON.stringify(g.name).replace(/</g,'\\u003c')})">🗑️ 삭제</button></div>`).join('');
+    list.innerHTML = data.map(g => `<div class="group-card"><div><div class="group-name">${esc(g.name)}</div><div class="group-meta">생성일: ${g.created_at.slice(0,10)}</div></div><button class="btn-sm btn-danger" onclick="deleteGroup(${g.id})">🗑️ 삭제</button></div>`).join('');
   }
 
   async function createGroup() {
@@ -523,7 +526,9 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     else showToast(data.detail, 'error');
   }
 
-  async function deleteGroup(id, name) {
+  async function deleteGroup(id) {
+    const group = (window._allGroups || []).find(g => g.id === id);
+    const name = group ? group.name : `ID ${id}`;
     if (!confirm(`'${name}' 그룹을 삭제할까요?\n소속 유저의 그룹이 해제됩니다.`)) return;
     const res = await fetch('/admin/groups/'+id, { method:'DELETE', headers:authH() });
     const data = await res.json();
@@ -910,7 +915,13 @@ tr:hover td { background:rgba(255,143,171,0.03); }
   document.getElementById('absStart').value = weekAgo;
   document.getElementById('absEnd').value = today;
   document.getElementById('groupStatsDate').value = today;
-  loadUsers();
+  const _initialTab = (location.hash || '').replace(/^#/, '');
+  const _validTabs = ['users','stats','attendance','cheats','activity','goals','group-stats','absence-stats','feedbacks','notices','animals','groups','shop','points','client','backup'];
+  if (_initialTab && _validTabs.includes(_initialTab)) {
+    switchTab(_initialTab, null);
+  } else {
+    loadUsers();
+  }
   setInterval(() => { if (_currentTab === 'stats') loadStats(); if (_currentTab === 'group-stats') loadGroupStats(); }, 30000);
 
   // ── 상점 관리 ──────────────────────────────────────────────────
