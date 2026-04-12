@@ -313,7 +313,7 @@ async def heartbeat(
     SECONDS_PER_POINT = 360
     # 행이 없으면 삽입 (INSERT OR IGNORE)
     await session.execute(
-        text("INSERT OR IGNORE INTO user_point (username, points, seconds_buffer) VALUES (:u, 0, 0)"),
+        text("INSERT OR IGNORE INTO user_points (username, points, seconds_buffer) VALUES (:u, 0, 0)"),
         {"u": username},
     )
     # seconds_buffer 현재값 조회 (earned 계산 및 PointLog 기록용)
@@ -323,11 +323,12 @@ async def heartbeat(
     old_sb = sb_row[0] if sb_row else 0
     earned = int((old_sb + req.active_seconds) // SECONDS_PER_POINT)
     # 원자적 UPDATE: SQL 정수 산술로 buffer/points 동시 갱신
+    # CAST를 통해 정수 나눗셈 보장 (seconds_buffer가 FLOAT라 그냥 나누면 소수가 됨)
     await session.execute(
         text("""
-            UPDATE user_point
-            SET seconds_buffer = (seconds_buffer + :added) % :spp,
-                points = points + (seconds_buffer + :added) / :spp,
+            UPDATE user_points
+            SET points = points + CAST((seconds_buffer + :added) / :spp AS INTEGER),
+                seconds_buffer = (seconds_buffer + :added) - CAST((seconds_buffer + :added) / :spp AS INTEGER) * :spp,
                 updated_at = :now
             WHERE username = :u
         """),

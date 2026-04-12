@@ -447,7 +447,7 @@ tr:hover td { background:rgba(255,143,171,0.03); }
           ${u.role !== 'superadmin' ? `<button class="btn-sm" style="background:rgba(116,185,255,0.12);border:1.5px solid rgba(116,185,255,0.3);color:#0984e3" onclick="toggleActive(${u.id},${u.is_active})">${u.is_active ? '비활성화' : '활성화'}</button>` : ''}
           ${isSuperAdmin && u.role !== 'superadmin' ? `<button class="btn-sm" style="background:rgba(255,143,171,0.1);border:1.5px solid rgba(255,143,171,0.25);color:var(--primary)" onclick="openGroupModal(${u.id}, ${u.group_id||'null'})">🏠 그룹</button>` : ''}
           ${isSuperAdmin && u.role !== 'superadmin' ? `<button class="btn-sm" style="background:rgba(200,180,220,0.12);border:1.5px solid var(--border);color:var(--text-light)" onclick="toggleRole(${u.id},'${u.role}')">${u.role === 'group_admin' ? '일반으로' : '관리자로'}</button>` : ''}
-          ${u.role !== 'superadmin' ? `<button class="btn-sm btn-danger" onclick="deleteUser(${u.id},${JSON.stringify(u.username).replace(/</g,'\\u003c')})">🗑️ 삭제</button>` : ''}
+          ${u.role !== 'superadmin' ? `<button class="btn-sm btn-danger" onclick="deleteUser(${u.id})">🗑️ 삭제</button>` : ''}
         </div></td>
       </tr>`;
     }).join('');
@@ -465,7 +465,9 @@ tr:hover td { background:rgba(255,143,171,0.03); }
     else showToast(data.detail, 'error');
   }
 
-  async function deleteUser(id, username) {
+  async function deleteUser(id) {
+    const user = (window._allUsers || []).find(u => u.id === id);
+    const username = user ? user.username : `ID ${id}`;
     if (!confirm(`'${username}' 계정을 삭제할까요?`)) return;
     const res = await fetch('/admin/users/'+id, { method:'DELETE', headers:authH() });
     const data = await res.json();
