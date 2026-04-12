@@ -913,9 +913,13 @@ async def admin_get_points(
     session: AsyncSession = Depends(get_session),
     _: dict = Depends(get_current_superadmin),
 ):
-    result = await session.execute(select(UserPoint).order_by(UserPoint.points.desc()))
-    rows = result.scalars().all()
-    return [{"username": r.username, "points": r.points} for r in rows]
+    result = await session.execute(
+        select(User.username, UserPoint.points)
+        .outerjoin(UserPoint, User.username == UserPoint.username)
+        .where(User.role != "superadmin")
+        .order_by(func.coalesce(UserPoint.points, 0).desc(), User.username.asc())
+    )
+    return [{"username": row[0], "points": row[1] or 0} for row in result.all()]
 
 
 class PointAdjust(BaseModel):

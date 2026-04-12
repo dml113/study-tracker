@@ -91,6 +91,11 @@ input::placeholder { color:var(--muted); font-weight:500; }
   font-size:0.85rem; font-weight:600; margin-bottom:12px; display:none;
 }
 .animals-row { text-align:center; font-size:1.3rem; margin-top:18px; opacity:0.6; letter-spacing:4px; }
+.privacy-notice {
+  margin-top:18px; padding:12px 14px; background:#faf7fd; border:1px solid var(--border);
+  border-radius:12px; font-size:0.72rem; line-height:1.55; color:var(--text-light); font-weight:500;
+}
+.privacy-notice b { color:var(--text); font-weight:700; }
 </style>
 </head>
 <body>
@@ -118,6 +123,14 @@ input::placeholder { color:var(--muted); font-weight:500; }
   </div>
   <button class="btn-login" onclick="login()">입장하기 🚀</button>
   <div class="animals-row">🐱 🐶 🐹 🐰 🐸 🦊 🐼 🐨</div>
+  <div class="privacy-notice">
+    <b>📋 수집 정보 안내</b><br>
+    본 시스템은 동아리 학습 통계 제공을 위해 다음을 측정합니다:<br>
+    • 출퇴근/외출 시각, 누적 활동 시간<br>
+    • 키보드·마우스 <b>활성 여부</b> (입력 내용은 수집하지 않음)<br>
+    • VMware 창의 화면 변화 감지 (이미지 저장하지 않음)<br>
+    수집된 정보는 본인 통계 및 동아리 운영 목적으로만 사용됩니다.
+  </div>
 </div>
 <script>
   document.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
