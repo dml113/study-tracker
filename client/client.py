@@ -26,7 +26,7 @@ try:
 except Exception:
     _PLYER_OK = False
 
-VERSION = "1.1.8"
+VERSION = "1.1.9"
 
 CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".study_tracker.json")
 SEND_INTERVAL = 30
@@ -59,6 +59,8 @@ state = {
     "auth_expired": False,      # JWT 만료 감지 플래그
     "egg_stage": -1,            # 알 스테이지 (-1: 미조회, 0~3)
     "lifetime_minutes": 0.0,    # 평생 누적 공부시간 (분)
+    "last_check_date": None,    # 자정 넘김 감지용 (YYYY-MM-DD)
+    "_attendance_poll_tick": 0, # 주기적 서버 동기화용 카운터
 }
 
 EGG_THRESHOLDS = [300, 900, 1800]  # 스테이지 1/2/3 달성 기준 (분)
@@ -482,8 +484,26 @@ class MainWindow:
             )
 
         # 현재 시간
-        now_str = datetime.now().strftime("%H:%M:%S")
+        now_dt = datetime.now()
+        now_str = now_dt.strftime("%H:%M:%S")
         self.lbl_time.config(text=now_str)
+
+        # 자정 넘김 감지 + 주기적 서버 동기화 (전날 미퇴근 상태로 묶이는 문제 방지)
+        today_iso = now_dt.date().isoformat()
+        if state["last_check_date"] is None:
+            state["last_check_date"] = today_iso
+        if today_iso != state["last_check_date"]:
+            state["last_check_date"] = today_iso
+            with state["lock"]:
+                state["session_total"] = 0.0
+                state["active_buffer"] = 0.0
+            state["goal_notified"] = False
+            self._load_attendance_state()
+        else:
+            state["_attendance_poll_tick"] += 1
+            if state["_attendance_poll_tick"] >= 60:  # 60초마다 서버 동기화
+                state["_attendance_poll_tick"] = 0
+                self._load_attendance_state()
 
         # 활동 시간 표시 (전송 완료분 + 현재 버퍼)
         with state["lock"]:
