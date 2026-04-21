@@ -17,6 +17,11 @@ jobs:
           cp server/*.py ~/study-tracker/
           cp server/routers/*.py ~/study-tracker/routers/
           cp server/static/*.html ~/study-tracker/static/
+          mkdir -p ~/study-tracker/static/design/assets/animals ~/study-tracker/static/design/assets/eggs
+          cp server/static/design/*.css ~/study-tracker/static/design/
+          cp server/static/design/assets/*.svg ~/study-tracker/static/design/assets/ 2>/dev/null || true
+          cp server/static/design/assets/animals/*.svg ~/study-tracker/static/design/assets/animals/
+          cp server/static/design/assets/eggs/*.svg ~/study-tracker/static/design/assets/eggs/
 
       - name: Clear pycache and restart service
         run: |
