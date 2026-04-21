@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 60" width="260" height="60">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff8fab"></stop>
+      <stop offset="100%" stop-color="#c77dff"></stop>
+    </linearGradient>
+  </defs>
+  <text x="8" y="44" font-family="Nunito, sans-serif" font-weight="900" font-size="34" fill="url(#g)" letter-spacing="1">🌸 공부 트래커</text>
+</svg>

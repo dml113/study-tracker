@@ -6,131 +6,61 @@
 <title>공부 트래커 🌸</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/design/colors_and_type.css">
+<link rel="stylesheet" href="/static/design/components.css">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-:root {
-  --bg:#fdf6f0; --surface:#fff; --primary:#ff8fab; --primary-dark:#e8738f;
-  --accent:#ffd166; --text:#3d2b56; --text-light:#7b6b8d; --muted:#c4b5d5;
-  --border:rgba(200,180,220,0.35); --shadow:0 8px 32px rgba(180,120,200,0.12);
-}
-body {
-  font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text);
-  min-height:100vh; display:flex; align-items:center; justify-content:center;
-}
-body::before {
-  content:''; position:fixed; inset:0; pointer-events:none;
-  background-image:radial-gradient(circle,rgba(200,180,220,0.18) 1px,transparent 1px);
-  background-size:22px 22px; z-index:0;
-}
-.blobs { position:fixed; inset:0; z-index:0; pointer-events:none; }
-.blob {
-  position:absolute; border-radius:50%; filter:blur(80px); animation:blobFloat 18s ease-in-out infinite;
-}
-.blob-1 { width:400px; height:400px; background:rgba(255,143,171,0.18); top:-150px; left:-120px; }
-.blob-2 { width:350px; height:350px; background:rgba(255,209,102,0.15); bottom:-120px; right:-100px; animation-delay:-9s; }
-.blob-3 { width:250px; height:250px; background:rgba(168,216,234,0.2); top:50%; left:60%; animation-delay:-4s; }
-@keyframes blobFloat { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(15px,-15px) scale(1.05)} }
-
-.floaties { position:fixed; inset:0; z-index:0; pointer-events:none; }
-.floaty { position:absolute; font-size:1.8rem; animation:floatUp 6s ease-in-out infinite; opacity:0.5; }
-.floaty:nth-child(1){left:8%;top:20%;animation-delay:0s}
-.floaty:nth-child(2){left:88%;top:15%;animation-delay:-2s}
-.floaty:nth-child(3){left:5%;bottom:25%;animation-delay:-4s}
-.floaty:nth-child(4){left:90%;bottom:30%;animation-delay:-1s}
-.floaty:nth-child(5){left:50%;top:8%;animation-delay:-3s}
-@keyframes floatUp { 0%,100%{transform:translateY(0) rotate(-5deg)} 50%{transform:translateY(-12px) rotate(5deg)} }
-
-.card {
-  position:relative; z-index:1; width:400px;
-  background:var(--surface); border-radius:28px;
-  box-shadow:var(--shadow), 0 2px 0 rgba(255,255,255,0.8) inset;
-  border:1.5px solid var(--border); padding:44px 36px 36px;
-}
-.logo-area { text-align:center; margin-bottom:6px; }
-.logo-icon { font-size:3rem; display:block; margin-bottom:8px; animation:bounce 2s ease-in-out infinite; }
-@keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-.logo-title {
-  font-size:1.7rem; font-weight:900; letter-spacing:1px;
-  background:linear-gradient(135deg,var(--primary),#c77dff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
-}
-.logo-sub { font-size:0.85rem; color:var(--text-light); margin-top:4px; font-weight:600; }
-.season-badge {
-  display:inline-block; background:linear-gradient(135deg,#ffecd2,#fcb69f);
-  color:#c25e3a; font-size:0.7rem; font-weight:800; padding:3px 12px; border-radius:99px;
-  letter-spacing:1.5px; margin-top:8px; margin-bottom:2px;
-}
-.divider { display:flex; align-items:center; gap:10px; margin:22px 0; }
-.divider-line { flex:1; height:1.5px; background:linear-gradient(90deg,transparent,var(--border),transparent); border-radius:99px; }
-.divider-text { font-size:0.72rem; font-weight:700; color:var(--muted); letter-spacing:1px; }
-
-.field-wrap { margin-bottom:14px; }
-.field-label { font-size:0.78rem; font-weight:700; color:var(--text-light); margin-bottom:6px; display:block; }
-input {
-  width:100%; background:#faf7fd; border:1.5px solid var(--border); border-radius:14px;
-  color:var(--text); padding:12px 16px; font-family:'Nunito',sans-serif; font-size:0.95rem; font-weight:600; outline:none;
-  transition:border-color 0.2s, box-shadow 0.2s;
-}
-input:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(255,143,171,0.15); }
-input::placeholder { color:var(--muted); font-weight:500; }
-
-.btn-login {
-  width:100%; margin-top:8px; padding:14px;
-  background:linear-gradient(135deg,var(--primary),#c77dff);
-  border:none; color:white; font-family:'Nunito',sans-serif;
-  font-size:0.95rem; font-weight:800; letter-spacing:0.5px;
-  border-radius:14px; cursor:pointer;
-  box-shadow:0 4px 18px rgba(255,143,171,0.4);
-  transition:opacity 0.2s, transform 0.15s, box-shadow 0.2s;
-}
-.btn-login:hover { opacity:0.93; transform:translateY(-1px); box-shadow:0 6px 24px rgba(255,143,171,0.5); }
-.btn-login:active { transform:translateY(0); }
-
-.error {
-  background:rgba(255,100,100,0.08); border:1.5px solid rgba(255,100,100,0.25);
-  border-radius:12px; padding:10px 14px; color:#e05050;
-  font-size:0.85rem; font-weight:600; margin-bottom:12px; display:none;
-}
-.animals-row { text-align:center; font-size:1.3rem; margin-top:18px; opacity:0.6; letter-spacing:4px; }
-.privacy-notice {
-  margin-top:18px; padding:12px 14px; background:#faf7fd; border:1px solid var(--border);
-  border-radius:12px; font-size:0.72rem; line-height:1.55; color:var(--text-light); font-weight:500;
-}
-.privacy-notice b { color:var(--text); font-weight:700; }
+body { font-family: var(--st-font); background: var(--st-bg); color: var(--st-fg1); min-height: 100vh; }
+.error { display: none; }
+.error.show { display: block; }
 </style>
 </head>
 <body>
-<div class="blobs"><div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div></div>
-<div class="floaties">
-  <span class="floaty">🥚</span><span class="floaty">⭐</span>
-  <span class="floaty">🌸</span><span class="floaty">✨</span><span class="floaty">🐣</span>
-</div>
-<div class="card">
-  <div class="logo-area">
-    <span class="logo-icon">🌸</span>
-    <div class="logo-title">공부 트래커</div>
-    <div class="logo-sub">동아리 공부 랭킹 시스템</div>
-    <div class="season-badge">SEASON 1</div>
+<div class="bg-dots"></div>
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<div class="login-wrap">
+  <div class="floaties">
+    <span class="floaty">🥚</span>
+    <span class="floaty">⭐</span>
+    <span class="floaty">🌸</span>
+    <span class="floaty">✨</span>
+    <span class="floaty">🐣</span>
   </div>
-  <div class="divider"><div class="divider-line"></div><div class="divider-text">로그인</div><div class="divider-line"></div></div>
-  <div class="error" id="error"></div>
-  <div class="field-wrap">
-    <label class="field-label">아이디</label>
-    <input type="text" id="username" placeholder="아이디 입력" autofocus>
-  </div>
-  <div class="field-wrap">
-    <label class="field-label">비밀번호</label>
-    <input type="password" id="password" placeholder="비밀번호 입력">
-  </div>
-  <button class="btn-login" onclick="login()">입장하기 🚀</button>
-  <div class="animals-row">🐱 🐶 🐹 🐰 🐸 🦊 🐼 🐨</div>
-  <div class="privacy-notice">
-    <b>📋 수집 정보 안내</b><br>
-    본 시스템은 동아리 학습 통계 제공을 위해 다음을 측정합니다:<br>
-    • 출퇴근/외출 시각, 누적 활동 시간<br>
-    • 키보드·마우스 <b>활성 여부</b> (입력 내용은 수집하지 않음)<br>
-    • VMware 창의 화면 변화 감지 (이미지 저장하지 않음)<br>
-    수집된 정보는 본인 통계 및 동아리 운영 목적으로 사용되며,
-    <b>아이디·공부시간·랭킹·출석 현황은 동아리 부원에게 공개</b>됩니다.
+  <div class="login-card">
+    <div class="logo-area">
+      <span class="logo-icon">🌸</span>
+      <div class="logo-title">공부 트래커</div>
+      <div class="logo-sub">동아리 공부 랭킹 시스템</div>
+      <div class="season-badge">SEASON 1</div>
+    </div>
+    <div class="divider">
+      <div class="divider-line"></div>
+      <div class="divider-text">로그인</div>
+      <div class="divider-line"></div>
+    </div>
+    <div class="error" id="error"></div>
+    <div class="field-wrap">
+      <label class="field-label">아이디</label>
+      <input type="text" id="username" placeholder="아이디 입력" autofocus>
+    </div>
+    <div class="field-wrap">
+      <label class="field-label">비밀번호</label>
+      <input type="password" id="password" placeholder="비밀번호 입력">
+    </div>
+    <button class="btn-login" onclick="login()">입장하기 🚀</button>
+    <div class="animals-row">🐱 🐶 🐹 🐰 🐸 🦊 🐼 🐨</div>
+    <div class="privacy-notice">
+      <b>📋 수집 정보 안내</b><br>
+      본 시스템은 동아리 학습 통계 제공을 위해 다음을 측정합니다:<br>
+      • 출퇴근/외출 시각, 누적 활동 시간<br>
+      • 키보드·마우스 <b>활성 여부</b> (입력 내용은 수집하지 않음)<br>
+      • VMware 창의 화면 변화 감지 (이미지 저장하지 않음)<br>
+      수집된 정보는 본인 통계 및 동아리 운영 목적으로 사용되며,
+      <b>아이디·공부시간·랭킹·출석 현황은 동아리 부원에게 공개</b>됩니다.
+    </div>
   </div>
 </div>
 <script>
@@ -139,7 +69,7 @@ input::placeholder { color:var(--muted); font-weight:500; }
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value;
     const errEl = document.getElementById('error');
-    errEl.style.display = 'none';
+    errEl.classList.remove('show');
     if (!username || !password) { showError('아이디와 비밀번호를 입력하세요'); return; }
     const form = new URLSearchParams();
     form.append('username', username); form.append('password', password);
@@ -151,7 +81,7 @@ input::placeholder { color:var(--muted); font-weight:500; }
       location.href = ['superadmin','group_admin'].includes(data.role) ? '/admin' : '/dashboard';
     } catch(e) { showError('서버 연결에 실패했습니다'); }
   }
-  function showError(msg) { const el = document.getElementById('error'); el.textContent = msg; el.style.display='block'; }
+  function showError(msg) { const el = document.getElementById('error'); el.textContent = msg; el.classList.add('show'); }
   function parseJwt(t) { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); } catch { return {}; } }
   const token = localStorage.getItem('token');
   if (token) { const {role} = parseJwt(token); location.href = ['superadmin','group_admin'].includes(role) ? '/admin' : '/dashboard'; }

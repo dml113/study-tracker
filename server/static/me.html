@@ -6,28 +6,17 @@
 <title>내 통계 🌸</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/design/colors_and_type.css">
+<link rel="stylesheet" href="/static/design/components.css">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 :root {
-  --bg:#fdf6f0; --surface:#fff; --primary:#ff8fab;
-  --text:#3d2b56; --text-light:#7b6b8d; --muted:#c4b5d5;
-  --border:rgba(200,180,220,0.3); --shadow:0 4px 20px rgba(180,120,200,0.1);
-  --mint:#6bcb77; --blue:#74b9ff;
+  --bg:var(--st-bg); --surface:var(--st-surface); --primary:var(--st-primary);
+  --text:var(--st-fg1); --text-light:var(--st-fg2); --muted:var(--st-fg3);
+  --border:var(--st-border); --shadow:var(--st-shadow-card);
+  --mint:var(--st-mint); --blue:var(--st-blue);
 }
-body { font-family:'Nunito',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
-body::before { content:''; position:fixed; inset:0; pointer-events:none; background-image:radial-gradient(circle,rgba(200,180,220,0.15) 1px,transparent 1px); background-size:22px 22px; z-index:0; }
-.blob { position:fixed; border-radius:50%; filter:blur(90px); pointer-events:none; z-index:0; animation:blobFloat 18s ease-in-out infinite; }
-.blob-1 { width:500px; height:500px; background:rgba(255,143,171,0.1); top:-200px; left:-150px; }
-.blob-2 { width:400px; height:400px; background:rgba(168,216,234,0.09); bottom:-150px; right:-120px; animation-delay:-9s; }
-@keyframes blobFloat { 0%,100%{transform:translate(0,0)} 50%{transform:translate(18px,-15px)} }
-.header { position:relative; z-index:10; background:rgba(255,255,255,0.88); backdrop-filter:blur(20px); border-bottom:1.5px solid var(--border); padding:0 28px; height:60px; display:flex; align-items:center; justify-content:space-between; }
-.logo { font-size:1.2rem; font-weight:900; background:linear-gradient(135deg,var(--primary),#c77dff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-.header-right { display:flex; align-items:center; gap:10px; }
-.username-tag { font-size:0.82rem; font-weight:700; color:var(--text-light); }
-.nav-btn { background:var(--surface); border:1.5px solid var(--border); color:var(--text-light); padding:7px 16px; border-radius:99px; font-size:0.82rem; font-family:'Nunito',sans-serif; font-weight:700; text-decoration:none; cursor:pointer; transition:all 0.2s; }
-.nav-btn:hover { border-color:var(--primary); color:var(--primary); }
-
-.container { position:relative; z-index:1; max-width:860px; margin:28px auto; padding:0 20px; }
+body { font-family: var(--st-font); background: var(--st-bg); color: var(--st-fg1); min-height:100vh; }
 
 /* Egg hero */
 .egg-hero {
@@ -141,17 +130,18 @@ body::before { content:''; position:fixed; inset:0; pointer-events:none; backgro
 </style>
 </head>
 <body>
-<div class="blob blob-1"></div><div class="blob blob-2"></div>
-<div class="header">
+<div class="bg-dots"></div>
+<div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div>
+<header class="app-header">
   <div class="logo">🌸 내 통계</div>
-  <div class="header-right">
-    <span class="username-tag" id="myName"></span>
+  <div class="right">
+    <span class="tag" id="myName"></span>
     <a href="/dashboard" class="nav-btn">← 대시보드</a>
     <a href="/feedback" class="nav-btn">💬 피드백</a>
     <button class="nav-btn" onclick="logout()">로그아웃</button>
   </div>
-</div>
-<div class="container">
+</header>
+<div class="container" style="max-width:860px">
   <div class="egg-hero" id="eggHero">
     <div class="egg-hero-visual">
       <svg width="120" height="120" viewBox="0 0 120 120" style="position:absolute;top:0;left:0">

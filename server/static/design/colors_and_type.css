@@ -1,0 +1,164 @@
+/* ==========================================================================
+   Study Tracker — Colors & Type
+   A cozy, pastel Korean IT-club study-time tracker.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  /* ---------- Colors: foundations ---------- */
+  --st-bg:           #fdf6f0;   /* cream/peach page background */
+  --st-surface:      #ffffff;   /* card / panel */
+  --st-surface-alt:  #faf7fd;   /* subtle lavender-white, used for inputs */
+
+  /* Brand */
+  --st-primary:      #ff8fab;   /* pink — CTAs, accents, logos */
+  --st-primary-dark: #e8738f;
+  --st-purple:       #c77dff;   /* gradient partner of primary */
+  --st-accent:       #ffd166;   /* warm yellow — rank-1, celebrations */
+
+  /* Semantic */
+  --st-mint:   #6bcb77;  /* success / present / live */
+  --st-blue:   #74b9ff;  /* info */
+  --st-error:  #e05050;  /* errors */
+  --st-warn:   #b5850a;  /* absence / caution */
+
+  /* Podium */
+  --st-gold:   #ffb347;
+  --st-gold-hi:#ffd700;
+  --st-silver: #b0b7c3;
+  --st-bronze: #cd8b5a;
+
+  /* Text */
+  --st-fg1:    #3d2b56;  /* primary text (deep plum) */
+  --st-fg2:    #7b6b8d;  /* secondary (dusty purple) */
+  --st-fg3:    #c4b5d5;  /* muted / placeholder */
+
+  /* Lines & shadows */
+  --st-border:       rgba(200, 180, 220, 0.30);
+  --st-border-soft:  rgba(200, 180, 220, 0.15);
+  --st-border-strong:rgba(200, 180, 220, 0.45);
+
+  --st-shadow-card:  0 4px 20px rgba(180, 120, 200, 0.10);
+  --st-shadow-hero:  0 8px 32px rgba(180, 120, 200, 0.12);
+  --st-shadow-cta:   0 4px 18px rgba(255, 143, 171, 0.40);
+  --st-shadow-hover: 0 8px 28px rgba(180, 120, 200, 0.16);
+  --st-shadow-gold:  0 4px 20px rgba(255, 179, 71, 0.20);
+
+  /* Gradients */
+  --st-grad-primary: linear-gradient(135deg, #ff8fab, #c77dff);
+  --st-grad-rank-1:  linear-gradient(135deg, #ffd700, #ffb347);
+  --st-grad-rank-2:  linear-gradient(135deg, #d0d5e0, #b0b7c3);
+  --st-grad-rank-3:  linear-gradient(135deg, #e8a870, #cd8b5a);
+  --st-grad-season:  linear-gradient(135deg, #ffecd2, #fcb69f);
+
+  /* Radii */
+  --st-r-xs: 10px;
+  --st-r-sm: 12px;
+  --st-r-md: 14px;
+  --st-r-lg: 18px;
+  --st-r-xl: 20px;
+  --st-r-2xl:24px;
+  --st-r-3xl:28px;
+  --st-r-pill:99px;
+
+  /* Spacing scale (informational — brand commonly uses 4 / 8 / 10 / 12 / 16 / 20 / 24 / 28 px) */
+  --st-sp-1: 4px;
+  --st-sp-2: 8px;
+  --st-sp-3: 10px;
+  --st-sp-4: 12px;
+  --st-sp-5: 14px;
+  --st-sp-6: 16px;
+  --st-sp-7: 20px;
+  --st-sp-8: 24px;
+  --st-sp-9: 28px;
+
+  /* Type */
+  --st-font: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Timing */
+  --st-ease:        cubic-bezier(0.34, 1.56, 0.64, 1); /* gentle overshoot */
+  --st-ease-quick:  ease;
+  --st-t-fast:  0.15s;
+  --st-t-base:  0.2s;
+  --st-t-card:  0.35s;
+  --st-t-fill:  0.7s;
+}
+
+/* ---------- Base type ---------- */
+html, body { font-family: var(--st-font); color: var(--st-fg1); background: var(--st-bg); }
+
+.st-display {
+  font-family: var(--st-font);
+  font-weight: 900;
+  font-size: 2.4rem;
+  line-height: 1.1;
+  background: var(--st-grad-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.st-h1 { font-family: var(--st-font); font-weight: 900; font-size: 1.8rem; line-height: 1.15; color: var(--st-fg1); }
+.st-h2 { font-family: var(--st-font); font-weight: 900; font-size: 1.5rem; line-height: 1.2;  color: var(--st-fg1); }
+.st-h3 { font-family: var(--st-font); font-weight: 800; font-size: 1.2rem; line-height: 1.3;  color: var(--st-fg1); }
+
+.st-logo-text {
+  font-family: var(--st-font);
+  font-weight: 900;
+  font-size: 1.7rem;
+  letter-spacing: 1px;
+  background: var(--st-grad-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.st-body  { font-family: var(--st-font); font-weight: 500; font-size: 0.95rem; line-height: 1.55; color: var(--st-fg1); }
+.st-body-sm { font-family: var(--st-font); font-weight: 600; font-size: 0.85rem; line-height: 1.5; color: var(--st-fg1); }
+.st-caption { font-family: var(--st-font); font-weight: 600; font-size: 0.78rem; line-height: 1.4; color: var(--st-fg2); }
+
+.st-label {            /* field labels, section metadata */
+  font-family: var(--st-font);
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--st-fg2);
+}
+
+.st-eyebrow {          /* section titles like "🏆 랭킹" */
+  font-family: var(--st-font);
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+  color: var(--st-fg2);
+  text-transform: uppercase;
+}
+
+.st-stat-value {       /* big gradient number */
+  font-family: var(--st-font);
+  font-weight: 900;
+  font-size: 1.8rem;
+  line-height: 1;
+  background: var(--st-grad-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.st-mono {             /* not used in product — fallback */
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ---------- Utility tokens (optional) ---------- */
+.st-card {
+  background: var(--st-surface);
+  border: 1.5px solid var(--st-border);
+  border-radius: var(--st-r-xl);
+  box-shadow: var(--st-shadow-card);
+  padding: 20px;
+}
+.st-pill {
+  border-radius: var(--st-r-pill);
+  padding: 7px 16px;
+  font-weight: 700;
+  font-size: 0.82rem;
+}
