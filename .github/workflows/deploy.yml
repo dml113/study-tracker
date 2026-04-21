@@ -26,8 +26,14 @@ jobs:
           systemctl is-active study-tracker
 
       - name: Notify Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
+          if [ -z "${SLACK_WEBHOOK_URL}" ]; then
+            echo "SLACK_WEBHOOK_URL not set, skipping"
+            exit 0
+          fi
           COMMIT_MSG=$(git log -1 --pretty=%s)
-          curl -s -X POST "https://hooks.slack.com/services/REDACTED" \
+          curl -s -X POST "${SLACK_WEBHOOK_URL}" \
             -H "Content-Type: application/json" \
             -d "{\"text\":\"🛠️ 서버가 새롭게 업데이트됐어요!\n> ${COMMIT_MSG}\n잘 부탁드려요 🙏\",\"username\":\"Study-Deploy\",\"icon_emoji\":\":sparkles:\"}"

@@ -47,7 +47,7 @@ client/
 | `group_admin` | 자기 그룹의 member만 생성/수정/삭제/조회, 자기 그룹 목표 설정. 유저 생성 시 자기 그룹 자동 할당 (group_id 변경 불가) |
 | `member` | 일반 유저 (출근/퇴근/외출/heartbeat/비밀번호 변경/피드백 제출) |
 
-- superadmin 계정은 하나만 존재 (auto-created: admin / admin1234)
+- superadmin 계정은 하나만 존재 (서버 첫 실행 시 자동 생성, 기본 비번은 `server/main.py` 참고 — 운영 환경에서 즉시 변경 필수)
 - superadmin 계정은 삭제·role 변경 불가
 
 ## 핵심 비즈니스 로직
@@ -148,7 +148,7 @@ MEAL_TIMES = {
 - **DB**: `/home/user/study-tracker/study_tracker.db` (SQLite)
 - **백업 디렉토리**: `/home/user/study-tracker/backups/`
 - **클라이언트 배포 디렉토리**: `/home/user/study-tracker/client_dist/`
-- **기본 관리자**: admin / admin1234
+- **기본 관리자**: `server/main.py` 참고 (운영에서 즉시 변경)
 
 ### 배포 명령어
 ```bash

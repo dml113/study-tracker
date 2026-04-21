@@ -23,8 +23,14 @@ jobs:
           echo "${RESULT}"
 
       - name: Notify Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
+          if [ -z "${SLACK_WEBHOOK_URL}" ]; then
+            echo "SLACK_WEBHOOK_URL not set, skipping"
+            exit 0
+          fi
           VERSION=$(cat ~/study-tracker/client_dist/version.txt 2>/dev/null || echo "unknown")
-          curl -s -X POST "https://hooks.slack.com/services/REDACTED" \
+          curl -s -X POST "${SLACK_WEBHOOK_URL}" \
             -H "Content-Type: application/json" \
             -d "{\"text\":\"🎉 클라이언트 v${VERSION} 업데이트가 준비됐어요!\n앱을 다시 실행하면 자동으로 업데이트돼요 😊\",\"username\":\"Study-Deploy\",\"icon_emoji\":\":sparkles:\"}"
