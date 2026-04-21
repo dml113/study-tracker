@@ -224,6 +224,17 @@ sshpass -p 'PASSWORD' ssh user@172.16.145.16 \
 - `traker.itnsa.cloud` → `https://tracker.itnsa.cloud` 301 리다이렉트 (FastAPI 미들웨어)
 - **스플릿 DNS**: 내부 클라이언트는 `172.16.145.15` DNS 사용, 외부는 Route53(AWS, `kim` 프로파일)
 
+## 최근 변경 이력
+
+### v1.1.9 (2026-04-21)
+- **자정 넘김 버그 수정** (피드백 #27): 전날 미퇴근 상태에서 자정 지나면 출근 불가 문제 해결
+  - `MainWindow._refresh`에서 날짜 변경 감지 → 버퍼/세션 리셋 + `_load_attendance_state()` 재호출
+  - 60초마다 서버 출퇴근 상태 폴링 (자동 퇴근 반영)
+  - state에 `last_check_date`, `_attendance_poll_tick` 필드 추가
+- **상점 초기 아이템 10종 추가** (피드백 #25, #26): 모자 4 / 옷 3 / 액세서리 3 (SVG, slot/price/svg_data)
+- **서버 GITHUB_TOKEN 갱신**: systemd env 의 만료 PAT 교체 (sync-github 401 대응)
+- **gongju-wiki에 프로젝트 페이지 생성**: `projects/study-tracker.md`
+
 ## API 엔드포인트 요약
 
 | Method | Path | 권한 | 설명 |
